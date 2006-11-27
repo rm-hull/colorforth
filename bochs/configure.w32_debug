@@ -1,0 +1,1 @@
+./configure --enable-vbe --enable-cirrus --enable-usb --enable-sb16 --enable-pci --enable-ne2000 --enable-fast-function-calls --enable-icache --enable-repeat-speedups --enable-guest2host-tlb --enable-sep --enable-pge --enable-pae --enable-sse --enable-apic --enable-cpu-level=6 --enable-debugger --enable-disasm
