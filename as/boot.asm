@@ -64,10 +64,8 @@ start0:
     mov  di, ax
     mov  si, ax
     call loc ;# where are we? ip+4*cs
-;#.org .-2
 loc: pop  si
     sub  si, offset loc-offset start
-;#.org .-2
     mov  cx, 512/4 ;# only 256 bytes unless...
 ;# compile as 32-bit code here so it moves longwords and not words
 .code32
@@ -76,7 +74,7 @@ loc: pop  si
     .byte 0x0ea
     .word relocate-start, 0
 
-relocate: ;# this code is executed from 0; actualy from 0x84 in Bochs
+relocate: ;# this code is executed from an offset of 0, not 0x7c00
     mov  ds, ax
 ;#   lgdt fword ptr gdt
     .byte 0x0f, 1, 0x16
