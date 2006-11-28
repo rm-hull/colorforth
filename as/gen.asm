@@ -1,5 +1,13 @@
 .intel_syntax ;#generic graphics
 
+;# VESA mode numbers and screen sizes,
+;# from http://www.mat.univie.ac.at/~gerald/laptop/vesafb.txt
+;#    | 640x480  800x600  1024x768 1280x1024
+;#----+-------------------------------------
+;#256 |  0x101    0x103    0x105    0x107   
+;#32k |  0x110    0x113    0x116    0x119   
+;#64k |  0x111    0x114    0x117    0x11A   
+;#16M |  0x112    0x115    0x118    0x11B   
 .align 4
 ;# top of RAM is 0x2000000 with 32 megs; framebuffer is just below this
 ;# multiply vp (vertical pixels) by hp (horizontal pixels) by 2 bytes (16 bits)
