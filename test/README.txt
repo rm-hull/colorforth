@@ -31,3 +31,6 @@ di], dword ptr ds:[esi] ; f3a5
 (0).[11114998] [0x000002dd] 0008:000002dd (unk. ctxt): add byte ptr ds:[esi], bl
 
 Looks like memory got overwritten during the 'rep movsd'.
+
+Aha! Found out why. 0x1f55 is 'mov edi, displ'. displ has an unusable value
+since the AGP detection failed.

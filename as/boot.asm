@@ -51,10 +51,9 @@ gdt0: .word 0, 0, 0, 0
 ;# this code is in real 16-bit mode
 
 .code16gcc
-start0: mov  ax, 0x4f02 ;# video mode
-;#.org .-2
+start0:
+    mov  ax, 0x4f02 ;# video mode
     mov  bx, vesa ;# hp*vp rgb: 565
-;#.org .-2
     int  0x10
     cli
     xor  ax, ax    ;# move code to 0
