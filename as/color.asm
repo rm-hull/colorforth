@@ -19,9 +19,9 @@
     lodsd
 .endm
 
-.equ hp, 1024
-.equ vp, 768
-.equ vesa, 0x4117 ;# bit 12 sets linear address mode
+.equ hp, 1024 ;# 1024 or 800
+.equ vp, 768 ;# 768 or 600
+.equ vesa, 0x4117 ;# bit 12 sets linear address mode in 0x117 or 0x114
 .equ buffer, 604*256
 .include "boot.asm" ;# boot boot0 hard
 

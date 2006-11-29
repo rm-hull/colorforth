@@ -8,7 +8,8 @@ import sys, struct
 # the old huffman code is from http://www.colorforth.com/chars.html
 oldcode  = ' rtoeanismcylgfwdvpbhxuqkzj34567891-0.2/;:!+@*,?'
 newcode  = ' rtoeanismcylgfwdvpbhxuq0123456789j-k.z/;:!+@*,?'
-code = newcode  # assume Tim knows what he's doing
+#code = newcode  # assume Tim knows what he's doing
+code = oldcode  # assume Chuck knows what he's saying
 
 output = sys.stdout
 
@@ -32,6 +33,8 @@ colortags = ['yellow', 'yellow', 'red', 'green',
 
 highbit =  0x80000000L
 mask =     0xffffffffL
+
+format = ''  # use 'html' or 'color', otherwise plain text
 
 def putchar(character):
  output.write(character)
@@ -110,8 +113,10 @@ def dump(filename):
   file = open(filename)
  data = file.read()
  file.close()
- for block in range(0, len(data) / 1024, 1024):
+ sys.stderr.write('dumping %d bytes\n' % len(data))
+ for block in range(0, len(data), 1024):
   chunk = data[block:block + 1024]
+  sys.stderr.write('dumping block %d\n' % (block / 1024))
   dump_block(chunk)
 
 if __name__ == '__main__':
