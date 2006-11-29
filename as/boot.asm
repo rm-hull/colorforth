@@ -18,11 +18,6 @@ start: jmp  start0
     .long 0       ;# hidden sectors
     .long 80*2*18 ;# sectors again
     .byte 0       ;# drive
-;#    .byte 0
-;#    .byte 0x29     ; signature
-;#    .long 0x44444444     ; serial
-;#    .ascii "color forth" ; label
-;#    .ascii "        "
 
 command:  .byte 0
          .byte 0   ;# head, drive
@@ -50,19 +45,20 @@ gdt0: .word 0, 0, 0, 0
 ;# and eax and ax exchanged
 ;# this code is in real 16-bit mode
 
-.code16gcc
+.code16
 start0:
-    mov  ax, 0x4f02 ;# video mode
-    mov  bx, vesa ;# hp*vp rgb: 565
+    mov  ax, 0x4f01 ;# get video mode info
+    mov  cx, vesa ;# a 16-bit color linear video mode (5:6:5 rgb)
+    mov  di, 0x7e00 ;# use buffer space just past loaded bootsector
+    int  0x10
+    mov  ax, 0x4f02 ;# set video mode
+    mov  bx, cx ;# vesa mode
     int  0x10
     cli
     xor  ax, ax    ;# move code to 0
-    mov  bx, ax
+    mov  di, ax
     mov  bx, cs
     mov  ds, bx
-    mov  es, ax
-    mov  di, ax
-    mov  si, ax
     call loc ;# where are we? ip+4*cs
 loc: pop  si
     sub  si, offset loc-offset start
@@ -70,18 +66,18 @@ loc: pop  si
 ;# compile as 32-bit code here so it moves longwords and not words
 .code32
     rep movsw
-;#    jmp  0:relocate
+;#  jmp  0:relocate
     .byte 0x0ea
     .word relocate-start, 0
 
 relocate: ;# this code is executed from an offset of 0, not 0x7c00
     mov  ds, ax
-;#   lgdt fword ptr gdt
+;#  lgdt fword ptr gdt
     .byte 0x0f, 1, 0x16
     .word gdt-start
     mov  al, 1
     mov  cr0, eax
-;#    jmp  8:protected
+;#  jmp  8:protected
     .byte 0x0ea
     .word protected-start, 8
 
@@ -91,13 +87,14 @@ protected: ;# now in protected 32-bit mode
     mov  es, eax
     mov  ss, eax
     mov  esp, offset gods ;# assembles as a dword ptr without 'offset'
+    push [ds:0x7e28] ;# physical memory pointer returned by VESA call
     xor  ecx, ecx
 
 a20: mov  al, 0x0d1
     out  0x64, al ;# to keyboard
-0:     in   al, 0x64
-        and  al, 2
-        jnz  0b
+0:  in   al, 0x64
+    and  al, 2
+    jnz  0b
     mov  al, 0x4b
     out  0x60, al ;# to keyboard, enable A20
 
@@ -106,10 +103,10 @@ a20: mov  al, 0x0d1
     add  esi, ebx
     cmp  dword ptr [esi], 0x44444444 ;# boot?
     jnz  cold
-        mov  cx, 63*0x100-0x80 ;# nope
-        rep movsd
-        mov  esi, offset godd ;# 0x9f448, 3000 bytes below 0xa0000 (gods)
-        jmp  start2
+    mov  cx, 63*0x100-0x80 ;# nope
+    rep movsd
+    mov  esi, offset godd ;# 0x9f448, 3000 bytes below 0xa0000 (gods)
+    jmp  start2
 
 cold:   call sense_
         jns  cold
@@ -145,7 +142,6 @@ cmdi:   call sense_
 ready: ;#call delay
     mov  dx, 0x3f4
 0:     in   al, dx
-        out  0x0e1, al
         shl  al, 1
         jnc  0b
     lea  edx, [edx+1]
@@ -156,33 +152,28 @@ cmd: lea  edx, command
     mov  [edx], al
 cmd0: push esi
     mov  esi, edx
-cmd1:   call ready
-        jns  0f
-            in   al, dx
-            jmp  cmd1
+cmd1:  call ready
+       jns  0f
+       in   al, dx
+       jmp  cmd1
 0:     lodsb
-        out  dx, al
-        out  0x0e1, al
-        loop cmd1
+       out  dx, al
+      loop cmd1
     pop  esi
-;#delay: mov  eax, us
-;#@@:     dec  eax
-;#        jnz  0b
     ret
 
 sense_: mov  al, 8
     mov  ecx, 1
     call cmd
-0:     call ready
-        jns  0b
+0:  call ready
+    jns  0b
     in   al, dx
-    out  0x0e1, al
     and  al, al
-;#    cmp  al, 0x80
+;#  cmp  al, 0x80
     ret
 
-seek:   call sense_
-        jns  seek
+seek: call sense_
+    jns  seek
     ret
 
 stop: mov  cl, 0x0c ;# motor off
@@ -190,7 +181,6 @@ onoff: dup_
     mov  al, cl
     mov  dx, 0x3f2
     out  dx, al
-    out  0x0e1, al
     drop
     ret
 
@@ -214,37 +204,36 @@ read: call seek
 ;# note that the first call overwrites the cylinder number with 1 from
 ;# CM's color.com image; that's why it skips from cylinder 0 to 2
     mov  cx, 18*2*512 ;# two heads, 18 sectors/track, 512 bytes/sector
-0:     call ready
-        in   al, dx
-        out  0x0e1, al ;# CM's custom hardware for debugging, I guess
-        stosb
-        next 0b
+0:  call ready
+    in   al, dx
+    stosb
+    next 0b
     ret
 
 write: call seek
     mov  al, 0x0c5 ;# write data
     call transfer
     mov  cx, 18*2*512 ;#two heads, 18 sectors/track, 512 bytes/sector
-0:     call ready
-        lodsb
-        out  dx, al
-        out  0x0e1, al
-        next 0b
+0:  call ready
+    lodsb
+    out  dx, al
+    out  0x0e1, al
+    next 0b
     ret
 
 .org 0x1fe ;# mark boot sector
     .word 0x0aa55
+;# end of boot sector
     .long 0x44444444 ;# mark color.com
 
 flop: mov  cylinder, al ;# c-cx
     dup_
     mov  dx, 0x3f2
     in   al, dx
-    out  0x0e1, al
     test al, 0x10
     jnz  0f
-        jmp  spin
-0: ret
+    jmp  spin
+0:  ret
 
 readf: call flop ;# ac-ac
     push edi

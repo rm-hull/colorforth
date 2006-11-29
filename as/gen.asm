@@ -33,68 +33,6 @@ color: call rgb
     drop
     ret
 
-;# locate NorthBridge chipset
-;# 31 Configuration Space Enable:
-;# 0 Disable,
-;# 1 Convert configuration data port writes to
-;#  configuration cycles on the PCI bus
-;# 30-24 Reserved
-;# 23-16 PCI Bus Number: Used to choose a specific PCI bus in the system
-;# 15-11 Device Number: Used to choose a specific device in the system
-;# 10-8 Function Number: Used to choose a specific function
-;#  if the selected device supports multiple functions
-;# 7-2 Register Number: Used to select a specific DWORD
-;#  in the devices configuration space
-;# 1-0 Fixed always reads 0
-;# 
-;# There are 7 functions implemented in the VT82C686A:
-;# Function # Function
-;# 0 PCI to ISA Bridge
-;# 1 IDE Controller
-;# 2 USB Controller Ports 0-1
-;# 3 USB Controller Ports 2-3
-;# 4 Power Management, SMBus & Hardware Monitor
-;# 5 AC97 Audio Codec Controller
-;# 6 MC97 Modem Codec Controller
-north: mov  edx, 0x0cf8
-    out  dx, eax
-    add  edx, 4
-    in   eax, dx
-    ret
-
-dev: mov  eax, 0x80001008 ;# find display, start at device 2
-      ;# bit 12 set means device 2
-      ;# bit 3 set selects dword 2 in the configuration space
-      ;# 32 devices per bus
-    mov  ecx, 31-1 ;# .end with agp: 10008, bus 1, dev 0
-0:     dup_
-        call north
-        and  eax, 0x0ff000000 ;# north returned 0xffffffff on empty slot
-        cmp  eax, 0x3000000 ;# indicates display adaptor?
-        drop
-        jz   0f
-        add  eax, 0x800 ;# look at next device
-        next 0b
-0: ret ;# returns 0x80010008 on failure! nonexistent memory!
-
-ati0: call dev
-    or   dword ptr [eax-4], 2 ;# enable memory; fails on Bochs-2.3
-    add  al, 0x24-8 ;# look for prefetch
-    mov  cl, 5
-0:     dup_
-        call north
-        xor  al, 8
-        jz   0f
-        drop
-        sub  eax, 4
-        next 0b
-    dup_
-    call north
-    and  eax, 0x0fffffff0
-0: mov  displ, eax
-    drop
-    ret
-
 fifof: drop
 graphic: ret
 

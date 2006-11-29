@@ -19,12 +19,9 @@
     lodsd
 .endm
 
-;#hp equ 800
-;#vp equ 600
-;#vesa equ 0x114
 .equ hp, 1024
 .equ vp, 768
-.equ vesa, 0x117
+.equ vesa, 0x4117 ;# bit 12 sets linear address mode
 .equ buffer, 604*256
 .include "boot.asm" ;# boot boot0 hard
 
@@ -39,7 +36,7 @@
 ;#        0 forth
 
 warm: dup_
-start1: call ati0
+start1: pop [displ]
 ;#    mov  screen, offset nul
 ;#    xor  eax, eax
     call show0

@@ -104,11 +104,9 @@ errors:
 errorcount:
 	$(GAS) color.asm 2>&1 | wc -l
 rcsdiff:
-	rcsdiff RCS/*
+	cvs diff
 ci:
-	-ci -u RCS/*
-	-rcs -U RCS/* &>/dev/null
-	-ci -u RCS/* &>/dev/null
+	cvs commit
 /tmp/color.xxd: ../color.com
 	xxd $< > $@
 /tmp/gas_color.xxd: color.com
