@@ -81,7 +81,7 @@ sources.txt: $(sources)
 original.txt: $(original)
 	cat $+ > $@
 clean:
-	rm -f sources.txt original.txt *.dsm *.dmp a.out *.bin
+	rm -f sources.txt original.txt *.{o,bin,out,dmp}
 download: $(original) # in case we accidentally overwrote them (shit happens)
 	for file in $+; do \
 	fetch=$$(echo $$(basename $$file) | tr 'a-z' 'A-Z') && \
