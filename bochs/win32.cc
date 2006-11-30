@@ -718,7 +718,8 @@ void resize_main_window()
   RECT R;
   int toolbar_y = 0;
   int statusbar_y = 0;
-
+  
+  BX_DEBUG(("resize_main_window() starting"));
   if (IsWindowVisible(hwndTB)) {
     GetWindowRect(hwndTB, &R);
     toolbar_y = R.bottom - R.top;
@@ -947,19 +948,65 @@ LRESULT CALLBACK mainWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 
   case WM_SIZE:
     {
-      SendMessage(hwndTB, TB_AUTOSIZE, 0, 0);
-      SendMessage(hwndSB, WM_SIZE, 0, 0);
-      int rect_data[] = { 1, 0, IsWindowVisible(hwndTB), 100, IsWindowVisible(hwndSB), 0x7712, 0, 0 };
+      HWND desktopWindow;
+      HWND bxWnd = stInfo.simWnd;
+      int x, y, desktop_x, desktop_y;
+      RECT desktop;
+      int rect_data[] = { 1, 0, IsWindowVisible(hwndTB),
+       100, IsWindowVisible(hwndSB), 0x7712, 0, 0 };
       RECT R;
+      BX_DEBUG(("mainWndProc(): processing WM_SIZE"));
       GetEffectiveClientRect( hwnd, &R, rect_data );
-      MoveWindow(stInfo.simWnd, R.left, R.top, R.right - R.left, R.bottom - R.top, TRUE);
+      x = R.right - R.left;
+      y = R.bottom - R.top;
+      MoveWindow(stInfo.simWnd, R.left, R.top, x, y, TRUE);
       GetClientRect(stInfo.simWnd, &R);
-      if (((R.right - R.left) != (int)stretched_x) || ((R.bottom - R.top) != (int)stretched_y)) {
-        BX_ERROR(("Sim window's client size(%d, %d) was different from the stretched size(%d, %d) !!", (R.right - R.left), (R.bottom - R.top), stretched_x, stretched_y));
-        fix_size = TRUE;
+      if ((x != (int)stretched_x) || (y != (int)stretched_y)) {
+       BX_ERROR(("Sim client size(%d, %d) != stretched size(%d, %d)!",
+        x, y, stretched_x, stretched_y));
+      }
+      desktopWindow = GetDesktopWindow();
+      GetWindowRect(desktopWindow, &desktop);
+      desktop_x = desktop.right - desktop.left;
+      desktop_y = desktop.bottom - desktop.top;
+      BX_DEBUG(("Desktop Window dimensions: %d x %d", desktop_x, desktop_y));
+      BX_DEBUG(("mainWnd dimensions: %d x %d", x, y));
+      if (stretched_y >= desktop_y) {
+       BX_DEBUG(("mainWndProc(): showing dialog before going fullscreen"));
+       MessageBox(NULL,
+       "Going into fullscreen mode. Alt-Enter to revert to partial screen",
+       "Going fullscreen",
+       MB_APPLMODAL);
+       ShowWindow(hwndTB, SW_HIDE);
+       if (saveParent = SetParent(bxWnd, desktopWindow)) {
+        BX_DEBUG(("Saved parent window"));
+        SetWindowPos(bxWnd, HWND_TOPMOST, desktop.left, desktop.top,
+         desktop.right, desktop.bottom, SWP_SHOWWINDOW);
+        RegisterHotKey(bxWnd, 0x1234, MOD_ALT, VK_RETURN); // Alt-Enter
+       }
+      } else {
+       if (saveParent) {
+        BX_DEBUG(("Restoring parent window"));
+        RECT rect;
+        SetParent(bxWnd, saveParent);
+        GetWindowRect(saveParent, &rect);
+        SetWindowPos(bxWnd, saveParent, rect.left, rect.top,
+         rect.right, rect.bottom, SWP_SHOWWINDOW);
+        saveParent = NULL;
+       }
+       ShowWindow(hwndTB, SW_SHOW);
+       SendMessage(hwndTB, TB_AUTOSIZE, 0, 0);
+       SendMessage(hwndSB, WM_SIZE, 0, 0);
+       fix_size = TRUE;
       }
     }
     break;
+
+  case WM_HOTKEY:
+    if (wParam == 0x1234) {
+     stretched_y -= 20;  // no more fullscreen
+     resize_main_window();
+    }
 
   case WM_DRAWITEM:
     lpdis = (DRAWITEMSTRUCT *)lParam;
@@ -1044,6 +1091,7 @@ LRESULT CALLBACK simWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
       cursorWarped();
     }
     if (fix_size) {
+      BX_DEBUG(("simWndProc(): processing WM_TIMER, resizing main window"));
       resize_main_window();
     }
     return 0;
@@ -1747,9 +1795,8 @@ void bx_win32_gui_c::graphics_tile_update(Bit8u *tile, unsigned x0, unsigned y0)
 
 void bx_win32_gui_c::dimension_update(unsigned x, unsigned y, unsigned fheight, unsigned fwidth, unsigned bpp)
 {
-  HWND desktopWindow;
-  int desktop_x, desktop_y;
-  RECT desktop;
+  BX_DEBUG(("dimension_update() starting"));
+
   BxTextMode = (fheight > 0);
   if (BxTextMode) {
     text_cols = x / fwidth;
@@ -1782,32 +1829,6 @@ void bx_win32_gui_c::dimension_update(unsigned x, unsigned y, unsigned fheight, 
 
   if ( x==dimension_x && y==dimension_y && bpp==current_bpp)
     return;
-  desktopWindow = GetDesktopWindow();
-  GetWindowRect(desktopWindow, &desktop);
-  desktop_x = desktop.right - desktop.left;
-  desktop_y = desktop.bottom - desktop.top;
-  BX_DEBUG(("Desktop Window dimensions: %d x %d", desktop_x, desktop_y));
-  if (y >= desktop_y) {
-   MessageBox(NULL,
-    "About to go into fullscreen mode. Alt-Enter to revert to partial screen",
-    "Going FullScreen",
-    MB_APPLMODAL);
-   ShowWindow(hwndTB, SW_HIDE);
-   if (saveParent = SetParent(stInfo.mainWnd, desktopWindow)) {
-    SetWindowPos(stInfo.mainWnd, HWND_TOPMOST, desktop.left, desktop.top,
-     desktop.right, desktop.bottom, SWP_SHOWWINDOW);
-   }
-  } else {
-   if (saveParent) {
-    RECT rect;
-    SetParent(stInfo.mainWnd, saveParent);
-    GetWindowRect(saveParent, &rect);
-    SetWindowPos(stInfo.mainWnd, saveParent, rect.left, rect.top,
-     rect.right, rect.bottom, SWP_SHOWWINDOW);
-    saveParent = NULL;
-   }
-   ShowWindow(hwndTB, SW_SHOW);
-  }
   dimension_x = x;
   dimension_y = y;
   stretched_x = dimension_x;
