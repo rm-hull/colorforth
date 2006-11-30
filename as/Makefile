@@ -47,7 +47,7 @@ sed := sed $(foreach regex, $(recipes), $($(regex)))
 GAS := as -R
 export
 %.dat:	%.asm
-	$(GAS) -ahlmns=%.lis -o $*.o $<
+	$(GAS) -ahlmns=$*.lis -o $*.o $<
 	objcopy $*.o -O binary $@
 color.com: $(sources) secondpass
 	$(GAS) -ahlmns=color.lis -o color.o color.asm
