@@ -1,9 +1,6 @@
 .intel_syntax ;#colorforth, 2001 jul 22, chuck moore, public domain
 
-;#.model tiny
 ;#.486p
-;#only segment use32
-;#assume ds:only
 
 .macro next adr
     dec  ecx
@@ -19,9 +16,15 @@
     lodsd
 .endm
 
-.equ hp, 1024 ;# 1024 or 800
-.equ vp, 768 ;# 768 or 600
-.equ vesa, 0x4117 ;# bit 12 sets linear address mode in 0x117 or 0x114
+.ifndef SMALLSCREEN
+ .equ hp, 1024 ;# 1024 or 800
+ .equ vp, 768 ;# 768 or 600
+ .equ vesa, 0x4117 ;# bit 12 sets linear address mode in 0x117 or 0x114
+.else
+ .equ hp, 800
+ .equ vp, 600
+ .equ vesa, 0x4114
+.endif
 .equ buffer, 604*256
 .include "boot.asm" ;# boot boot0 hard
 

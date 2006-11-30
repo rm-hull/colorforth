@@ -47,15 +47,19 @@ sed := sed $(foreach regex, $(recipes), $($(regex)))
 GAS := as -R
 export
 %.dat:	%.asm
-	$(GAS) -ahlmns=$*.lis -o $*.o $<
+	$(GAS) -ahlmns=$*.lst -o $*.o $<
 	objcopy $*.o -O binary $@
 color.com: $(sources) secondpass
-	$(GAS) -ahlmns=color.lis -o color.o color.asm
+	$(GAS) $(if $(SMALLSCREEN),--defsym SMALLSCREEN=$(SMALLSCREEN)) \
+	 -ahlmns=color.lst -o color.o color.asm
 	objcopy color.o -O binary color.bin
 	# now get original color.com for its data blocks starting at 0x3000
 	cp -f ../color.com .
 	dd if=/dev/zero of=color.com bs=1024 count=12 conv=notrunc
 	dd if=color.bin of=color.com bs=1024 count=12 conv=notrunc
+small:
+	touch color.asm
+	$(MAKE) SMALLSCREEN=1 color.com
 $(sources): $(original)
 	for file in $+; do \
 	 $(sed) $$file | sed $(code16) | \
@@ -84,7 +88,7 @@ sources.txt: $(sources)
 original.txt: $(original)
 	cat $+ > $@
 clean:
-	rm -f sources.txt original.txt *.{o,bin,out,dmp}
+	rm -f sources.txt original.txt *.{o,bin,out,dmp,lst}
 download: $(original) # in case we accidentally overwrote them (shit happens)
 	for file in $+; do \
 	fetch=$$(echo $$(basename $$file) | tr 'a-z' 'A-Z') && \
@@ -116,3 +120,5 @@ ci:
 	xxd $< > $@
 bindiff: /tmp/color.xxd /tmp/gas_color.xxd
 	diff -y -W180 $+
+test:
+	cd ../test && $(MAKE)

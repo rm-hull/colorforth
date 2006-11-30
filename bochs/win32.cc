@@ -974,7 +974,7 @@ LRESULT CALLBACK mainWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
       if (stretched_y >= desktop_y) {
        BX_DEBUG(("mainWndProc(): showing dialog before going fullscreen"));
        MessageBox(NULL,
-       "Going into fullscreen mode. Alt-Enter to revert to partial screen",
+       "Going into fullscreen mode. Ctrl-Enter to revert to partial screen",
        "Going fullscreen",
        MB_APPLMODAL);
        ShowWindow(hwndTB, SW_HIDE);
@@ -982,7 +982,7 @@ LRESULT CALLBACK mainWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
         BX_DEBUG(("Saved parent window"));
         SetWindowPos(bxWnd, HWND_TOPMOST, desktop.left, desktop.top,
          desktop.right, desktop.bottom, SWP_SHOWWINDOW);
-        RegisterHotKey(bxWnd, 0x1234, MOD_ALT, VK_RETURN); // Alt-Enter
+        RegisterHotKey(bxWnd, 0x1234, MOD_CONTROL, VK_RETURN); // Ctrl-Enter
        }
       } else {
        if (saveParent) {
