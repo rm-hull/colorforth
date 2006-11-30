@@ -1788,12 +1788,10 @@ void bx_win32_gui_c::dimension_update(unsigned x, unsigned y, unsigned fheight, 
   desktop_y = desktop.bottom - desktop.top;
   BX_DEBUG(("Desktop Window dimensions: %d x %d", desktop_x, desktop_y));
   if (y >= desktop_y) {
-   /*
-   MessageBox(HWND_TOPMOST,
+   MessageBox(NULL,
     "About to go into fullscreen mode. Alt-Enter to revert to partial screen",
     "Going FullScreen",
-    MB_OK);
-   */
+    MB_APPLMODAL);
    ShowWindow(hwndTB, SW_HIDE);
    if (saveParent = SetParent(stInfo.mainWnd, desktopWindow)) {
     SetWindowPos(stInfo.mainWnd, HWND_TOPMOST, desktop.left, desktop.top,
