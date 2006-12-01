@@ -3,19 +3,27 @@ BOCHS_SRC := /usr/src/bochs
 CF_SRC := ~/src
 VMWARE := /cygdrive/c/Program\ Files/VMWare/VMware\ Player
 BXSHARE := $(shell cygpath -w $(BOCHS))
+oldcf := a.img
+newcf := b.img
 export
 default: newbxnewcf
-oldbx%: oldbx%.bxrc a.img b.img
-	-if [ "$(BXDEBUG)" ]; then \
-	 $(BOCHS)/bochsdbg -f $< -q; \
+oldbx%: template.bxrc a.img b.img
+	-export BXRC=$@ && \
+	export BOOTFLOPPY=$($*) && \
+	export OTHERFLOPPY=$(filter-out $< $($*),$+) && \
+	if [ "$(BXDEBUG)" ]; then \
+	 $(BOCHS)/bochsdbg -f template.bxrc -q; \
 	else \
 	 $(BOCHS)/bochs -f $< -q; \
 	fi
 	sed -i 's/\r//' $@.txt
 	uniq -f 1 -c $@.txt > $@.uniq.txt
 	less $@.uniq.txt
-newbx%: newbx%.bxrc a.img b.img
-	-if [ "$(BXDEBUG)" ]; then \
+newbx%: template.bxrc a.img b.img
+	-export BXRC=$@ && \
+	export BOOTFLOPPY=$($*) && \
+	export OTHERFLOPPY=$(filter-out $< $($*),$+) && \
+	if [ "$(BXDEBUG)" ]; then \
 	 $(BOCHS_SRC)/bochsdbg -f $< -q; \
 	else \
 	 $(BOCHS_SRC)/bochs -f $< -q; \
