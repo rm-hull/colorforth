@@ -616,7 +616,7 @@ void bx_win32_gui_c::specific_init(int argc, char **argv, unsigned
   GetWindowRect(desktopWindow, &desktop);
   desktop_x = desktop.right - desktop.left;
   desktop_y = desktop.bottom - desktop.top;
-  hotKeyReceiver = stInfo.mainWnd;
+  hotKeyReceiver = stInfo.simWnd;
   BX_DEBUG(("BX_DEBUG: Desktop Window dimensions: %d x %d", desktop_x, desktop_y));
 
   static RGBQUAD black_quad={ 0, 0, 0, 0};
@@ -749,10 +749,10 @@ void resize_main_window()
 
   // stretched_x and stretched_y were set in dimension_update()
   // if we need to do any additional resizing, do it now
-  if (stretched_y >= desktop_y) {
+  if (desktop_y > 0 && stretched_y >= desktop_y) {
     BX_DEBUG(("BX_DEBUG: mainWndProc(): showing dialog before going fullscreen"));
     MessageBox(NULL,
-     "Going into fullscreen mode. Ctrl-Enter to revert to partial screen",
+     "Going into fullscreen mode -- hit any System key to revert",
      "Going fullscreen",
      MB_APPLMODAL);
     // hide toolbar and status bars to get some additional space
@@ -767,7 +767,6 @@ void resize_main_window()
       BX_DEBUG(("BX_DEBUG: Saved parent window"));
       SetWindowPos(stInfo.mainWnd, HWND_TOPMOST, desktop.left, desktop.top,
        desktop.right, desktop.bottom, SWP_SHOWWINDOW);
-      RegisterHotKey(hotKeyReceiver, 0x1234, MOD_CONTROL, VK_RETURN); // Ctrl-Enter
     }
   } else {
     if (saveParent) {
@@ -1023,15 +1022,6 @@ LRESULT CALLBACK mainWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
     }
     break;
 
-  case WM_HOTKEY:
-    BX_DEBUG(("BX_DEBUG: hotkey message received: 0x%x", wParam));
-    if (wParam == 0x1234) {
-     stretched_y -= 20;  // no more fullscreen
-     resize_main_window();
-     UnregisterHotKey(hotKeyReceiver, 0x1234);
-    }
-    break;
-
   case WM_DRAWITEM:
     lpdis = (DRAWITEMSTRUCT *)lParam;
     if (lpdis->hwndItem == hwndSB) {
@@ -1241,6 +1231,9 @@ LRESULT CALLBACK simWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
     EnterCriticalSection(&stInfo.keyCS);
     enq_key_event(HIWORD (lParam) & 0x01FF, BX_KEY_RELEASED);
     LeaveCriticalSection(&stInfo.keyCS);
+    // no more fullscreen
+    if (saveParent) theGui->dimension_update(dimension_x, desktop_y - 1,
+     0, 0, current_bpp);
     return 0;
 
   case WM_CHAR:
@@ -1249,7 +1242,6 @@ LRESULT CALLBACK simWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
   case WM_SYSDEADCHAR:
     return 0;
   }
-
   return DefWindowProc (hwnd, iMsg, wParam, lParam);
 }
 
