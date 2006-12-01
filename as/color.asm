@@ -49,7 +49,7 @@ start1: pop [displ]
     call load
     jmp  accept ;# wait for keyhit
 
-.equ gods, 0x28000*4 ;# 0x0a0000
+.equ gods, 0x28000*4 ;# 0x0a0000, data stack pointer
 .equ godd, gods-750*4
 .equ mains, godd-1500*4
 .equ maind, mains-750*4
@@ -154,7 +154,7 @@ ex2: and  eax, -020
 abort: mov  curs, edi
     shr  edi, 10-2
     mov  blk, edi
-abort1: mov  esp, gods
+abort1: mov  esp, gods ;# reset data stack pointer
     mov dword ptr  spaces+3*4, offset forthd
     mov dword ptr  spaces+4*4, offset qcompile
     mov dword ptr  spaces+5*4, offset cnum
@@ -881,18 +881,22 @@ keys: .byte 16, 17, 18, 19,  0,  0,  4,  5 ;# 20
      .byte  0,  0,  0,  0, 24, 25, 26, 27
      .byte  0,  1, 12, 13, 14, 15,  0,  0 ;# 60 n
      .byte  3,  2 ;# alt space
-key: dup_
-    xor  eax, eax
-0:     call pause
-        in   al, 0144
-        test al, 1
-        jz   0b
-    in   al, 0140
-    test al, 0360
-    jz   0b
-    cmp  al, 072
-    jnc  0b
-    mov  al, [keys-020+eax]
+
+key: dup_             ;# why DUP here?
+    xor  eax, eax     ;# used as index later, so clear it
+0:  call pause        ;# busy-wait
+    in   al, 0x64     ;# keyboard status port
+    test al, 1        ;# see if there is a byte waiting
+    jz   0b           ;# if not, loop
+    in   al, 0x60     ;# fetch the scancode
+    test al, 0xf0     ;# top row of keyboard generates scancodes < 0x10
+    jz   0b           ;# we don't use that row (the numbers row), so ignore it
+    cmp  al, 58       ;# 57, right shift, is the highest scancode we use
+    jnc  0b           ;# so if it's over, ignore that too
+    /* since we're ignoring scancodes less than 0x10, we subtract that
+    /* before indexing into the table, that way the table doesn't have
+    /* to have 16 wasted bytes */
+    mov  al, [keys-0x10+eax] ;# index into key table
     ret
 
 .align 4
@@ -925,7 +929,7 @@ accept:
 acceptn: mov dword ptr  shift, offset alpha0
     lea  edi, alpha-4
 accept1: mov  board, edi
-0: call key
+0:  call key
     cmp  al, 4
     jns  first
     mov  edx, shift
@@ -1066,11 +1070,15 @@ star0: mov dword ptr  shift, offset graph0
     jmp  accept1
 
 alph: mov dword ptr  shift, offset alpha1
+    /* variable 'board' holds a pointer to the keyboard currently in use:
+    /* alphabetic, numeric, graphic, etc.
+    /* since valid key codes start at 1, subtract length of 1 address
+    /* (4 bytes) from the start of the table into which we index */
     lea  edi, alpha-4
     jmp  0f
 graph: mov dword ptr  shift, offset graph1
     lea  edi, graphics-4
-0: mov  board, edi
+0:  mov  board, edi
     jmp  word0
 
 first: add dword ptr  shift, 4*4+4
@@ -1078,12 +1086,12 @@ first: add dword ptr  shift, 4*4+4
     call [aword]
     jmp  accept
 
-hicon: .byte 030, 031, 032, 033, 034, 035, 036, 037
-      .byte 040, 041,  5 , 023, 012, 020,  4 , 016
+hicon: .byte 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+    .byte 0x20, 0x21,  5 , 0x13, 0xa, 0x10,  4 , 0xe
 edig1: dup_
 edig: push ecx
-     mov  al, hicon[eax]
-     call emit
+    mov  al, hicon[eax]
+    call emit
     pop  ecx
     ret
 
@@ -1126,49 +1134,50 @@ qdot: cmp dword ptr  base, 10
 dot10: mov  edx, eax
     test edx, edx
     jns  0f
-        neg  edx
-        dup_
-        mov  eax, 043
-        call emit
-0: mov  ecx, 8
-0:     mov  eax, edx
-        xor  edx, edx
-        div dword ptr  tens[ecx*4]
-        test eax, eax
-        jnz  d_1
-        dec  ecx
-        jns  0b
+    neg  edx
+    dup_
+    mov  eax, 043
+    call emit
+0:  mov  ecx, 8
+0:  mov  eax, edx
+    xor  edx, edx
+    div dword ptr  tens[ecx*4]
+    test eax, eax
+    jnz  d_1
+    dec  ecx
+    jns  0b
     jmp  d_2
-0:     mov  eax, edx
-        xor  edx, edx
-        div dword ptr  tens[ecx*4]
-d_1:    call edig1
-        dec  ecx
-        jns  0b
+0:  mov  eax, edx
+    xor  edx, edx
+    div dword ptr  tens[ecx*4]
+d_1: call edig1
+    dec  ecx
+    jns  0b
 d_2: mov  eax, edx
     call edig1
     call space ;# spcr
     drop
     ret
 
+/* unpack the Huffman-coded characters in a 32-bit word */
 unpack: dup_
     test eax, eax
     js   0f
-        shl  dword ptr [esi], 4
-        rol  eax, 4
-        and  eax, 7
-        ret
-0: shl  eax, 1
+    shl  dword ptr [esi], 4
+    rol  eax, 4
+    and  eax, 7
+    ret
+0:  shl  eax, 1
     js   0f
-        shl  dword ptr [esi], 5
-        rol  eax, 4
-        and  eax, 7
-        xor  al, 010
-        ret
-0: shl  dword ptr [esi], 7
+    shl  dword ptr [esi], 5
+    rol  eax, 4
+    and  eax, 7
+    xor  al, 0x8
+    ret
+0:  shl  dword ptr [esi], 7
     rol  eax, 6
-    and  eax, 077
-    sub  al, 020
+    and  eax, 0x3f
+    sub  al, 0x10
     ret
 
 qring: dup_
@@ -1325,6 +1334,7 @@ cad:    .long 0
 pcad:   .long 0
 lcad:   .long 0
 trash:  .long buffer*4
+/* the editor keys and their actions */
 ekeys: .long nul, del, eout, destack
       .long act1, act3, act4, shadow
       .long mcur, mmcur, ppcur, pcur

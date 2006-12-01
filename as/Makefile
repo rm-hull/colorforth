@@ -122,3 +122,5 @@ bindiff: /tmp/color.xxd /tmp/gas_color.xxd
 	diff -y -W180 $+
 test:
 	cd ../test && $(MAKE)
+debug:
+	cd ../test && $(MAKE) BXDEBUG=1

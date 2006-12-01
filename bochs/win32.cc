@@ -752,7 +752,7 @@ void resize_main_window()
   if (desktop_y > 0 && stretched_y >= desktop_y) {
     BX_DEBUG(("BX_DEBUG: mainWndProc(): showing dialog before going fullscreen"));
     MessageBox(NULL,
-     "Going into fullscreen mode -- hit any System key to revert",
+     "Going into fullscreen mode -- hit Control key to revert",
      "Going fullscreen",
      MB_APPLMODAL);
     // hide toolbar and status bars to get some additional space
@@ -1228,12 +1228,15 @@ LRESULT CALLBACK simWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 
   case WM_KEYUP:
   case WM_SYSKEYUP:
+    BX_DEBUG(("BX_DEBUG: keyup received: %d", wParam));
     EnterCriticalSection(&stInfo.keyCS);
     enq_key_event(HIWORD (lParam) & 0x01FF, BX_KEY_RELEASED);
     LeaveCriticalSection(&stInfo.keyCS);
-    // no more fullscreen
-    if (saveParent) theGui->dimension_update(dimension_x, desktop_y - 1,
-     0, 0, current_bpp);
+    if (wParam == VK_CONTROL && saveParent) {
+     BX_DEBUG(("leaving fullscreen mode"));
+     theGui->dimension_update(dimension_x, desktop_y - 1,
+      0, 0, current_bpp);
+    }
     return 0;
 
   case WM_CHAR:
