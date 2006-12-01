@@ -112,6 +112,10 @@ static HBITMAP MemoryBitmap = NULL;
 static HDC MemoryDC = NULL;
 static RECT updated_area;
 static BOOL updated_area_valid = FALSE;
+static HWND desktopWindow;
+static RECT desktop;
+static int desktop_x, desktop_y;
+static BOOL toolbarVisible, statusVisible;
 
 // Text mode screen stuff
 static unsigned prev_cursor_x = 0;
@@ -168,10 +172,11 @@ static unsigned stretch_factor=1;
 static BOOL BxTextMode = TRUE;
 static BOOL legacyF12 = FALSE;
 static BOOL fix_size = FALSE;
-static HWND saveParent = NULL;
 #if BX_DEBUGGER
 static BOOL windebug = FALSE;
 #endif
+static HWND hotKeyReceiver = NULL;
+static HWND saveParent = NULL;
 
 static char *szMouseEnable = "CTRL + 3rd button enables mouse ";
 static char *szMouseDisable = "CTRL + 3rd button disables mouse";
@@ -605,6 +610,15 @@ void bx_win32_gui_c::specific_init(int argc, char **argv, unsigned
   int i;
 
   put("WGUI");
+
+  // prepare for possible fullscreen mode
+  desktopWindow = GetDesktopWindow();
+  GetWindowRect(desktopWindow, &desktop);
+  desktop_x = desktop.right - desktop.left;
+  desktop_y = desktop.bottom - desktop.top;
+  hotKeyReceiver = stInfo.mainWnd;
+  BX_DEBUG(("BX_DEBUG: Desktop Window dimensions: %d x %d", desktop_x, desktop_y));
+
   static RGBQUAD black_quad={ 0, 0, 0, 0};
   stInfo.kill = 0;
   stInfo.UIinited = FALSE;
@@ -718,27 +732,65 @@ void resize_main_window()
   RECT R;
   int toolbar_y = 0;
   int statusbar_y = 0;
+  unsigned long mainStyle;
   
-  BX_DEBUG(("resize_main_window() starting"));
+  BX_DEBUG(("BX_DEBUG: resize_main_window() starting"));
   if (IsWindowVisible(hwndTB)) {
+    toolbarVisible = TRUE;
     GetWindowRect(hwndTB, &R);
     toolbar_y = R.bottom - R.top;
   }
 
   if (IsWindowVisible(hwndSB)) {
+    statusVisible = TRUE;
     GetWindowRect(hwndSB, &R);
     statusbar_y = R.bottom - R.top;
   }
 
-  SetRect(&R, 0, 0, stretched_x, stretched_y);
-  DWORD style = GetWindowLong(stInfo.simWnd, GWL_STYLE);
-  DWORD exstyle = GetWindowLong(stInfo.simWnd, GWL_EXSTYLE);
-  AdjustWindowRectEx(&R, style, FALSE, exstyle);
-  style = GetWindowLong(stInfo.mainWnd, GWL_STYLE);
-  AdjustWindowRect(&R, style, FALSE);
-  SetWindowPos(stInfo.mainWnd, HWND_TOP, 0, 0, R.right - R.left,
+  // stretched_x and stretched_y were set in dimension_update()
+  // if we need to do any additional resizing, do it now
+  if (stretched_y >= desktop_y) {
+    BX_DEBUG(("BX_DEBUG: mainWndProc(): showing dialog before going fullscreen"));
+    MessageBox(NULL,
+     "Going into fullscreen mode. Ctrl-Enter to revert to partial screen",
+     "Going fullscreen",
+     MB_APPLMODAL);
+    // hide toolbar and status bars to get some additional space
+    ShowWindow(hwndTB, SW_HIDE);
+    ShowWindow(hwndSB, SW_HIDE);
+    // hide title bar
+    mainStyle = GetWindowLong(stInfo.mainWnd, GWL_STYLE);
+    mainStyle &= ~(WS_CAPTION | WS_BORDER);
+    SetWindowLong(stInfo.mainWnd, GWL_STYLE, mainStyle);
+    // maybe need to adjust stInfo.simWnd here also?
+    if (saveParent = SetParent(stInfo.mainWnd, desktopWindow)) {
+      BX_DEBUG(("BX_DEBUG: Saved parent window"));
+      SetWindowPos(stInfo.mainWnd, HWND_TOPMOST, desktop.left, desktop.top,
+       desktop.right, desktop.bottom, SWP_SHOWWINDOW);
+      RegisterHotKey(hotKeyReceiver, 0x1234, MOD_CONTROL, VK_RETURN); // Ctrl-Enter
+    }
+  } else {
+    if (saveParent) {
+      BX_DEBUG(("BX_DEBUG: Restoring parent window"));
+      SetParent(stInfo.mainWnd, saveParent);
+      saveParent = NULL;
+    }
+    // put back the title bar, border, etc...
+    mainStyle = GetWindowLong(stInfo.mainWnd, GWL_STYLE);
+    mainStyle |= WS_CAPTION | WS_BORDER;
+    SetWindowLong(stInfo.mainWnd, GWL_STYLE, mainStyle);
+    if (toolbarVisible) ShowWindow(hwndTB, SW_SHOW);
+    if (statusVisible) ShowWindow(hwndSB, SW_SHOW);
+    SetRect(&R, 0, 0, stretched_x, stretched_y);
+    DWORD style = GetWindowLong(stInfo.simWnd, GWL_STYLE);
+    DWORD exstyle = GetWindowLong(stInfo.simWnd, GWL_EXSTYLE);
+    AdjustWindowRectEx(&R, style, FALSE, exstyle);
+    style = GetWindowLong(stInfo.mainWnd, GWL_STYLE);
+    AdjustWindowRect(&R, style, FALSE);
+    SetWindowPos(stInfo.mainWnd, HWND_TOP, 0, 0, R.right - R.left,
                R.bottom - R.top + toolbar_y + statusbar_y,
                SWP_NOMOVE | SWP_NOZORDER);
+  }
   fix_size = FALSE;
 }
 
@@ -948,65 +1000,37 @@ LRESULT CALLBACK mainWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 
   case WM_SIZE:
     {
-      HWND desktopWindow;
-      HWND bxWnd = stInfo.simWnd;
-      int x, y, desktop_x, desktop_y;
-      RECT desktop;
+      int x, y;
+      BX_DEBUG(("BX_DEBUG: mainWndProc(): processing WM_SIZE"));
+      SendMessage(hwndTB, TB_AUTOSIZE, 0, 0);
+      SendMessage(hwndSB, WM_SIZE, 0, 0);
+      // now fit simWindow to mainWindow
       int rect_data[] = { 1, 0, IsWindowVisible(hwndTB),
        100, IsWindowVisible(hwndSB), 0x7712, 0, 0 };
       RECT R;
-      BX_DEBUG(("mainWndProc(): processing WM_SIZE"));
       GetEffectiveClientRect( hwnd, &R, rect_data );
       x = R.right - R.left;
       y = R.bottom - R.top;
       MoveWindow(stInfo.simWnd, R.left, R.top, x, y, TRUE);
       GetClientRect(stInfo.simWnd, &R);
+      x = R.right - R.left;
+      y = R.bottom - R.top;
       if ((x != (int)stretched_x) || (y != (int)stretched_y)) {
        BX_ERROR(("Sim client size(%d, %d) != stretched size(%d, %d)!",
         x, y, stretched_x, stretched_y));
-      }
-      desktopWindow = GetDesktopWindow();
-      GetWindowRect(desktopWindow, &desktop);
-      desktop_x = desktop.right - desktop.left;
-      desktop_y = desktop.bottom - desktop.top;
-      BX_DEBUG(("Desktop Window dimensions: %d x %d", desktop_x, desktop_y));
-      BX_DEBUG(("mainWnd dimensions: %d x %d", x, y));
-      if (stretched_y >= desktop_y) {
-       BX_DEBUG(("mainWndProc(): showing dialog before going fullscreen"));
-       MessageBox(NULL,
-       "Going into fullscreen mode. Ctrl-Enter to revert to partial screen",
-       "Going fullscreen",
-       MB_APPLMODAL);
-       ShowWindow(hwndTB, SW_HIDE);
-       if (saveParent = SetParent(bxWnd, desktopWindow)) {
-        BX_DEBUG(("Saved parent window"));
-        SetWindowPos(bxWnd, HWND_TOPMOST, desktop.left, desktop.top,
-         desktop.right, desktop.bottom, SWP_SHOWWINDOW);
-        RegisterHotKey(bxWnd, 0x1234, MOD_CONTROL, VK_RETURN); // Ctrl-Enter
-       }
-      } else {
-       if (saveParent) {
-        BX_DEBUG(("Restoring parent window"));
-        RECT rect;
-        SetParent(bxWnd, saveParent);
-        GetWindowRect(saveParent, &rect);
-        SetWindowPos(bxWnd, saveParent, rect.left, rect.top,
-         rect.right, rect.bottom, SWP_SHOWWINDOW);
-        saveParent = NULL;
-       }
-       ShowWindow(hwndTB, SW_SHOW);
-       SendMessage(hwndTB, TB_AUTOSIZE, 0, 0);
-       SendMessage(hwndSB, WM_SIZE, 0, 0);
-       fix_size = TRUE;
+       if (!saveParent) fix_size = TRUE; // no fixing if fullscreen
       }
     }
     break;
 
   case WM_HOTKEY:
+    BX_DEBUG(("BX_DEBUG: hotkey message received: 0x%x", wParam));
     if (wParam == 0x1234) {
      stretched_y -= 20;  // no more fullscreen
      resize_main_window();
+     UnregisterHotKey(hotKeyReceiver, 0x1234);
     }
+    break;
 
   case WM_DRAWITEM:
     lpdis = (DRAWITEMSTRUCT *)lParam;
@@ -1091,7 +1115,7 @@ LRESULT CALLBACK simWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
       cursorWarped();
     }
     if (fix_size) {
-      BX_DEBUG(("simWndProc(): processing WM_TIMER, resizing main window"));
+      BX_DEBUG(("BX_DEBUG: simWndProc(): processing WM_TIMER, resizing main window"));
       resize_main_window();
     }
     return 0;
@@ -1795,8 +1819,9 @@ void bx_win32_gui_c::graphics_tile_update(Bit8u *tile, unsigned x0, unsigned y0)
 
 void bx_win32_gui_c::dimension_update(unsigned x, unsigned y, unsigned fheight, unsigned fwidth, unsigned bpp)
 {
-  BX_DEBUG(("dimension_update() starting"));
-
+  BX_DEBUG(("BX_DEBUG: dimension_update() starting"));
+  BX_DEBUG(("BX_DEBUG: x = %d, y=%d, fheight = %d, fwidth=%d, bpp=%d",
+   x, y, fheight, fwidth, bpp));
   BxTextMode = (fheight > 0);
   if (BxTextMode) {
     text_cols = x / fwidth;
