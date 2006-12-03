@@ -63,6 +63,11 @@ def print_normal(printing, tagtype):
 
 def print_color(printing, tagtype):
  color = colortags[tagtype]
+ if printing:
+  output.write('%s[%d;%dm' % (escape, 0,
+   30 + colors.index('normal')))
+ if printing and tagtype == 3:
+  putchar('\n')
  output.write('%s[%d;%dm' % (escape, color != 'normal',
   30 + colors.index(color)))
 
