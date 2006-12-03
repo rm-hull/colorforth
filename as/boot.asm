@@ -1,9 +1,9 @@
 .intel_syntax ;# floppy boot segment
+; Floppy boot segment. Modified 7/17/01 for Asus P2B-D Floppy I/O Terry Loveall
 
 .org 0 ;# actually 7c00
 start: jmp  start0
     nop
-
     .ascii "cmcf 1.0"
     .word 512     ;# bytes/sector
     .byte 1       ;# sector/cluster
@@ -19,17 +19,17 @@ start: jmp  start0
     .long 80*2*18 ;# sectors again
     .byte 0       ;# drive
 
-command:  .byte 0
-         .byte 0   ;# head, drive
+command: .byte 0
+    .byte 0   ;# head, drive
 cylinder: .byte 0 ;# 1 in compiled color.com from CM website...
 ;# causes load to skip from cylinder 0 directly to cylinder 2,
 ;# missing bytes 0x4800 to 0x9000 in color.com image
-         .byte 0   ;# head
-         .byte 1   ;# sector
-         .byte 2   ;# 512 bytes/sector
-         .byte 18  ;# sectors/track
-         .byte 0x1b ;# gap
-         .byte 0x0ff
+    .byte 0   ;# head
+    .byte 1   ;# sector
+    .byte 2   ;# 512 bytes/sector
+    .byte 18  ;# sectors/track
+    .byte 0x1b ;# gap
+    .byte 0x0ff
 .align 4
 nc: .long 9 ;# forth+icons+blocks 24-161 ;# number of cylinders, 9 (out of 80)
 gdt: .word 0x17
@@ -108,16 +108,16 @@ a20: mov  al, 0x0d1
     mov  esi, offset godd ;# 0x9f448, 3000 bytes below 0xa0000 (gods)
     jmp  start2
 
-cold:   call sense_
-        jns  cold
+cold: call sense_
+    jns  cold
     mov  esi, offset godd ;# 0x9f448, 3000 bytes below 0xa0000 (gods)
     xor  edi, edi ;# cylinder 0 on top of address 0
     mov  cl, byte ptr nc ;# number of cylinders used
-0:     push ecx
-        call read
-        inc dword ptr  cylinder
-        pop  ecx
-        loop 0b
+0:  push ecx
+    call read
+    inc dword ptr  cylinder
+    pop  ecx
+    loop 0b
 start2: call stop
     jmp  start1
 
@@ -125,25 +125,25 @@ start2: call stop
 .equ ms, 1000*us
 spin: mov  cl, 0x1c
     call onoff
-;#    mov  dx, 0x3f2
-;#    out  dx, al
-0:     call sense_
-        jns  0b
+;#  mov  dx, 0x3f2
+;#  out  dx, al
+0:  call sense_
+    jns  0b
     mov dword ptr  cylinder, 0 ;# calibrate
     mov  al, 7
     mov  cl, 2
     call cmd
     mov  ecx, 500*ms
-0:     loop 0b
-cmdi:   call sense_
-        js   cmdi
+0:  loop 0b
+cmdi: call sense_
+    js   cmdi
     ret
 
 ready: ;#call delay
     mov  dx, 0x3f4
-0:     in   al, dx
-        shl  al, 1
-        jnc  0b
+0:  in   al, dx
+    shl  al, 1
+    jnc  0b
     lea  edx, [edx+1]
     ret
 
@@ -152,13 +152,13 @@ cmd: lea  edx, command
     mov  [edx], al
 cmd0: push esi
     mov  esi, edx
-cmd1:  call ready
-       jns  0f
-       in   al, dx
-       jmp  cmd1
-0:     lodsb
-       out  dx, al
-      loop cmd1
+cmd1: call ready
+    jns  0f
+    in   al, dx
+    jmp  cmd1
+0:  lodsb
+    out  dx, al
+    loop cmd1
     pop  esi
     ret
 
@@ -255,7 +255,7 @@ writef: call flop ;# ac-ac
     jmp  readf1
 
 seekf: call flop ;# c-c
-;#    call delay
+;#  call delay
     call seek
     mov  al, 0x0f
     mov  cl, 3

@@ -2,16 +2,20 @@
 
 ;#.486p
 
+;# can't use loopnz in 32-bit mode
 .macro next adr
     dec  ecx
     jnz  \adr
 .endm
 
+;# save contents of eax on data stack
+;# often used as copy of return stack pointer
 .macro dup_
     lea  esi, [esi-4]
     mov  [esi], eax
 .endm
 
+;# pop what's at bottom of data stack back into eax
 .macro drop
     lodsd
 .endm
@@ -49,24 +53,38 @@ start1: pop [displ]
     call load
     jmp  accept ;# wait for keyhit
 
-.equ gods, 0x28000*4 ;# 0x0a0000, data stack pointer
-.equ godd, gods-750*4
-.equ mains, godd-1500*4
-.equ maind, mains-750*4
+;# This version of colorforth has cooperative round-robin multi-tasking.
+;# the tasks are: God (the forth kernel), and main
+;# Each has two grows-down stacks; 's' indicates the
+;# return stack, 'd' indicates the data stack.  Thus 'Gods' and 'Godd'
+;# are the tops of the return and data stacks, respectively, for the
+;# God task.
+.equ gods, 0x28000*4 ;# 0xa0000, top of return stack
+.equ godd, gods-750*4 ;# 0x9f448, top of data stack
+.equ mains, godd-1500*4 ;# 0x9dcd8
+.equ maind, mains-750*4 ;# 0x9d120
 .align 4
+;# 'me' points to the save slot for the current task
     me: .long god
 screen: .long 0 ;# logo
 
+;# When we switch tasks, we need to switch stacks as well.  We do this
+;# by pushing eax (cached top-of-stack) onto the data stack, pushing
+;# the data stack pointer onto the return stack, and then saving the
+;# return stack pointer into the save slot for the task.
+;#
+;# these are the save slots - each is followed by code to resume the
+;# next task - the last one jumps 'round to the first.
 round: call unpause
 god:     .long 0 ;# gods-2*4
     call unpause
 main:    .long 0 ;# mains-2*4
     jmp  round
 
-pause: dup_
-    push esi
-    mov  eax, me
-    mov  [eax], esp
+pause: dup_ ;# save cached top-of return stack
+    push esi ;# save data stack pointer on return stack
+    mov  eax, me ;# get current task
+    mov  [eax], esp ;# put our stack pointer into [me]
     add  eax, 4
     jmp  eax
 
@@ -93,11 +111,11 @@ show: pop  screen ;# pops address of 'ret' just preceding
     dup_
     xor  eax, eax
     call act
-0:     call graphic
-        call [screen] ;# ret?
-        call switch
-        inc  eax
-        jmp  0b
+0:  call graphic
+    call [screen] ;# ret?
+    call switch
+    inc  eax
+    jmp  0b
 
 c_:  mov  esi, godd+4
     ret
@@ -116,7 +134,7 @@ empty: mov  ecx, mk+2*4
     mov  forths, ecx
     mov  ecx, mk
     mov  macros, ecx
-    mov dword ptr  class, 0
+    mov  dword ptr  class, 0
     ret
 
 mfind: mov  ecx, macros
@@ -127,7 +145,7 @@ mfind: mov  ecx, macros
 find: mov  ecx, forths
     push edi
     lea  edi, [forth0-4+ecx*4]
-0: std
+0:  std  ;# search backwards
     repne scasd
     cld
     pop  edi
@@ -135,12 +153,12 @@ find: mov  ecx, forths
 
 ex1: dec dword ptr  words ;# from keyboard
     jz   0f
-        drop
-        jmp  ex1
-0: call find
+    drop
+    jmp  ex1
+0:  call find
     jnz  abort1
-        drop
-        jmp  [forth2+ecx*4]
+    drop
+    jmp  [forth2+ecx*4]
 
 execute: mov dword ptr  lit, offset alit
     dup_
@@ -148,13 +166,13 @@ execute: mov dword ptr  lit, offset alit
 ex2: and  eax, -020
     call find
     jnz  abort
-        drop
-        jmp  [forth2+ecx*4]
+    drop
+    jmp  [forth2+ecx*4]
 
 abort: mov  curs, edi
     shr  edi, 10-2
     mov  blk, edi
-abort1: mov  esp, gods ;# reset data stack pointer
+abort1: mov  esp, gods ;# reset return stack pointer
     mov dword ptr  spaces+3*4, offset forthd
     mov dword ptr  spaces+4*4, offset qcompile
     mov dword ptr  spaces+5*4, offset cnum
@@ -397,14 +415,10 @@ adefine: .long 5+macro_ ;# macrod ?
   list: .long 0, 0
 macros: .long 0
 forths: .long 0
-;#macro0 .long (3 << 4+1)<< 24 ; or
-;#       .long ((5 << 4+6)<< 7+0140)<< 17 ; and
-;#       .long 0173 << 25 ; +
 macro0: .long 0170 << 25 ;# ;
        .long ((0140 << 7+0146)<< 7+0142)<< 11 ;# dup
        .long (((0177 << 7+0140)<< 7+0146)<< 7+0142)<< 4 ;# ?dup
        .long (((0140 << 4+1)<< 4+3)<< 7+0142)<< 10 ;# drop
-;#       .long ((6 << 4+7)<< 7+0142)<< 17 ; nip
        .long (((2 << 7+0144)<< 4+4)<< 4+6)<< 13 ;# then
        .long ((((0143 << 4+4)<< 5+025)<< 4+7)<< 4+6)<< 8 ;# begin
 macro1: .rept 128 .long 0; .endr
@@ -421,7 +435,6 @@ forth0: .long (((0143 << 4+3)<< 4+3)<< 4+2)<< 13 ;# boot
        .long (((((022 << 4+3)<< 5+021)<< 5+021)<< 4+5)<< 4+6)<< 5;# comman d
        .long (((020 << 4+4)<< 4+4)<< 7+0164)<< 12 ;# seek
        .long ((((1 << 4+4)<< 4+5)<< 7+0140)<< 5+023)<< 8 ;# ready
-;#       .long (((022 << 5+024)<< 4+1)<< 4+7)<< 14 ; clri
        .long ((5 << 5+022)<< 4+2)<< 19 ;# act
        .long (((020 << 7+0144)<< 4+3) << 5+027)<< 11 ;# show
        .long (((024 << 4+3)<< 4+5)<< 7+0140)<< 12 ;# load
@@ -450,17 +463,10 @@ forth0: .long (((0143 << 4+3)<< 4+3)<< 4+2)<< 13 ;# boot
        .long (((0140 << 4+3)<< 5+027)<< 4+6)<< 12 ;# down
        .long (((4 << 7+0140)<< 4+7)<< 4+2)<< 13 ;# edit
        .long 4 << 28 ;# e
-;#       .long (((026 << 4+3)<< 4+6)<< 4+2)<< 15 ; font
        .long (024 << 5+021)<< 22 ;# lm
        .long (1 << 5+021)<< 23 ;# rm
        .long ((((025 << 4+1)<< 4+5)<< 7+0142)<< 7+0144)<< 5 ;# graph ic
        .long (((2 << 4+4)<< 7+0145)<< 4+2)<< 13 ;# text
-;#       .long (0153 << 7+0140)<< 18 ; 3d
-;#       .long (((((1 << 4+4)<< 4+6)<< 7+0140)<< 4+4)<< 4+1)<< 5 ; render
-;#       .long ((((0141 << 4+4)<< 4+1)<< 4+2)<< 4+4)<< 9 ; verte x
-;#       .long ((((026 << 4+1)<< 4+3)<< 4+6)<< 4+2)<< 11 ; front
-;#       .long ((2 << 4+3)<< 7+0142)<< 17 ; top
-;#       .long (((020 << 4+7)<< 7+0140)<< 4+4)<< 12 ; side
        .long ((((0164 << 4+4)<< 5+023)<< 7+0143)<< 4+3)<< 5 ;# keybo ard
        .long (((0140 << 4+4)<< 7+0143)<< 7+0146)<< 7 ;# debu g
        .long (5 << 4+2)<< 24 ;# at
@@ -471,21 +477,15 @@ forth0: .long (((0143 << 4+3)<< 4+3)<< 4+2)<< 13 ;# boot
        .long ((0143 << 4+3)<< 7+0145)<< 14 ;# box
        .long (((024 << 4+7)<< 4+6)<< 4+4)<< 15 ;# line
        .long ((((022 << 4+3)<< 5+024)<< 4+3)<< 4+1)<< 10 ;# color
-;#       .long (((022 << 5+024)<< 4+7)<< 7+0142)<< 11 ; clip
        .long (((((3 << 5+022)<< 4+2)<< 4+5)<< 4+6)<< 4+2)<< 7 ;# octant
        .long (020 << 7+0142)<< 20 ;# sp
        .long (((024 << 4+5)<< 5+020)<< 4+2)<< 14 ;# last
        .long (((((0146 << 4+6)<< 7+0142)<< 4+5)<< 5+022))<< 5 ;# unpac k
-;#       .long (((0142 << 4+5)<< 5+022)<< 7+0164)<< 9 ; pack
 forth1: .rept 512 .long 0; .endr
-;#macro2 .long offset cor
-;#       .long offset cand
-;#       .long offset plus
 macro2: .long semi
        .long cdup
        .long qdup
        .long cdrop
-;#       .long offset nip
        .long then
        .long begin
        .rept 128 .long 0; .endr
@@ -530,17 +530,10 @@ forth2: .long boot
        .long down
        .long edit
        .long e
-;#       .long offset font
        .long lms
        .long rms
        .long graphic
        .long text1
-;#       .long offset set3d
-;#       .long offset render
-;#       .long offset vertex
-;#       .long offset front
-;#       .long offset top_
-;#       .long offset side
        .long keyboard
        .long debug
        .long at
@@ -551,12 +544,10 @@ forth2: .long boot
        .long box
        .long line
        .long color
-;#       .long offset clip
        .long octant
        .long sps
        .long last_
        .long unpack
-;#       .long offset pack
        .rept 512 .long 0; .endr
 
 boot: mov  al, 0x0fe ;# reset
@@ -574,19 +565,6 @@ erase: mov  ecx, eax
     pop edi
     drop
     ret
-
-;#move: mov  ecx, eax
-;#    drop
-;#    mov  edi, eax
-;#    shl  edi, 2
-;#    drop
-;#    push esi
-;#     mov  esi, eax
-;#     shl  esi, 2
-;#     rep movsd
-;#    pop  esi
-;#    drop
-;#    ret
 
 copy: cmp  eax, 12
     jc   abort1
@@ -749,37 +727,6 @@ pat: add  word ptr xy, ax
     drop
     ret
 
-;#cl1: xor  eax, eax
-;#    mov  [esi], eax
-;#    ret
-;#clip: movsx edx, word ptr xy
-;#    cmp  edx, vp
-;#    jns  cl1
-;#    add  eax, edx
-;#    js   cl1
-;#    test edx, edx
-;#    jns  0f
-;#        xor  edx, edx
-;#@@: cmp  eax, vp
-;#    js   0f
-;#        mov  eax, vp
-;#@@: sub  eax, edx
-;#    mov  word ptr xy, dx
-;#    movsx edx, word ptr xy+2
-;#    cmp  edx, hp
-;#    jns  cl1
-;#    add  [esi], edx
-;#    js   cl1
-;#    test edx, edx
-;#    jns  0f
-;#        xor  edx, edx
-;#@@: cmp  dword ptr [esi], hp
-;#    js   0f
-;#        mov  dword ptr [esi], hp
-;#@@: sub  [esi], edx
-;#    mov  word ptr xy+2, dx
-;#    ret
-
 octant: dup_
     mov  eax, 0x43 ;# poly -last y+ x+ ;0x23 ; last y+ x+
     mov  edx, [4+esi]
@@ -794,11 +741,16 @@ octant: dup_
 0: ret
 
 ;# keyboard
+;# display one line of the onscreen keyboard (eight icons)
+;# four chars at addr+12, space, four chars at addr.
+;# IN: edi = addr-4
+;# OUT: edi = addr
 eight: add  edi, 12
     call four
     call space
     sub  edi, 16
 four: mov  ecx, 4
+;# display ECX chars from EDI+4, incrementing EDI with each char.
 four1:  push ecx
         dup_
         xor  eax, eax
@@ -882,7 +834,7 @@ keys: .byte 16, 17, 18, 19,  0,  0,  4,  5 ;# 20
      .byte  0,  1, 12, 13, 14, 15,  0,  0 ;# 60 n
      .byte  3,  2 ;# alt space
 
-key: dup_             ;# why DUP here?
+key: dup_             ;# save copy of return stack pointer(?)
     xor  eax, eax     ;# used as index later, so clear it
 0:  call pause        ;# busy-wait
     in   al, 0x64     ;# keyboard status port
@@ -900,6 +852,10 @@ key: dup_             ;# why DUP here?
     ret
 
 .align 4
+; layouts for the thumb (shift) keys
+; these sort of go in pairs:
+;	foo0 is for the first character of a word
+;	foo1 is used for the rest
 graph0: .long nul0, nul0, nul0, alph0
        .byte  0 ,  0 ,  5 , 0 ;#     a
 graph1: .long word0, x, lj, alph
@@ -1021,14 +977,13 @@ xn: drop
     drop
     jmp  acceptn
 
-;#      .byte  0,  0,  0,  0
 digit: .byte 14, 10,  0,  0
       .byte  0,  0, 12,  0,  0,  0, 15,  0
       .byte 13,  0,  0, 11,  0,  0,  0,  0
       .byte  0,  1,  2,  3,  4,  5,  6,  7
       .byte  8,  9
 sign: .byte 0
-minus: ;# mov  al, 043 ; -
+minus:
     mov  sign, al
     jmp  number2
 
