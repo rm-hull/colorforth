@@ -1,5 +1,5 @@
 .intel_syntax ;# floppy boot segment
-; Floppy boot segment. Modified 7/17/01 for Asus P2B-D Floppy I/O Terry Loveall
+;# Floppy boot segment. Modified 7/17/01 for Asus P2B-D Floppy I/O Terry Loveall
 
 .org 0 ;# actually 7c00
 start: jmp  start0
@@ -47,18 +47,32 @@ gdt0: .word 0, 0, 0, 0
 
 .code16
 start0:
+.ifdef AGP
+    mov  ax, 0x4f02 ;# video mode
+    mov  bx, vesa ;# hp*vp rgb: 565
+.else  # use VBE call to determine RAM address of desired video mode
     mov  ax, 0x4f01 ;# get video mode info
     mov  cx, vesa ;# a 16-bit color linear video mode (5:6:5 rgb)
     mov  di, 0x7e00 ;# use buffer space just past loaded bootsector
     int  0x10
     mov  ax, 0x4f02 ;# set video mode
     mov  bx, cx ;# vesa mode
+.endif
     int  0x10
     cli
     xor  ax, ax    ;# move code to 0
+.ifdef QUESTIONABLE  # some things in CM's source which can be left out?
+    mov  bx, ax
+    mov  bx, cs
+    mov  ds, bx
+    mov  es, ax
+    mov  di, ax
+    mov  si, ax
+.else
     mov  di, ax
     mov  bx, cs
     mov  ds, bx
+.endif
     call loc ;# where are we? ip+4*cs
 loc: pop  si
     sub  si, offset loc-offset start
@@ -87,7 +101,9 @@ protected: ;# now in protected 32-bit mode
     mov  es, eax
     mov  ss, eax
     mov  esp, offset gods ;# assembles as a dword ptr without 'offset'
+.ifndef AGP
     push [ds:0x7e28] ;# physical memory pointer returned by VESA call
+.endif
     xor  ecx, ecx
 
 a20: mov  al, 0x0d1

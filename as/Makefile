@@ -46,20 +46,32 @@ recipes += offset orgminus use16 use32
 sed := sed $(foreach regex, $(recipes), $($(regex)))
 GAS := as -R
 export
+help:
+	@echo To build the most universally usable color.com: make new
+	@echo To build the closest thing to CM's 2001 color.com: make cm2001
+	@echo Read Makefile for other options.
 %.dat:	%.asm
 	$(GAS) -ahlmns=$*.lst -o $*.o $<
 	objcopy $*.o -O binary $@
 color.com: $(sources) secondpass
 	$(GAS) $(if $(SMALLSCREEN),--defsym SMALLSCREEN=$(SMALLSCREEN)) \
+	 $(if $(QUESTIONABLE),--defsym QUESTIONABLE=$(QUESTIONABLE)) \
+	 $(if $(AGP),--defsym AGP=$(AGP)) \
 	 -ahlmns=color.lst -o color.o color.asm
 	objcopy color.o -O binary color.bin
 	# now get original color.com for its data blocks starting at 0x3000
 	cp -f ../color.com .
 	dd if=/dev/zero of=color.com bs=1024 count=12 conv=notrunc
 	dd if=color.bin of=color.com bs=1024 count=12 conv=notrunc
-small:
-	touch color.asm
+new:	color.asm
+	touch $<
+	$(MAKE) color.com
+small:	color.asm
+	touch $<
 	$(MAKE) SMALLSCREEN=1 color.com
+cm2001: color.asm
+	touch $<
+	$(MAKE) AGP=1 QUESTIONABLE=1 color.com
 $(sources): $(original)
 	for file in $+; do \
 	 $(sed) $$file | sed $(code16) | \

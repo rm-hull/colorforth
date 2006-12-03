@@ -43,7 +43,12 @@
 ;#        0 forth
 
 warm: dup_
-start1: pop [displ]
+start1:
+.ifdef AGP
+    call ati0  # access North Bridge chipset to get display RAM address
+.else
+    pop [displ]  # use address determined by VBE2 call in boot.asm
+.endif
 ;#    mov  screen, offset nul
 ;#    xor  eax, eax
     call show0
@@ -852,10 +857,10 @@ key: dup_             ;# save copy of return stack pointer(?)
     ret
 
 .align 4
-; layouts for the thumb (shift) keys
-; these sort of go in pairs:
-;	foo0 is for the first character of a word
-;	foo1 is used for the rest
+;# layouts for the thumb (shift) keys
+;# these sort of go in pairs:
+;# foo0 is for the first character of a word
+;# foo1 is used for the rest
 graph0: .long nul0, nul0, nul0, alph0
        .byte  0 ,  0 ,  5 , 0 ;#     a
 graph1: .long word0, x, lj, alph
