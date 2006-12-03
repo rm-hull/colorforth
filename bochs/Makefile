@@ -1,7 +1,7 @@
 BOCHS := /usr/src/bochs
 export
-bochs:
-	cd $(BOCHS) && $(MAKE)
+# make bochsdbg.exe first because it builds as bochs.exe!
+all:	$(BOCHS)/bochsdbg.exe $(BOCHS)/bochs.exe
 set:
 	set
 %.diff:
@@ -12,7 +12,7 @@ checkin:
 	cd .. && cvs commit
 cvsdiff:
 	cd .. && cvs diff
-configure:
+configure: Makefile
 	cd $(BOCHS) && ./configure \
 	 --enable-vbe \
 	 --enable-cirrus \
@@ -32,11 +32,17 @@ configure:
 	 --enable-cpu-level=6 \
 	 --enable-readline \
 	 $(DEBUG_CONFIG)
-debug_config:
+	touch $@
+debug_config: Makefile
+	rm -f configure
 	$(MAKE) DEBUG_CONFIG="--enable-debugger --enable-disasm" configure
-$(BOCHS)/bochs.exe:
-	$(MAKE) configure
+	rm -f configure
+	touch $@
+$(BOCHS)/bochs.exe: configure
 	cd $(BOCHS) && $(MAKE)
-$(BOCHS)/bochsdbg.exe:
-	$(MAKE) debug_config
+$(BOCHS)/bochsdbg.exe: debug_config
 	cd $(BOCHS) && $(MAKE) && mv bochs.exe bochsdbg.exe
+distclean:
+	rm $(BOCHS)/bochs{,dbg}.exe
+test:
+	cd ../test && $(MAKE)

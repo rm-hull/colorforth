@@ -752,7 +752,7 @@ void resize_main_window()
   if (desktop_y > 0 && stretched_y >= desktop_y) {
     BX_DEBUG(("BX_DEBUG: mainWndProc(): showing dialog before going fullscreen"));
     MessageBox(NULL,
-     "Going into fullscreen mode -- hit Control key to revert",
+     "Going into fullscreen mode -- Alt-Enter to revert",
      "Going fullscreen",
      MB_APPLMODAL);
     // hide toolbar and status bars to get some additional space
@@ -767,6 +767,10 @@ void resize_main_window()
       BX_DEBUG(("BX_DEBUG: Saved parent window"));
       SetWindowPos(stInfo.mainWnd, HWND_TOPMOST, desktop.left, desktop.top,
        desktop.right, desktop.bottom, SWP_SHOWWINDOW);
+      if (!RegisterHotKey(hotKeyReceiver,
+        0x1234, MOD_ALT, VK_RETURN)) { // alt-enter
+        BX_ERROR(("No hotkey! Must use alt-tab or windows key to close app"));
+      }
     }
   } else {
     if (saveParent) {
@@ -1083,7 +1087,19 @@ LRESULT CALLBACK simWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
   POINT pt;
   static BOOL mouseModeChange = FALSE;
 
+  BX_DEBUG(("simWndProc(): message = 0x%x", iMsg));
+
   switch (iMsg) {
+   
+  case WM_HOTKEY:
+    BX_DEBUG(("BX_DEBUG: hotkey received: 0x%x", wParam));
+    if (wParam == 0x1234) {
+     BX_DEBUG(("BX_DEBUG: leaving fullscreen mode"));
+     UnregisterHotKey(hotKeyReceiver, 0x1234);
+     theGui->dimension_update(dimension_x, desktop_y - 1,
+      0, 0, current_bpp);
+    }
+
   case WM_CREATE:
 #if BX_USE_WINDOWS_FONTS
     InitFont();
@@ -1228,15 +1244,9 @@ LRESULT CALLBACK simWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 
   case WM_KEYUP:
   case WM_SYSKEYUP:
-    BX_DEBUG(("BX_DEBUG: keyup received: %d", wParam));
     EnterCriticalSection(&stInfo.keyCS);
     enq_key_event(HIWORD (lParam) & 0x01FF, BX_KEY_RELEASED);
     LeaveCriticalSection(&stInfo.keyCS);
-    if (wParam == VK_CONTROL && saveParent) {
-     BX_DEBUG(("leaving fullscreen mode"));
-     theGui->dimension_update(dimension_x, desktop_y - 1,
-      0, 0, current_bpp);
-    }
     return 0;
 
   case WM_CHAR:

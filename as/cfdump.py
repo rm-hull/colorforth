@@ -10,8 +10,8 @@ oldcode  = ' rtoeani' + 'smcylgfw' + 'dvpbhxuq' + 'kzj34567' + \
            '891-0.2/' + ';:!+@*,?'
 newcode  = ' rtoeani' + 'smcylgfw' + 'dvpbhxuq' + '01234567' + \
            '89j-k.z/' + ';:!+@*,?'
-#code = newcode  # assume Tim knows what he's doing
-code = oldcode  # assume Chuck knows what he's saying
+code = newcode  # assume Tim knows what he's doing
+#code = oldcode  # assume Chuck knows what he's saying
 
 output = sys.stdout
 
@@ -67,7 +67,7 @@ def print_text(coded):
   if nybble < 0x8:  # 4-bit coded character
    putchar(code[nybble])
   elif nybble < 0xc: # 5-bit code
-   putchar(code[((nybble << 1) | (coded & highbit > 0))])
+   putchar(code[(((nybble ^ 0xc) << 1) | (coded & highbit > 0))])
    coded = (coded << 1) & mask
   else:  # 7-bit code
    putchar(code[(coded >> 29) + (8 * (nybble - 10))])

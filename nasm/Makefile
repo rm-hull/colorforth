@@ -1,3 +1,4 @@
+DMAVERSION := /usr/src/howerd/Josh/chuck05-jg2
 original := $(wildcard ../masm/*.asm)
 sources := $(notdir $(original))
 # sed recipes (commands) for converting MASM code to NASM assembler
@@ -42,7 +43,7 @@ offset_test := -n -e '/$(label_if_any).*offset/p'  # must be used alone
 regex_test := sed $(foreach regex, $(REGEX), $($(regex)))
 # order of the recipes can be important!
 recipes := 
-recipes += lowercase shift comment unused nasm_reserved indexed
+recipes += lowercase shift unused nasm_reserved indexed
 recipes += octal macro0 endm includes ptr use16 use32 orgminus
 recipes += dup xor extended_addressing
 sed := sed $(foreach regex, $(recipes), $($(regex)))
@@ -65,7 +66,7 @@ color.dsm: ../color.com
 set:
 	set
 diff:	sources.txt original.txt
-	-diff -W180 -y $+
+	-diff -i -b -B -W180 -y $+
 sources.txt: $(sources)
 	cat $+ > $@
 original.txt: $(original)
@@ -99,3 +100,11 @@ ci:
 	-ci -u RCS/*
 	-rcs -U RCS/* &>/dev/null
 	-ci -u RCS/* &>/dev/null
+%.dmadiff: %
+	diff -i -b -B -y -W160 $(DMAVERSION)/$< $<
+dma:	$(DMAVERSION)
+	cd $< && $(NASM) -o color.com color.asm
+	touch $@
+dmatest: dma
+	cp $(DMAVERSION)/color.com ../as
+	cd ../test && $(MAKE) oldbxnewcf
