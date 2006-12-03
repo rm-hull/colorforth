@@ -2,12 +2,14 @@ BOCHS := /usr/src/bochs
 export
 # make bochsdbg.exe first because it builds as bochs.exe!
 all:	$(BOCHS)/bochsdbg.exe $(BOCHS)/bochs.exe
+force:
+	$(MAKE) distclean
+	touch Makefile
+	$(MAKE) all
 set:
 	set
 %.diff:
 	-diff -y -W160 $* $(shell find $(BOCHS) -name "$*.orig")
-test:
-	cd ../test && $(MAKE)
 checkin:
 	cd .. && cvs commit
 cvsdiff:
@@ -43,6 +45,6 @@ $(BOCHS)/bochs.exe: configure
 $(BOCHS)/bochsdbg.exe: debug_config
 	cd $(BOCHS) && $(MAKE) && mv bochs.exe bochsdbg.exe
 distclean:
-	rm $(BOCHS)/bochs{,dbg}.exe
+	rm -f $(BOCHS)/bochs{,dbg}.exe
 test:
 	cd ../test && $(MAKE)
