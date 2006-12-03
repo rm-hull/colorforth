@@ -48,7 +48,7 @@ GAS := as -R
 export
 help:
 	@echo To build the most universally usable color.com: make new
-	@echo To build the closest thing to CM's 2001 color.com: make cm2001
+	@echo To build the closest thing to CM\'s 2001 color.com: make cm2001
 	@echo Read Makefile for other options.
 %.dat:	%.asm
 	$(GAS) -ahlmns=$*.lst -o $*.o $<

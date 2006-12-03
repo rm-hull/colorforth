@@ -3,7 +3,7 @@
 
    public domain code based on Tim Neitz's cf2html"""
 
-import sys, struct
+import sys, os, struct
 
 # the old huffman code is from http://www.colorforth.com/chars.html
 oldcode  = ' rtoeani' + 'smcylgfw' + 'dvpbhxuq' + 'kzj34567' + \
@@ -51,7 +51,8 @@ def putchar(character):
  output.write(character)
 
 def print_normal(printing, tagtype):
- pass
+ if printing and tagtype == 3:
+  putchar('\n')
 
 def print_color(printing, tagtype):
  color = colortags[tagtype]
@@ -136,7 +137,7 @@ def init():
  global print_formats
  print_formats = [print_normal, print_color, print_tags]
 
-def dump(filename):
+def cfdump(filename):
  init()
  if not filename:
   file = sys.stdin
@@ -150,7 +151,17 @@ def dump(filename):
   debug('dumping block %d' % (block / 1024))
   dump_block(chunk)
 
+def dump_color(filename):
+ format = 'color'
+ cfdump(filename)
+
+def dump_html(filename):
+ format = 'html'
+ cfdump(filename)
+
 if __name__ == '__main__':
- dump(sys.argv[1])
+ os.path.split
+ command = os.path.splitext(os.path.split(sys.argv[0])[1])[0]
+ (eval(command))(sys.argv[1])
 else:
  pass
