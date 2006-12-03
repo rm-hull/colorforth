@@ -81,6 +81,7 @@ IMPLEMENT_GUI_PLUGIN_CODE(win32)
 #define MOUSE_PRESSED       0x20000000
 #define HEADERBAR_CLICKED   0x08000000
 #define MOUSE_MOTION        0x22000000
+#define BX_SYSKEY           KF_UP|KF_REPEAT|KF_ALTDOWN
 void enq_key_event(Bit32u, Bit32u);
 void enq_mouse_event(void);
 
@@ -114,6 +115,7 @@ static RECT updated_area;
 static BOOL updated_area_valid = FALSE;
 static HWND desktopWindow;
 static RECT desktop;
+static BOOL queryFullScreen = FALSE;
 static int desktop_x, desktop_y;
 static BOOL toolbarVisible, statusVisible;
 
@@ -750,11 +752,14 @@ void resize_main_window()
   // stretched_x and stretched_y were set in dimension_update()
   // if we need to do any additional resizing, do it now
   if (desktop_y > 0 && stretched_y >= desktop_y) {
-    BX_DEBUG(("BX_DEBUG: mainWndProc(): showing dialog before going fullscreen"));
-    MessageBox(NULL,
-     "Going into fullscreen mode -- Alt-Enter to revert",
-     "Going fullscreen",
-     MB_APPLMODAL);
+    if (!queryFullScreen) {
+     BX_DEBUG(("BX_DEBUG: mainWndProc(): asking before going fullscreen"));
+     MessageBox(NULL,
+      "Going into fullscreen mode -- Alt-Enter to revert",
+      "Going fullscreen",
+      MB_APPLMODAL);
+     queryFullScreen = TRUE;
+    }
     // hide toolbar and status bars to get some additional space
     ShowWindow(hwndTB, SW_HIDE);
     ShowWindow(hwndSB, SW_HIDE);
@@ -767,10 +772,6 @@ void resize_main_window()
       BX_DEBUG(("BX_DEBUG: Saved parent window"));
       SetWindowPos(stInfo.mainWnd, HWND_TOPMOST, desktop.left, desktop.top,
        desktop.right, desktop.bottom, SWP_SHOWWINDOW);
-      if (!RegisterHotKey(hotKeyReceiver,
-        0x1234, MOD_ALT, VK_RETURN)) { // alt-enter
-        BX_ERROR(("No hotkey! Must use alt-tab or windows key to close app"));
-      }
     }
   } else {
     if (saveParent) {
@@ -1087,18 +1088,7 @@ LRESULT CALLBACK simWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
   POINT pt;
   static BOOL mouseModeChange = FALSE;
 
-  BX_DEBUG(("simWndProc(): message = 0x%x", iMsg));
-
   switch (iMsg) {
-   
-  case WM_HOTKEY:
-    BX_DEBUG(("BX_DEBUG: hotkey received: 0x%x", wParam));
-    if (wParam == 0x1234) {
-     BX_DEBUG(("BX_DEBUG: leaving fullscreen mode"));
-     UnregisterHotKey(hotKeyReceiver, 0x1234);
-     theGui->dimension_update(dimension_x, desktop_y - 1,
-      0, 0, current_bpp);
-    }
 
   case WM_CREATE:
 #if BX_USE_WINDOWS_FONTS
@@ -1244,14 +1234,55 @@ LRESULT CALLBACK simWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 
   case WM_KEYUP:
   case WM_SYSKEYUP:
-    EnterCriticalSection(&stInfo.keyCS);
-    enq_key_event(HIWORD (lParam) & 0x01FF, BX_KEY_RELEASED);
-    LeaveCriticalSection(&stInfo.keyCS);
+    BX_DEBUG(("simWndProc(): message = 0x%x: 0x%x, 0x%x",
+     iMsg, wParam, lParam));
+    // check if it's keyup, alt key, non-repeat
+    // see http://msdn2.microsoft.com/en-us/library/ms646267.aspx
+    if (wParam == VK_RETURN) {
+     BX_DEBUG(("BX_DEBUG: return key pressed"));
+     if ((HIWORD (lParam) & BX_SYSKEY) == (KF_ALTDOWN | KF_UP)) {
+      BX_DEBUG(("got fullscreen hotkey"));
+      if (!saveParent) {
+       BX_DEBUG(("BX_DEBUG: entering fullscreen mode"));
+       theGui->dimension_update(desktop_x, desktop_y,
+        0, 0, current_bpp);
+      } else {
+       BX_DEBUG(("BX_DEBUG: leaving fullscreen mode"));
+       theGui->dimension_update(dimension_x, desktop_y - 1,
+        0, 0, current_bpp);
+      }
+     }
+    } else {
+     EnterCriticalSection(&stInfo.keyCS);
+     enq_key_event(HIWORD (lParam) & 0x01FF, BX_KEY_RELEASED);
+     LeaveCriticalSection(&stInfo.keyCS);
+    }
     return 0;
 
+  case WM_SYSCHAR:
+    BX_DEBUG(("simWndProc(): message = 0x%x: 0x%x, 0x%x",
+     iMsg, wParam, lParam));
+    BX_DEBUG(("VK_RETURN: 0x%x, lParam & 0xe0000000: 0x%x",
+     VK_RETURN, lParam & 0xe0000000));
+    // check if it's keydown, alt key, non-repeat
+    // see http://msdn2.microsoft.com/en-us/library/ms646267.aspx
+    if (wParam == VK_RETURN) {
+     BX_DEBUG(("BX_DEBUG: return key pressed"));
+     if (HIWORD (lParam) & BX_SYSKEY == KF_ALTDOWN) {
+      BX_DEBUG(("got fullscreen hotkey"));
+      if (!saveParent) {
+       BX_DEBUG(("BX_DEBUG: entering fullscreen mode"));
+       theGui->dimension_update(desktop_x, desktop_y,
+        0, 0, current_bpp);
+      } else {
+       BX_DEBUG(("BX_DEBUG: leaving fullscreen mode"));
+       theGui->dimension_update(dimension_x, desktop_y - 1,
+        0, 0, current_bpp);
+      }
+     }
+    }
   case WM_CHAR:
   case WM_DEADCHAR:
-  case WM_SYSCHAR:
   case WM_SYSDEADCHAR:
     return 0;
   }

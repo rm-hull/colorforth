@@ -1,5 +1,5 @@
 #!/usr/bin/python
-"""dump a colorForth image block
+"""dump a colorForth image file
 
    public domain code based on Tim Neitz's cf2html"""
 
@@ -22,16 +22,23 @@ escape = chr(0x1b)
 colors = ['', 'red', 'green', 'yellow', 'blue',
  'magenta', 'cyan', 'white', '', 'normal'] # escape codes 30 to 39
 
-function = ['execute', 'execute', 'define', 'compile',
+function = [
+ 'execute', 'execute', 'define', 'compile',
  'compile', 'compile', 'compilemacro', 'execute',
  'text', 'textcapitalized', 'textallcaps', 'variable',
  '', '', '', '',
  '', 'executehex', '', '',
- 'compilehex', 'compilehex', '', 'executehex']
+ 'compilehex', 'compilehex', '', 'executehex',
+]
 
-colortags = ['yellow', 'yellow', 'red', 'green',
+colortags = [
+ 'yellow', 'yellow', 'red', 'green',
  'green', 'green', 'cyan', 'yellow',
- 'white', 'white', 'white', 'magenta']
+ 'white', 'white', 'white', 'magenta',
+ 'normal', 'normal', 'normal', 'normal',
+ 'normal', 'yellow', 'normal', 'normal',
+ 'green', 'green', 'normal', 'yellow',
+]
 
 highbit =  0x80000000L
 mask =     0xffffffffL
@@ -135,7 +142,7 @@ def dump_block(chunk):
 
 def init():
  global print_formats
- print_formats = [print_normal, print_color, print_tags]
+ print_formats = [print_normal, print_tags, print_color]
 
 def cfdump(filename):
  init()
@@ -152,10 +159,12 @@ def cfdump(filename):
   dump_block(chunk)
 
 def dump_color(filename):
+ global format
  format = 'color'
  cfdump(filename)
 
 def dump_html(filename):
+ global format
  format = 'html'
  cfdump(filename)
 
