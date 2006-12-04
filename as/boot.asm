@@ -158,6 +158,9 @@ cmdi: call sense_
 ready: ;#call delay
     mov  dx, 0x3f4
 0:  in   al, dx
+.ifdef QUESTIONABLE
+    debugout
+.endif
     shl  al, 1
     jnc  0b
     lea  edx, [edx+1]
@@ -174,6 +177,9 @@ cmd1: call ready
     jmp  cmd1
 0:  lodsb
     out  dx, al
+.ifdef QUESTIONABLE
+    debugout
+.endif
     loop cmd1
     pop  esi
     ret
@@ -184,6 +190,9 @@ sense_: mov  al, 8
 0:  call ready
     jns  0b
     in   al, dx
+.ifdef QUESTIONABLE
+    debugout
+.endif
     and  al, al
 ;#  cmp  al, 0x80
     ret
@@ -197,6 +206,9 @@ onoff: dup_
     mov  al, cl
     mov  dx, 0x3f2
     out  dx, al
+.ifdef QUESTIONABLE
+    debugout
+.endif
     drop
     ret
 
@@ -222,6 +234,9 @@ read: call seek
     mov  cx, 18*2*512 ;# two heads, 18 sectors/track, 512 bytes/sector
 0:  call ready
     in   al, dx
+.ifdef QUESTIONABLE
+    debugout
+.endif
     stosb
     next 0b
     ret
@@ -248,6 +263,9 @@ flop: mov  cylinder, al ;# c-cx
     dup_
     mov  dx, 0x3f2
     in   al, dx
+.ifdef QUESTIONABLE
+    debugout
+.endif
     test al, 0x10
     jnz  0f
     jmp  spin
