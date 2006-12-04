@@ -135,9 +135,6 @@ b32: shl  eax, 1
     ret
 
 emit: call qcr
-.ifdef DEBUG_KBD
-    debugout
-.endif
     push esi
     push edi
     push edx

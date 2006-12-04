@@ -849,6 +849,9 @@ key: dup_             ;# save copy of return stack pointer(?)
     xor  eax, eax     ;# used as index later, so clear it
 0:  call pause        ;# busy-wait
     in   al, 0x64     ;# keyboard status port
+.ifdef DEBUG_KBD
+    debugout
+.endif
     test al, 1        ;# see if there is a byte waiting
     jz   0b           ;# if not, loop
     in   al, 0x60     ;# fetch the scancode
@@ -906,25 +909,25 @@ accept1: mov  board, edi
     jmp  dword ptr [edx+eax*4]
 
 bits: .byte 28
-0: add  eax, 0120
+0:  add  eax, 0120
     mov  cl, 7
     jmp  0f
 pack: cmp  al, 020
     jnc  0b
-        mov  cl, 4
-        test al, 010
-        jz   0f
-        inc  ecx
-        xor  al, 030
-0: mov  edx, eax
+    mov  cl, 4
+    test al, 010
+    jz   0f
+    inc  ecx
+    xor  al, 030
+0:  mov  edx, eax
     mov  ch, cl
-0: cmp  bits, cl
+0:  cmp  bits, cl
     jnc  0f
-        shr  al, 1
-        jc   full
-        dec  cl
-        jmp  0b
-0: shl  dword ptr [esi], cl
+    shr  al, 1
+    jc   full
+    dec  cl
+    jmp  0b
+0:  shl  dword ptr [esi], cl
     xor  [esi], eax
     sub  bits, cl
     ret
@@ -959,18 +962,18 @@ word_: call right
     mov  dword ptr [esi], 0
     mov dword ptr  bits, 28
 word1:  call letter
-        jns  0f
-            mov  edx, shift
-            jmp  dword ptr [edx+eax*4]
-0:     test al, al
-        jz   word0
-        dup_
-        call echo_
-        call pack
-        inc dword ptr  chars
-word0:  drop
-        call key
-        jmp  word1
+    jns  0f
+    mov  edx, shift
+    jmp  dword ptr [edx+eax*4]
+0:  test al, al
+    jz   word0
+    dup_
+    call echo_
+    call pack
+    inc dword ptr  chars
+word0: drop
+    call key
+    jmp  word1
 
 decimal: mov dword ptr  base, 10
     mov dword ptr  shift, offset numb0
@@ -992,10 +995,10 @@ xn: drop
     jmp  acceptn
 
 digit: .byte 14, 10,  0,  0
-      .byte  0,  0, 12,  0,  0,  0, 15,  0
-      .byte 13,  0,  0, 11,  0,  0,  0,  0
-      .byte  0,  1,  2,  3,  4,  5,  6,  7
-      .byte  8,  9
+    .byte  0,  0, 12,  0,  0,  0, 15,  0
+    .byte 13,  0,  0, 11,  0,  0,  0,  0
+    .byte  0,  1,  2,  3,  4,  5,  6,  7
+    .byte  8,  9
 sign: .byte 0
 minus:
     mov  sign, al
@@ -1009,18 +1012,18 @@ number: call current
 number3: call key
     call letter
     jns  0f
-        mov  edx, shift
-        jmp  dword ptr [edx+eax*4]
-0: test al, al
+    mov  edx, shift
+    jmp  dword ptr [edx+eax*4]
+0:  test al, al
     jz   number0
     mov  al, [digit-4+eax]
     test dword ptr sign, 037
     jz   0f
-        neg  eax
-0: mov  edx, [esi]
+    neg  eax
+0:  mov  edx, [esi]
     imul edx, base
     add  edx, eax
-0: mov  [esi], edx
+0:  mov  [esi], edx
 number2: drop
     mov dword ptr  shift, offset numb1
     jmp  number3
@@ -1035,7 +1038,7 @@ alph0: mov dword ptr  shift, offset alpha0
     jmp  0f
 star0: mov dword ptr  shift, offset graph0
     lea  edi, graphics-4
-0: drop
+0:  drop
     jmp  accept1
 
 alph: mov dword ptr  shift, offset alpha1
@@ -1077,21 +1080,21 @@ hdotn: mov  edx, eax
     mov  ecx, edx
     jmp  0f
 hdot: mov  ecx, 8
-0:     call odig
-        call edig
-        next 0b
+0:  call odig
+    call edig
+    next 0b
     drop
     ret
 
 dot: mov  ecx, 7
-0:     call odig
-        jnz  @h
-        drop
-        next 0b
+0:  call odig
+    jnz  @h
+    drop
+    next 0b
     inc  ecx
-0:     call odig
-@h1:    call edig
-        next 0b
+0:  call odig
+@h1: call edig
+    next 0b
     call space
     drop
     ret
