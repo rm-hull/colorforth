@@ -9,6 +9,6 @@ clean:
 	 $(shell [ -d $(subdir) ] && cd $(subdir) && make clean))
 upload:
 #	$(MAKE) clean
-	rsync -Cvuz . jcomeau_ictx@colorforth.sourceforge.net:/home/groups/c/co/colorforth/htdocs/
+	rsync -Crvuz . jcomeau_ictx@colorforth.sourceforge.net:/home/groups/c/co/colorforth/htdocs/
 commit:
 	cvs commit
