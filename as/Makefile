@@ -57,6 +57,7 @@ color.com: $(sources) secondpass
 	$(GAS) $(if $(SMALLSCREEN),--defsym SMALLSCREEN=$(SMALLSCREEN)) \
 	 $(if $(QUESTIONABLE),--defsym QUESTIONABLE=$(QUESTIONABLE)) \
 	 $(if $(AGP),--defsym AGP=$(AGP)) \
+	 $(if $(DEBUG_KBD),--defsym DEBUG_KBD=$(DEBUG_KBD)) \
 	 -ahlmns=color.lst -o color.o color.asm
 	objcopy color.o -O binary color.bin
 	# now get original color.com for its data blocks starting at 0x3000
@@ -66,6 +67,9 @@ color.com: $(sources) secondpass
 new:	color.asm
 	touch $<
 	$(MAKE) color.com
+kbd:	color.asm
+	touch $<
+	$(MAKE) DEBUG_KBD=1 color.com
 small:	color.asm
 	touch $<
 	$(MAKE) SMALLSCREEN=1 color.com

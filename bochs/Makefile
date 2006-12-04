@@ -48,3 +48,6 @@ distclean:
 	rm -f $(BOCHS)/bochs{,dbg}.exe
 test:
 	cd ../test && $(MAKE)
+%.link:
+	cd $(BOCHS)/iodev && ln -sf floppy.cc.$* floppy.cc
+	cd $(BOCHS)/iodev && ln -sf floppy.h.$* floppy.h

@@ -135,19 +135,22 @@ b32: shl  eax, 1
     ret
 
 emit: call qcr
+.ifdef DEBUG_KBD
+    debugout
+.endif
     push esi
     push edi
     push edx
-     imul eax, 16*24/8
-     lea  esi, icons[eax]
-     call clip
-     mov  edx, fore
-     mov  ecx, 24
-0:     push ecx
-        call bit16
-        add  edi, (hp-16)*2
-        pop  ecx
-        next 0b
+    imul eax, 16*24/8
+    lea  esi, icons[eax]
+    call clip
+    mov  edx, fore
+    mov  ecx, 24
+0:  push ecx
+    call bit16
+    add  edi, (hp-16)*2
+    pop  ecx
+    next 0b
     pop  edx
     pop  edi
     pop  esi

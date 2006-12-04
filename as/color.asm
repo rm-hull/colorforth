@@ -2,6 +2,10 @@
 
 ;#.486p
 
+.macro debugout
+    out 0xe1, al
+.endm
+
 ;# can't use loopnz in 32-bit mode
 .macro next adr
     dec  ecx
@@ -702,15 +706,17 @@ top: mov  ecx, lm
     mov  xycr, ecx
     ret
 
+;# insert a carriage return if at end of line
 qcr: mov  cx, word ptr xy+2
     cmp  cx, word ptr rm
     js   0f
+;# insert a carriage return (drop to next line)
 cr: mov  ecx, lm
     shl  ecx, 16
     mov  cx, word ptr xy
     add  ecx, ih
     mov  xy, ecx
-0: ret
+0:  ret
 
 lms: mov  lm, eax
     drop
@@ -891,6 +897,9 @@ acceptn: mov dword ptr  shift, offset alpha0
     lea  edi, alpha-4
 accept1: mov  board, edi
 0:  call key
+.ifdef DEBUG_KBD
+    debugout
+.endif
     cmp  al, 4
     jns  first
     mov  edx, shift
@@ -1161,16 +1170,16 @@ ring: mov  cad, edi
     mov  cx, word ptr xy+2
     cmp  cx, word ptr rm
     js   0f
-        call emit
-        sub dword ptr  xy, iw*0x10000 ;# bksp
-        ret
-0: jmp  emit
+    call emit
+    sub dword ptr  xy, iw*0x10000 ;# bksp
+    ret
+0:  jmp  emit
 
 rw: mov  cx, word ptr xy+2
     cmp  cx, word ptr lm
     jz   0f
         call cr
-0: call red
+0:  call red
     jmp  type_
 
 gw: call green
@@ -1185,13 +1194,13 @@ ww: dup_
 type0: sub dword ptr  xy, iw*0x10000 ;# call bspcr
     test dword ptr [-4+edi*4], -020
     jnz  type1
-        dec  edi
-        mov  lcad, edi
-        call space
-        call qring
-        pop  edx ;# .end of block
-        drop
-        jmp  keyboard
+    dec  edi
+    mov  lcad, edi
+    call space
+    call qring
+    pop  edx ;# .end of block
+    drop
+    jmp  keyboard
 
 cap: call white
     dup_
@@ -1206,22 +1215,22 @@ caps: call white
     dup_
     mov  eax, [-4+edi*4]
     and  eax, -020
-0:     call unpack
-        jz   0f
-        add  al, 48
-        call emit
-        jmp  0b
+0:  call unpack
+    jz   0f
+    add  al, 48
+    call emit
+    jmp  0b
 
 text: call white
 type_:
 type1: dup_
     mov  eax, [-4+edi*4]
     and  eax, -020
-type2:  call unpack
-        jz   0f
-        call emit
-        jmp  type2
-0: call space
+type2: call unpack
+    jz   0f
+    call emit
+    jmp  type2
+0:  call space
     drop
     drop
     ret
@@ -1268,49 +1277,49 @@ refresh: call show
     shl  edi, 10-2
     mov  pcad, edi ;# for curs=0
 ref1:   test dword ptr [edi*4], 0x0f
-        jz   0f
-            call qring
-0:     mov  edx, [edi*4]
-        inc  edi
-        mov dword ptr  bas, offset dot10
-        test dl, 020
-        jz   0f
-            mov dword ptr  bas, offset dot
-0:     and  edx, 017
-        call display[edx*4]
-        jmp  ref1
+    jz   0f
+    call qring
+0:  mov  edx, [edi*4]
+    inc  edi
+    mov dword ptr  bas, offset dot10
+    test dl, 020
+    jz   0f
+    mov dword ptr  bas, offset dot
+0:  and  edx, 017
+    call display[edx*4]
+    jmp  ref1
 
 .align 4
 display: .long type0, ww, nw, rw
-        .long gw, gnw, gsw, mw
-        .long sw, text, cap, caps
-        .long var, nul, nul, nul
+    .long gw, gnw, gsw, mw
+    .long sw, text, cap, caps
+    .long var, nul, nul, nul
 tens: .long 10, 100, 1000, 10000, 100000, 1000000
-     .long 10000000, 100000000, 1000000000
+    .long 10000000, 100000000, 1000000000
 bas: .long dot10
-blk:    .long 18
-curs:   .long 0
-cad:    .long 0
-pcad:   .long 0
-lcad:   .long 0
-trash:  .long buffer*4
+blk: .long 18
+curs: .long 0
+cad: .long 0
+pcad: .long 0
+lcad: .long 0
+trash: .long buffer*4
 /* the editor keys and their actions */
 ekeys: .long nul, del, eout, destack
-      .long act1, act3, act4, shadow
-      .long mcur, mmcur, ppcur, pcur
-      .long mblk, actv, act7, pblk
-      .long nul, act11, act10, act9
-      .long nul, nul, nul, nul
+    .long act1, act3, act4, shadow
+    .long mcur, mmcur, ppcur, pcur
+    .long mblk, actv, act7, pblk
+    .long nul, act11, act10, act9
+    .long nul, nul, nul, nul
 ekbd0: .long nul, nul, nul, nul
-     .byte 025, 045,  7 ,  0  ;# x  .  i
+    .byte 025, 045,  7 ,  0  ;# x  .  i
 ekbd: .byte 017,  1 , 015, 055 ;# w  r  g  *
-     .byte 014, 026, 020,  1  ;# l  u  d  r
-     .byte 043, 011, 012, 053 ;# -  m  c  +
-     .byte  0 , 070, 072,  2  ;#    s  c  t
-     .byte  0 ,  0 ,  0 ,  0
-     .byte  0 ,  0 ,  0 ,  0
+    .byte 014, 026, 020,  1  ;# l  u  d  r
+    .byte 043, 011, 012, 053 ;# -  m  c  +
+    .byte  0 , 070, 072,  2  ;#    s  c  t
+    .byte  0 ,  0 ,  0 ,  0
+    .byte  0 ,  0 ,  0 ,  0
 actc: .long yellow, 0, 0x0ff0000, 0x0c000, 0, 0, 0x0ffff
-     .long 0, 0x0ffffff, 0x0ffffff, 0x0ffffff, 0x8080ff
+    .long 0, 0x0ffffff, 0x0ffffff, 0x0ffffff, 0x8080ff
 vector: .long 0
 action: .byte 1
 
@@ -1327,7 +1336,7 @@ act10: mov  al, 10
 act11: mov  al, 11
     jmp  0f
 act7: mov  al, 7
-0: mov  action, al
+0:  mov  action, al
     mov  eax, [actc-4+eax*4]
     mov dword ptr  aword, offset insert
 actn: mov  keyc, eax
@@ -1348,12 +1357,12 @@ actv: mov dword ptr  action, 12
 mcur: dec dword ptr  curs
     jns  0f
 pcur: inc dword ptr  curs
-0: ret
+0:  ret
 
 mmcur: sub dword ptr  curs, 8
     jns  0f
-        mov dword ptr  curs, 0
-0: ret
+    mov dword ptr  curs, 0
+0:  ret
 ppcur: add dword ptr  curs, 8
     ret
 
@@ -1362,9 +1371,9 @@ pblk: add dword ptr  blk, 2
     ret
 mblk: cmp dword ptr  blk, 20
     js   0f
-        sub dword ptr  blk, 2
-        sub  dword ptr [esi], 2
-0: ret
+    sub dword ptr  blk, 2
+    sub  dword ptr [esi], 2
+0:  ret
 
 shadow: xor dword ptr  blk, 1
     xor  dword ptr [esi], 1
@@ -1381,13 +1390,13 @@ e:  dup_
     mov  byte ptr alpha0+4*4, 045 ;# .
     mov dword ptr  alpha0+4, offset e0
     call refresh
-0: mov dword ptr  shift, offset ekbd0
+0:  mov dword ptr  shift, offset ekbd0
     mov dword ptr  board, offset ekbd-4
     mov dword ptr  keyc, yellow
-0:     call key
-        call ekeys[eax*4]
-        drop
-        jmp  0b
+0:  call key
+    call ekeys[eax*4]
+    drop
+    jmp  0b
 
 eout: pop  eax
     drop
@@ -1402,48 +1411,48 @@ eout: pop  eax
 destack: mov  edx, trash
     cmp  edx, buffer*4
     jnz  0f
-        ret
-0: sub  edx, 2*4
+    ret
+0:  sub  edx, 2*4
     mov  ecx, [edx+1*4]
     mov  words, ecx
-0:     dup_
-        mov  eax, [edx]
-        sub  edx, 1*4
-        next 0b
+0:  dup_
+    mov  eax, [edx]
+    sub  edx, 1*4
+    next 0b
     add  edx, 1*4
     mov  trash, edx
 
 insert0: mov  ecx, lcad  ;# room available?
-     add  ecx, words
-     xor  ecx, lcad
-     and  ecx, -0x100
-     jz   insert1
-         mov  ecx, words ;# no
-0:          drop
-             next 0b
-         ret
+    add  ecx, words
+    xor  ecx, lcad
+    and  ecx, -0x100
+    jz   insert1
+    mov  ecx, words ;# no
+0:  drop
+    next 0b
+    ret
 insert1: push esi
-     mov  esi, lcad
-     mov  ecx, esi
-     dec  esi
-     mov  edi, esi
-     add  edi, words
-     shl  edi, 2
-     sub  ecx, cad
-     js   0f
-         shl  esi, 2
-         std
-         rep movsd
-         cld
-0: pop  esi
+    mov  esi, lcad
+    mov  ecx, esi
+    dec  esi
+    mov  edi, esi
+    add  edi, words
+    shl  edi, 2
+    sub  ecx, cad
+    js   0f
+    shl  esi, 2
+    std
+    rep movsd
+    cld
+0:  pop  esi
     shr  edi, 2
     inc  edi
     mov  curs, edi ;# like abort
     mov  ecx, words
-0:     dec  edi
-        mov  [edi*4], eax
-        drop ;# requires cld
-        next 0b
+0:  dec  edi
+    mov  [edi*4], eax
+    drop ;# requires cld
+    next 0b
     ret
 
 insert: call insert0
@@ -1453,33 +1462,33 @@ insert: call insert0
 
 format: test dword ptr action, 012 ;# ignore 3 and 9
     jz   0f
-        drop
-        ret
-0: mov  edx, eax
+    drop
+    ret
+0:  mov  edx, eax
     and  edx, 0x0fc000000
     jz   0f
-        cmp  edx, 0x0fc000000
-        jnz  format2
-0: shl  eax, 5
+    cmp  edx, 0x0fc000000
+    jnz  format2
+0:  shl  eax, 5
     xor  al, 2 ;# 6
     cmp dword ptr  action, 4
     jz   0f
-        xor  al, 013 ;# 8
-0: cmp dword ptr  base, 10
+    xor  al, 013 ;# 8
+0:  cmp dword ptr  base, 10
     jz   0f
-        xor  al, 020
-0: mov dword ptr  words, 1
+    xor  al, 020
+0:  mov dword ptr  words, 1
     jmp  insert
 
 format2: dup_
     mov  eax, 1 ;# 5
     cmp dword ptr  action, 4
     jz   0f
-        mov  al, 3 ;# 2
-0: cmp dword ptr  base, 10
+    mov  al, 3 ;# 2
+0:  cmp dword ptr  base, 10
     jz   0f
-        xor  al, 020
-0: xchg eax, [esi]
+    xor  al, 020
+0:  xchg eax, [esi]
     mov dword ptr  words, 2
     jmp  insert
 
@@ -1489,9 +1498,9 @@ del: call enstack
     sub  ecx, edi
     shl  edi, 2
     push esi
-     mov  esi, cad
-     shl  esi, 2
-     rep movsd
+    mov  esi, cad
+    shl  esi, 2
+    rep movsd
     pop  esi
     jmp  mcur
 
@@ -1499,20 +1508,20 @@ enstack: dup_
     mov  eax, cad
     sub  eax, pcad
     jz   ens
-      mov  ecx, eax
-      xchg eax, edx
-      push esi
-       mov  esi, cad
-       lea  esi, [esi*4-4]
-       mov  edi, trash
-0:      std
-         lodsd
-         cld
-         stosd
-         next 0b
-       xchg eax, edx
-       stosd
-       mov  trash, edi
+    mov  ecx, eax
+    xchg eax, edx
+    push esi
+    mov  esi, cad
+    lea  esi, [esi*4-4]
+    mov  edi, trash
+0:  std
+    lodsd
+    cld
+    stosd
+    next 0b
+    xchg eax, edx
+    stosd
+    mov  trash, edi
     pop  esi
 ens: drop
     ret
@@ -1523,14 +1532,14 @@ pad: pop  edx
     mov  board, edx
     sub  edx, 4*4
     mov  shift, edx
-0:     call key
-        mov  edx, vector
-        add  edx, eax
-        lea  edx, [5+eax*4+edx]
-        add  edx, [-4+edx]
-        drop
-        call edx
-        jmp  0b
+0:  call key
+    mov  edx, vector
+    add  edx, eax
+    lea  edx, [5+eax*4+edx]
+    add  edx, [-4+edx]
+    drop
+    call edx
+    jmp  0b
 
 .org (0x1200-1)*4
     .long 0

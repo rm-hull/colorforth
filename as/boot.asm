@@ -233,7 +233,9 @@ write: call seek
 0:  call ready
     lodsb
     out  dx, al
-    out  0x0e1, al
+.ifdef QUESTIONABLE
+    debugout
+.endif
     next 0b
     ret
 
