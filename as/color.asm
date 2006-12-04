@@ -94,8 +94,8 @@ pause: dup_ ;# save cached datum from top of data stack
     push esi ;# save data stack pointer on return stack
     mov  eax, me ;# get current task
     mov  [eax], esp ;# put our stack pointer into [me]
-    add  eax, 4 ; skip storage slot, point to round-robin CALL or JMP
-    jmp  eax ; execute the CALL or JMP
+    add  eax, 4 ;# skip storage slot, point to round-robin CALL or JMP
+    jmp  eax ;# execute the CALL or JMP
 
 unpause: pop  eax ;# return address is that of 'main' slot above
     mov  esp, [eax] ;# load 'main' task return stack
