@@ -90,18 +90,18 @@ god:     .long 0 ;# gods-2*4
 main:    .long 0 ;# mains-2*4
     jmp  round
 
-pause: dup_ ;# save cached top-of return stack
+pause: dup_ ;# save cached datum from top of data stack
     push esi ;# save data stack pointer on return stack
     mov  eax, me ;# get current task
     mov  [eax], esp ;# put our stack pointer into [me]
-    add  eax, 4
-    jmp  eax
+    add  eax, 4 ; skip storage slot, point to round-robin CALL or JMP
+    jmp  eax ; execute the CALL or JMP
 
-unpause: pop  eax
-    mov  esp, [eax]
-    mov  me, eax
-    pop  esi
-    drop
+unpause: pop  eax ;# return address is that of 'main' slot above
+    mov  esp, [eax] ;# load 'main' task return stack
+    mov  me, eax ;# 'main' task becomes 'me', current task
+    pop  esi ;# restore my task's data-stack pointer
+    drop ;# load previously dup'd datum back into EAX
     ret
 
 act: mov  edx, maind-4
@@ -326,7 +326,6 @@ comma: mov  ecx, 4
     lea  edx, [edx+ecx]
     lea  esi, [esi+4]
     mov  h, edx
-;#    drop
     ret
 
 comma1: mov  ecx, 1
@@ -344,8 +343,8 @@ semi: mov  edx, h
     jnz  0f
     cmp  byte ptr [edx], 0x0e8
     jnz  0f
-        inc  byte ptr [edx] ;# jmp
-        ret
+    inc  byte ptr [edx] ;# jmp
+    ret
 0: mov  byte ptr [5+edx], 0x0c3 ;# ret
     inc dword ptr  h
     ret
@@ -368,28 +367,28 @@ qlit: mov  edx, h
     jnz  0f
     cmp  byte ptr [edx], 0x0b8
     jnz  0f
-        dup_
-        mov  eax, list+4
-        mov  list, eax
-        mov  eax, [1+edx]
-        cmp  dword ptr [edx-5], 0x89fc768d ;# dup
-        jz   q1
-            mov  h, edx
-            jmp  cdrop
-q1:     add dword ptr  h, -10 ;# flag nz
-        ret
-0: xor  edx, edx ;# flag z
+    dup_
+    mov  eax, list+4
+    mov  list, eax
+    mov  eax, [1+edx]
+    cmp  dword ptr [edx-5], 0x89fc768d ;# dup
+    jz   q1
+    mov  h, edx
+    jmp  cdrop
+q1: add dword ptr  h, -10 ;# flag nz
+    ret
+0:  xor  edx, edx ;# flag z
     ret
 
 less: cmp  [esi], eax
     js   0f ;# flag nz
-        xor  ecx, ecx ;# flag z
-0: ret
+    xor  ecx, ecx ;# flag z
+0:  ret
 
 qignore: test dword ptr [-4+edi*4], -020
     jnz  nul
-        pop  edi
-        pop  edi
+    pop  edi
+    pop  edi
 nul: ret
 
 jump: pop  edx
@@ -403,161 +402,161 @@ load: shl  eax, 10-2
     push edi
     mov  edi, eax
     drop
-inter:  mov  edx, [edi*4]
-        inc  edi
-        and  edx, 017 ;# get only low 4 bits
-        call spaces[edx*4]
-        jmp  inter
+inter: mov  edx, [edi*4]
+    inc  edi
+    and  edx, 017 ;# get only low 4 bits
+    call spaces[edx*4]
+    jmp  inter
 
 .align 4
- spaces: .long qignore, execute, num
+spaces: .long qignore, execute, num
 adefine: .long 5+macro_ ;# macrod ?
-        .long qcompile, cnum, cshort, compile
-        .long short_, nul, nul, nul
-        .long variable, nul, nul, nul
+    .long qcompile, cnum, cshort, compile
+    .long short_, nul, nul, nul
+    .long variable, nul, nul, nul
 
-   lit: .long adup
-    mk: .long 0, 0, 0
-     h: .long 0x40000*4
-  last: .long 0
- class: .long 0
-  list: .long 0, 0
+lit: .long adup
+mk: .long 0, 0, 0
+h: .long 0x40000*4
+last: .long 0
+class: .long 0
+list: .long 0, 0
 macros: .long 0
 forths: .long 0
 macro0: .long 0170 << 25 ;# ;
-       .long ((0140 << 7+0146)<< 7+0142)<< 11 ;# dup
-       .long (((0177 << 7+0140)<< 7+0146)<< 7+0142)<< 4 ;# ?dup
-       .long (((0140 << 4+1)<< 4+3)<< 7+0142)<< 10 ;# drop
-       .long (((2 << 7+0144)<< 4+4)<< 4+6)<< 13 ;# then
-       .long ((((0143 << 4+4)<< 5+025)<< 4+7)<< 4+6)<< 8 ;# begin
+    .long ((0140 << 7+0146)<< 7+0142)<< 11 ;# dup
+    .long (((0177 << 7+0140)<< 7+0146)<< 7+0142)<< 4 ;# ?dup
+    .long (((0140 << 4+1)<< 4+3)<< 7+0142)<< 10 ;# drop
+    .long (((2 << 7+0144)<< 4+4)<< 4+6)<< 13 ;# then
+    .long ((((0143 << 4+4)<< 5+025)<< 4+7)<< 4+6)<< 8 ;# begin
 macro1: .rept 128 .long 0; .endr
 forth0: .long (((0143 << 4+3)<< 4+3)<< 4+2)<< 13 ;# boot
-       .long (((027 << 4+5)<< 4+1)<< 5+021)<< 14 ;# warm
-       .long ((((0142 << 4+5)<< 7+0146)<< 5+020)<< 4+4)<< 5 ;# pause
-       .long ((((021 << 4+5)<< 5+022)<< 4+1)<< 4+3)<< 10 ;# .macro
-       .long ((((026 << 4+3)<< 4+1)<< 4+2)<< 7+0144)<< 8 ;# forth
-       .long 022 << 27 ;# c
-       .long (((020 << 4+2)<< 4+3)<< 7+0142)<< 12 ;# stop
-       .long (((1 << 4+4)<< 4+5)<< 7+0140)<< 13 ;# read
-       .long ((((027 << 4+1)<< 4+7)<< 4+2)<< 4+4)<< 11 ;# write
-       .long (6 << 5+022)<< 23 ;# nc
-       .long (((((022 << 4+3)<< 5+021)<< 5+021)<< 4+5)<< 4+6)<< 5;# comman d
-       .long (((020 << 4+4)<< 4+4)<< 7+0164)<< 12 ;# seek
-       .long ((((1 << 4+4)<< 4+5)<< 7+0140)<< 5+023)<< 8 ;# ready
-       .long ((5 << 5+022)<< 4+2)<< 19 ;# act
-       .long (((020 << 7+0144)<< 4+3) << 5+027)<< 11 ;# show
-       .long (((024 << 4+3)<< 4+5)<< 7+0140)<< 12 ;# load
-       .long (((0144 << 4+4)<< 4+1)<< 4+4)<< 13 ;# here
-       .long (((0177 << 5+024)<< 4+7)<< 4+2)<< 12 ;# ?lit
-       .long (0153 << 7+0176) << 18 ;# 3,
-       .long (0152 << 7+0176) << 18 ;# 2,
-       .long (0151 << 7+0176) << 18 ;# 1,
-       .long 0176 << 25 ;# ,
-       .long (((024 << 4+4)<< 5+020)<< 5+020)<< 13 ;# less
-       .long (((0162 << 7+0146)<< 5+021)<< 7+0142)<< 6 ;# jump
-       .long (((((5 << 5+022)<< 5+022)<< 4+4)<< 7+0142)<< 4+2)<< 3 ;# accept
-       .long ((0142 << 4+5)<< 7+0140)<< 14 ;# pad
-       .long ((((4 << 4+1)<< 4+5)<< 5+020)<< 4+4)<< 11 ;# erase
-       .long (((022 << 4+3)<< 7+0142)<< 5+023)<< 11 ;# copy
-       .long (((021 << 4+5)<< 4+1)<< 7+0164)<< 12 ;# mark
-       .long (((4 << 5+021)<< 7+0142)<< 4+2)<< 12 ;# empt
-       .long (((4 << 5+021)<< 4+7)<< 4+2)<< 15 ;# emit
-       .long ((((0140 << 4+7)<< 5+025)<< 4+7)<< 4+2)<< 8 ;# digit
-       .long ((((0152 << 4+4)<< 5+021)<< 4+7)<< 4+2)<< 8 ;# 2emit
-       .long 0165 << 25 ;# .
-       .long (0144 << 7+0165)<< 18 ;# h.
-       .long ((0144 << 7+0165)<< 4+6)<< 14 ;# h.n
-       .long (022 << 4+1)<< 23 ;# cr
-       .long ((((020 << 7+0142)<< 4+5)<< 5+022)<< 4+4)<< 7 ;# space
-       .long (((0140 << 4+3)<< 5+027)<< 4+6)<< 12 ;# down
-       .long (((4 << 7+0140)<< 4+7)<< 4+2)<< 13 ;# edit
-       .long 4 << 28 ;# e
-       .long (024 << 5+021)<< 22 ;# lm
-       .long (1 << 5+021)<< 23 ;# rm
-       .long ((((025 << 4+1)<< 4+5)<< 7+0142)<< 7+0144)<< 5 ;# graph ic
-       .long (((2 << 4+4)<< 7+0145)<< 4+2)<< 13 ;# text
-       .long ((((0164 << 4+4)<< 5+023)<< 7+0143)<< 4+3)<< 5 ;# keybo ard
-       .long (((0140 << 4+4)<< 7+0143)<< 7+0146)<< 7 ;# debu g
-       .long (5 << 4+2)<< 24 ;# at
-       .long ((0173 << 4+5)<< 4+2)<< 17 ;# +at
-       .long (0145 << 5+023)<< 20 ;# xy
-       .long ((026 << 4+3)<< 7+0141)<< 16 ;# fov
-       .long (((026 << 4+7)<< 5+026)<< 4+3)<< 14 ;# fifo
-       .long ((0143 << 4+3)<< 7+0145)<< 14 ;# box
-       .long (((024 << 4+7)<< 4+6)<< 4+4)<< 15 ;# line
-       .long ((((022 << 4+3)<< 5+024)<< 4+3)<< 4+1)<< 10 ;# color
-       .long (((((3 << 5+022)<< 4+2)<< 4+5)<< 4+6)<< 4+2)<< 7 ;# octant
-       .long (020 << 7+0142)<< 20 ;# sp
-       .long (((024 << 4+5)<< 5+020)<< 4+2)<< 14 ;# last
-       .long (((((0146 << 4+6)<< 7+0142)<< 4+5)<< 5+022))<< 5 ;# unpac k
+    .long (((027 << 4+5)<< 4+1)<< 5+021)<< 14 ;# warm
+    .long ((((0142 << 4+5)<< 7+0146)<< 5+020)<< 4+4)<< 5 ;# pause
+    .long ((((021 << 4+5)<< 5+022)<< 4+1)<< 4+3)<< 10 ;# .macro
+    .long ((((026 << 4+3)<< 4+1)<< 4+2)<< 7+0144)<< 8 ;# forth
+    .long 022 << 27 ;# c
+    .long (((020 << 4+2)<< 4+3)<< 7+0142)<< 12 ;# stop
+    .long (((1 << 4+4)<< 4+5)<< 7+0140)<< 13 ;# read
+    .long ((((027 << 4+1)<< 4+7)<< 4+2)<< 4+4)<< 11 ;# write
+    .long (6 << 5+022)<< 23 ;# nc
+    .long (((((022 << 4+3)<< 5+021)<< 5+021)<< 4+5)<< 4+6)<< 5;# comman d
+    .long (((020 << 4+4)<< 4+4)<< 7+0164)<< 12 ;# seek
+    .long ((((1 << 4+4)<< 4+5)<< 7+0140)<< 5+023)<< 8 ;# ready
+    .long ((5 << 5+022)<< 4+2)<< 19 ;# act
+    .long (((020 << 7+0144)<< 4+3) << 5+027)<< 11 ;# show
+    .long (((024 << 4+3)<< 4+5)<< 7+0140)<< 12 ;# load
+    .long (((0144 << 4+4)<< 4+1)<< 4+4)<< 13 ;# here
+    .long (((0177 << 5+024)<< 4+7)<< 4+2)<< 12 ;# ?lit
+    .long (0153 << 7+0176) << 18 ;# 3,
+    .long (0152 << 7+0176) << 18 ;# 2,
+    .long (0151 << 7+0176) << 18 ;# 1,
+    .long 0176 << 25 ;# ,
+    .long (((024 << 4+4)<< 5+020)<< 5+020)<< 13 ;# less
+    .long (((0162 << 7+0146)<< 5+021)<< 7+0142)<< 6 ;# jump
+    .long (((((5 << 5+022)<< 5+022)<< 4+4)<< 7+0142)<< 4+2)<< 3 ;# accept
+    .long ((0142 << 4+5)<< 7+0140)<< 14 ;# pad
+    .long ((((4 << 4+1)<< 4+5)<< 5+020)<< 4+4)<< 11 ;# erase
+    .long (((022 << 4+3)<< 7+0142)<< 5+023)<< 11 ;# copy
+    .long (((021 << 4+5)<< 4+1)<< 7+0164)<< 12 ;# mark
+    .long (((4 << 5+021)<< 7+0142)<< 4+2)<< 12 ;# empt
+    .long (((4 << 5+021)<< 4+7)<< 4+2)<< 15 ;# emit
+    .long ((((0140 << 4+7)<< 5+025)<< 4+7)<< 4+2)<< 8 ;# digit
+    .long ((((0152 << 4+4)<< 5+021)<< 4+7)<< 4+2)<< 8 ;# 2emit
+    .long 0165 << 25 ;# .
+    .long (0144 << 7+0165)<< 18 ;# h.
+    .long ((0144 << 7+0165)<< 4+6)<< 14 ;# h.n
+    .long (022 << 4+1)<< 23 ;# cr
+    .long ((((020 << 7+0142)<< 4+5)<< 5+022)<< 4+4)<< 7 ;# space
+    .long (((0140 << 4+3)<< 5+027)<< 4+6)<< 12 ;# down
+    .long (((4 << 7+0140)<< 4+7)<< 4+2)<< 13 ;# edit
+    .long 4 << 28 ;# e
+    .long (024 << 5+021)<< 22 ;# lm
+    .long (1 << 5+021)<< 23 ;# rm
+    .long ((((025 << 4+1)<< 4+5)<< 7+0142)<< 7+0144)<< 5 ;# graph ic
+    .long (((2 << 4+4)<< 7+0145)<< 4+2)<< 13 ;# text
+    .long ((((0164 << 4+4)<< 5+023)<< 7+0143)<< 4+3)<< 5 ;# keybo ard
+    .long (((0140 << 4+4)<< 7+0143)<< 7+0146)<< 7 ;# debu g
+    .long (5 << 4+2)<< 24 ;# at
+    .long ((0173 << 4+5)<< 4+2)<< 17 ;# +at
+    .long (0145 << 5+023)<< 20 ;# xy
+    .long ((026 << 4+3)<< 7+0141)<< 16 ;# fov
+    .long (((026 << 4+7)<< 5+026)<< 4+3)<< 14 ;# fifo
+    .long ((0143 << 4+3)<< 7+0145)<< 14 ;# box
+    .long (((024 << 4+7)<< 4+6)<< 4+4)<< 15 ;# line
+    .long ((((022 << 4+3)<< 5+024)<< 4+3)<< 4+1)<< 10 ;# color
+    .long (((((3 << 5+022)<< 4+2)<< 4+5)<< 4+6)<< 4+2)<< 7 ;# octant
+    .long (020 << 7+0142)<< 20 ;# sp
+    .long (((024 << 4+5)<< 5+020)<< 4+2)<< 14 ;# last
+    .long (((((0146 << 4+6)<< 7+0142)<< 4+5)<< 5+022))<< 5 ;# unpac k
 forth1: .rept 512 .long 0; .endr
 macro2: .long semi
-       .long cdup
-       .long qdup
-       .long cdrop
-       .long then
-       .long begin
-       .rept 128 .long 0; .endr
+    .long cdup
+    .long qdup
+    .long cdrop
+    .long then
+    .long begin
+    .rept 128 .long 0; .endr
 forth2: .long boot
-       .long warm
-       .long pause
-       .long macro_
-       .long forth
-       .long c_
-       .long stop
-       .long readf
-       .long writef
-       .long nc_
-       .long cmdf
-       .long seekf
-       .long readyf
-       .long act
-       .long show
-       .long load
-       .long here
-       .long qlit
-       .long comma3
-       .long comma2
-       .long comma1
-       .long comma
-       .long less
-       .long jump
-       .long accept
-       .long pad
-       .long erase
-       .long copy
-       .long mark
-       .long empty
-       .long emit
-       .long edig
-       .long emit2
-       .long dot10
-       .long hdot
-       .long hdotn
-       .long cr
-       .long space
-       .long down
-       .long edit
-       .long e
-       .long lms
-       .long rms
-       .long graphic
-       .long text1
-       .long keyboard
-       .long debug
-       .long at
-       .long pat
-       .long xy_
-       .long fov_
-       .long fifof
-       .long box
-       .long line
-       .long color
-       .long octant
-       .long sps
-       .long last_
-       .long unpack
-       .rept 512 .long 0; .endr
+    .long warm
+    .long pause
+    .long macro_
+    .long forth
+    .long c_
+    .long stop
+    .long readf
+    .long writef
+    .long nc_
+    .long cmdf
+    .long seekf
+    .long readyf
+    .long act
+    .long show
+    .long load
+    .long here
+    .long qlit
+    .long comma3
+    .long comma2
+    .long comma1
+    .long comma
+    .long less
+    .long jump
+    .long accept
+    .long pad
+    .long erase
+    .long copy
+    .long mark
+    .long empty
+    .long emit
+    .long edig
+    .long emit2
+    .long dot10
+    .long hdot
+    .long hdotn
+    .long cr
+    .long space
+    .long down
+    .long edit
+    .long e
+    .long lms
+    .long rms
+    .long graphic
+    .long text1
+    .long keyboard
+    .long debug
+    .long at
+    .long pat
+    .long xy_
+    .long fov_
+    .long fifof
+    .long box
+    .long line
+    .long color
+    .long octant
+    .long sps
+    .long last_
+    .long unpack
+    .rept 512 .long 0; .endr
 
 boot: mov  al, 0x0fe ;# reset
     out  0x64, al
@@ -567,10 +566,10 @@ erase: mov  ecx, eax
     shl  ecx, 8
     drop
     push edi
-     mov  edi, eax
-     shl  edi, 2+8
-     xor  eax, eax
-     rep stosd
+    mov  edi, eax
+    shl  edi, 2+8
+    xor  eax, eax
+    rep stosd
     pop edi
     drop
     ret
@@ -580,10 +579,10 @@ copy: cmp  eax, 12
     mov  edi, eax
     shl  edi, 2+8
     push esi
-     mov  esi, blk
-     shl  esi, 2+8
-     mov  ecx, 256
-     rep movsd
+    mov  esi, blk
+    shl  esi, 2+8
+    mov  ecx, 256
+    rep movsd
     pop  esi
     mov  blk, eax
     drop
@@ -609,9 +608,9 @@ debug: mov dword ptr  xy,  offset (3*0x10000+(vc-2)*ih+3)
 .equ hc, hp/iw ;# 46
 .equ vc, vp/ih ;# 25
 .align 4
-xy:  .long 3*0x10000+3
-lm:  .long 3
-rm:  .long hc*iw ;# 1012
+xy: .long 3*0x10000+3
+lm: .long 3
+rm: .long hc*iw ;# 1012
 xycr: .long 0
 fov: .long 10*(2*vp+vp/2)
 
@@ -659,10 +658,10 @@ green: dup_
 
 history: .rept 11 .byte 0; .endr
 echo_: push esi
-     mov  ecx, 11-1
-     lea  edi, history
-     lea  esi, [1+edi]
-     rep movsb
+    mov  ecx, 11-1
+    lea  edi, history
+    lea  esi, [1+edi]
+    rep movsb
     pop  esi
     mov  history+11-1, al
     drop
@@ -687,7 +686,7 @@ zero: test eax, eax
     mov  eax, 0
     jnz  0f
         inc  eax
-0: ret
+0:  ret
 
 blank: dup_
     xor  eax, eax
@@ -746,10 +745,10 @@ octant: dup_
         neg  edx
         mov  [4+esi], edx
         xor  al, 1
-0: cmp  edx, [esi]
+0:  cmp  edx, [esi]
     jns  0f
         xor  al, 4
-0: ret
+0:  ret
 
 ;# keyboard
 ;# display one line of the onscreen keyboard (eight icons)
@@ -762,26 +761,26 @@ eight: add  edi, 12
     sub  edi, 16
 four: mov  ecx, 4
 ;# display ECX chars from EDI+4, incrementing EDI with each char.
-four1:  push ecx
-        dup_
-        xor  eax, eax
-        mov  al, [4+edi]
-        inc  edi
-        call emit
-        pop  ecx
-        next four1
+four1: push ecx
+    dup_
+    xor  eax, eax
+    mov  al, [4+edi]
+    inc  edi
+    call emit
+    pop  ecx
+    next four1
     ret
 
 stack: mov  edi, godd-4
-0: mov  edx, god
+0:  mov  edx, god
     cmp  [edx], edi
     jnc  0f
-        dup_
-        mov  eax, [edi]
-        sub  edi, 4
-        call qdot
-        jmp  0b
-0: ret
+    dup_
+    mov  eax, [edi]
+    sub  edi, 4
+    call qdot
+    jmp  0b
+0:  ret
 
 keyboard: call text1
     mov  edi, board
@@ -809,41 +808,41 @@ keyboard: call text1
     jmp  four1
 
 alpha: .byte 015, 012,  1 , 014
-      .byte 024,  2 ,  6 , 010
-      .byte 023, 011, 017, 021
-      .byte 022, 013, 016,  7
-      .byte  5 ,  3 ,  4 , 026
-      .byte 027, 044, 025, 020
+    .byte 024,  2 ,  6 , 010
+    .byte 023, 011, 017, 021
+    .byte 022, 013, 016,  7
+    .byte  5 ,  3 ,  4 , 026
+    .byte 027, 044, 025, 020
 graphics: .byte 031, 032, 033,  0
-         .byte 034, 035, 036, 030
-         .byte 037, 040, 041, 057
-         .byte 051, 050, 052, 054 ;# : ; ! @
-         .byte 046, 042, 045, 056 ;# z j . ,
-         .byte 055, 047, 053, 043 ;# * / + -
+    .byte 034, 035, 036, 030
+    .byte 037, 040, 041, 057
+    .byte 051, 050, 052, 054 ;# : ; ! @
+    .byte 046, 042, 045, 056 ;# z j . ,
+    .byte 055, 047, 053, 043 ;# * / + -
 numbers: .byte 031, 032, 033,  0
-        .byte 034, 035, 036, 030
-        .byte 037, 040, 041,  0
-        .byte  0,   0 ,  0 ,  0
-        .byte  0,   0 ,  0 ,  0
-        .byte  0,   0 ,  0 ,  0
+    .byte 034, 035, 036, 030
+    .byte 037, 040, 041,  0
+    .byte  0,   0 ,  0 ,  0
+    .byte  0,   0 ,  0 ,  0
+    .byte  0,   0 ,  0 ,  0
 octals: .byte 031, 032, 033,  0
-       .byte 034, 035, 036, 030
-       .byte 037, 040, 041,  0
-       .byte  0 ,  5 , 023, 012
-       .byte  0 , 020,  4 , 016
-       .byte  0 ,  0 ,  0 ,  0
+    .byte 034, 035, 036, 030
+    .byte 037, 040, 041,  0
+    .byte  0 ,  5 , 023, 012
+    .byte  0 , 020,  4 , 016
+    .byte  0 ,  0 ,  0 ,  0
 letter: cmp  al, 4
     js   0f
-        mov  edx, board
-        mov  al, [edx][eax]
-0: ret
+    mov  edx, board
+    mov  al, [edx][eax]
+0:  ret
 
 keys: .byte 16, 17, 18, 19,  0,  0,  4,  5 ;# 20
-     .byte  6,  7,  0,  0,  0,  0, 20, 21
-     .byte 22, 23,  0,  0,  8,  9, 10, 11 ;# 40
-     .byte  0,  0,  0,  0, 24, 25, 26, 27
-     .byte  0,  1, 12, 13, 14, 15,  0,  0 ;# 60 n
-     .byte  3,  2 ;# alt space
+    .byte  6,  7,  0,  0,  0,  0, 20, 21
+    .byte 22, 23,  0,  0,  8,  9, 10, 11 ;# 40
+    .byte  0,  0,  0,  0, 24, 25, 26, 27
+    .byte  0,  1, 12, 13, 14, 15,  0,  0 ;# 60 n
+    .byte  3,  2 ;# alt space
 
 key: dup_             ;# save copy of return stack pointer(?)
     xor  eax, eax     ;# used as index later, so clear it
@@ -871,27 +870,27 @@ key: dup_             ;# save copy of return stack pointer(?)
 ;# foo0 is for the first character of a word
 ;# foo1 is used for the rest
 graph0: .long nul0, nul0, nul0, alph0
-       .byte  0 ,  0 ,  5 , 0 ;#     a
+    .byte  0 ,  0 ,  5 , 0 ;#     a
 graph1: .long word0, x, lj, alph
-       .byte 025, 045,  5 , 0 ;# x . a
+    .byte 025, 045,  5 , 0 ;# x . a
 alpha0: .long nul0, nul0, number, star0
-       .byte  0 , 041, 055, 0 ;#   9 *
+    .byte  0 , 041, 055, 0 ;#   9 *
 alpha1: .long word0, x, lj, graph
-       .byte 025, 045, 055, 0 ;# x . *
- numb0: .long nul0, minus, alphn, octal
-       .byte 043,  5 , 016, 0 ;# - a f
- numb1: .long number0, xn, endn, number0
-       .byte 025, 045,  0 , 0 ;# x .
+    .byte 025, 045, 055, 0 ;# x . *
+numb0: .long nul0, minus, alphn, octal
+    .byte 043,  5 , 016, 0 ;# - a f
+numb1: .long number0, xn, endn, number0
+    .byte 025, 045,  0 , 0 ;# x .
 
-board:   .long alpha-4
-shift:   .long alpha0
-base:    .long 10
+board: .long alpha-4
+shift: .long alpha0
+base: .long 10
 current: .long decimal
-keyc:    .long yellow
-chars:   .long 1
-aword:   .long ex1
+keyc: .long yellow
+chars: .long 1
+aword: .long ex1
 anumber: .long nul
-words:   .long 1
+words: .long 1
 
 nul0: drop
     jmp  0f
@@ -961,7 +960,7 @@ word_: call right
     dup_
     mov  dword ptr [esi], 0
     mov dword ptr  bits, 28
-word1:  call letter
+word1: call letter
     jns  0f
     mov  edx, shift
     jmp  dword ptr [edx+eax*4]
