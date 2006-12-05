@@ -53,11 +53,9 @@ start1:
 .else
     pop [displ]  # use address determined by VBE2 call in boot.asm
 .endif
-;#    mov  screen, offset nul
-;#    xor  eax, eax
     call show0
-    mov dword ptr  forths,  offset ((forth1-forth0)/4)
-    mov dword ptr  macros,  offset ((macro1-macro0)/4)
+    mov  dword ptr  forths,  offset ((forth1-forth0)/4)
+    mov  dword ptr  macros,  offset ((macro1-macro0)/4)
     mov  eax, 18
     call load
     jmp  accept ;# wait for keyhit
@@ -85,12 +83,16 @@ screen: .long 0 ;# logo
 ;# these are the save slots - each is followed by code to resume the
 ;# next task - the last one jumps 'round to the first.
 round: call unpause
-god:     .long 0 ;# gods-2*4
+god: .long 0 ;# gods-2*4
     call unpause
-main:    .long 0 ;# mains-2*4
+main: .long 0 ;# mains-2*4
     jmp  round
 
 pause: dup_ ;# save cached datum from top of data stack
+.ifdef DEBUG_KBD
+    mov  al, 1
+    debugout
+.endif
     push esi ;# save data stack pointer on return stack
     mov  eax, me ;# get current task
     mov  [eax], esp ;# put our stack pointer into [me]
@@ -98,6 +100,12 @@ pause: dup_ ;# save cached datum from top of data stack
     jmp  eax ;# execute the CALL or JMP
 
 unpause: pop  eax ;# return address is that of 'main' slot above
+.ifdef DEBUG_KBD
+    push eax
+    mov  al, 2
+    debugout
+    pop  eax
+.endif
     mov  esp, [eax] ;# load 'main' task return stack
     mov  me, eax ;# 'main' task becomes 'me', current task
     pop  esi ;# restore my task's data-stack pointer
@@ -126,7 +134,7 @@ show: pop  screen ;# pops address of 'ret' just preceding
     inc  eax
     jmp  0b
 
-c_:  mov  esi, godd+4
+c_: mov  esi, godd+4
     ret
 
 mark: mov  ecx, macros
@@ -182,15 +190,15 @@ abort: mov  curs, edi
     shr  edi, 10-2
     mov  blk, edi
 abort1: mov  esp, gods ;# reset return stack pointer
-    mov dword ptr  spaces+3*4, offset forthd
-    mov dword ptr  spaces+4*4, offset qcompile
-    mov dword ptr  spaces+5*4, offset cnum
-    mov dword ptr  spaces+6*4, offset cshort
-    mov  eax, '?
+    mov  dword ptr  spaces+3*4, offset forthd
+    mov  dword ptr  spaces+4*4, offset qcompile
+    mov  dword ptr  spaces+5*4, offset cnum
+    mov  dword ptr  spaces+6*4, offset cshort
+    mov  eax, 057 ;# '?'
     call echo_
     jmp  accept
 
-sdefine: pop  adefine
+sdefine: pop adefine
     ret
 macro_: call sdefine
 macrod: mov  ecx, macros
@@ -202,7 +210,7 @@ forth: call sdefine
 forthd: mov  ecx, forths
     inc dword ptr  forths
     lea  ecx, [forth0+ecx*4]
-0: mov  edx, [-4+edi*4]
+0:  mov  edx, [-4+edi*4]
     and  edx, -020
     mov  [ecx], edx
     mov  edx, h
@@ -253,7 +261,7 @@ variable: call forthd
     mov  [4+ecx], edi
     inc  edi
     ret
-0: call [lit]
+0:  call [lit]
     mov  eax, [4+macro0+ecx*4]
     jmp  0f
 
@@ -265,7 +273,7 @@ cnum: call [lit]
 cshort: call [lit]
     mov  eax, [-4+edi*4]
     sar  eax, 5
-0: call literal
+0:  call literal
     drop
     ret
 
@@ -287,9 +295,9 @@ qcompile: call [lit]
     jnz  0f
     drop
     jmp  [macro2+ecx*4]
-0: call find
+0:  call find
     mov  eax, [forth2+ecx*4]
-0: jnz  abort
+0:  jnz  abort
 call_: mov  edx, h
     mov  list, edx
     mov  byte ptr [edx], 0x0e8
@@ -320,7 +328,7 @@ num: mov dword ptr lit, offset alit
     ret
 
 comma: mov  ecx, 4
-0: mov  edx, h
+0:  mov  edx, h
     mov  [edx], eax
     mov  eax, [esi] ;# drop
     lea  edx, [edx+ecx]
@@ -345,7 +353,7 @@ semi: mov  edx, h
     jnz  0f
     inc  byte ptr [edx] ;# jmp
     ret
-0: mov  byte ptr [5+edx], 0x0c3 ;# ret
+0:  mov  byte ptr [5+edx], 0x0c3 ;# ret
     inc dword ptr  h
     ret
 
@@ -661,7 +669,7 @@ echo_: push esi
     mov  ecx, 11-1
     lea  edi, history
     lea  esi, [1+edi]
-    rep movsb
+    rep  movsb
     pop  esi
     mov  history+11-1, al
     drop
@@ -671,7 +679,7 @@ right: dup_
     mov  ecx, 11
     lea  edi, history
     xor  eax, eax
-    rep stosb
+    rep  stosb
     drop
     ret
 
@@ -685,7 +693,7 @@ down: dup_
 zero: test eax, eax
     mov  eax, 0
     jnz  0f
-        inc  eax
+    inc  eax
 0:  ret
 
 blank: dup_
@@ -742,9 +750,9 @@ octant: dup_
     mov  edx, [4+esi]
     test edx, edx
     jns  0f
-        neg  edx
-        mov  [4+esi], edx
-        xor  al, 1
+    neg  edx
+    mov  [4+esi], edx
+    xor  al, 1
 0:  cmp  edx, [esi]
     jns  0f
         xor  al, 4
@@ -846,7 +854,7 @@ keys: .byte 16, 17, 18, 19,  0,  0,  4,  5 ;# 20
 
 key: dup_             ;# save copy of return stack pointer(?)
     xor  eax, eax     ;# used as index later, so clear it
-0:  call pause        ;# busy-wait
+0:  call pause        ;# give other task a chance to run
     in   al, 0x64     ;# keyboard status port
     test al, 1        ;# see if there is a byte waiting
     jz   0b           ;# if not, loop
@@ -899,9 +907,6 @@ acceptn: mov dword ptr  shift, offset alpha0
     lea  edi, alpha-4
 accept1: mov  board, edi
 0:  call key
-.ifdef DEBUG_KBD
-    debugout
-.endif
     cmp  al, 4
     jns  first
     mov  edx, shift
