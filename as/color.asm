@@ -947,7 +947,7 @@ lj: call lj0
 
 full: call lj0
     inc dword ptr  words
-    mov dword ptr  bits, 28
+    mov byte ptr bits, 28
     sub  bits, ch
     mov  eax, edx
     dup_
@@ -964,7 +964,7 @@ word_: call right
     mov dword ptr  chars, 1
     dup_
     mov  dword ptr [esi], 0
-    mov dword ptr  bits, 28
+    mov byte ptr bits, 28
 word1: call letter
     jns  0f
     mov  edx, shift
