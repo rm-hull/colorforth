@@ -74,7 +74,7 @@ start1:
 .equ maind, mains-750*4 ;# 0x9d120
 .align 4
 ;# 'me' points to the save slot for the current task
-    me: .long god
+me: .long god
 screen: .long 0 ;# logo
 
 ;# When we switch tasks, we need to switch stacks as well.  We do this
@@ -186,7 +186,7 @@ abort1: mov  esp, gods ;# reset return stack pointer
     mov dword ptr  spaces+4*4, offset qcompile
     mov dword ptr  spaces+5*4, offset cnum
     mov dword ptr  spaces+6*4, offset cshort
-    mov  eax, 057 ;# ?
+    mov  eax, '?
     call echo_
     jmp  accept
 
@@ -214,8 +214,8 @@ forthd: mov  ecx, forths
     mov dword ptr  lit, offset adup
     test dword ptr class, -1
     jz   0f
-        jmp  [class]
-0: ret
+    jmp  [class]
+0:  ret
 
 cdrop: mov  edx, h
     mov  list, edx
@@ -229,8 +229,8 @@ qdup: mov  edx, h
     jnz  cdup
     cmp  byte ptr [edx], 0x0ad
     jnz  cdup
-        mov  h, edx
-        ret
+    mov  h, edx
+    ret
 cdup: mov  edx, h
     mov  dword ptr [edx], 0x89fc768d
     mov  byte ptr [4+edx], 06
@@ -285,8 +285,8 @@ qcompile: call [lit]
     and  eax, -020
     call mfind
     jnz  0f
-        drop
-        jmp  [macro2+ecx*4]
+    drop
+    jmp  [macro2+ecx*4]
 0: call find
     mov  eax, [forth2+ecx*4]
 0: jnz  abort
@@ -848,12 +848,12 @@ key: dup_             ;# save copy of return stack pointer(?)
     xor  eax, eax     ;# used as index later, so clear it
 0:  call pause        ;# busy-wait
     in   al, 0x64     ;# keyboard status port
-.ifdef DEBUG_KBD
-    debugout
-.endif
     test al, 1        ;# see if there is a byte waiting
     jz   0b           ;# if not, loop
     in   al, 0x60     ;# fetch the scancode
+.ifdef DEBUG_KBD
+    debugout
+.endif
     test al, 0xf0     ;# top row of keyboard generates scancodes < 0x10
     jz   0b           ;# we don't use that row (the numbers row), so ignore it
     cmp  al, 58       ;# 57, right shift, is the highest scancode we use
@@ -1024,7 +1024,7 @@ number3: call key
     add  edx, eax
 0:  mov  [esi], edx
 number2: drop
-    mov dword ptr  shift, offset numb1
+    mov  dword ptr  shift, offset numb1
     jmp  number3
 
 endn: drop
@@ -1155,12 +1155,12 @@ qring: dup_
     inc  dword ptr [esi]
     cmp  curs, edi ;# from abort, insert
     jnz  0f
-        mov  curs, eax
-0: cmp  eax, curs
+    mov  curs, eax
+0:  cmp  eax, curs
     jz   ring
     jns  0f
-        mov  pcad, edi
-0: drop
+    mov  pcad, edi
+0:  drop
     ret
 
 ring: mov  cad, edi
@@ -1180,7 +1180,7 @@ ring: mov  cad, edi
 rw: mov  cx, word ptr xy+2
     cmp  cx, word ptr lm
     jz   0f
-        call cr
+    call cr
 0:  call red
     jmp  type_
 
@@ -1249,7 +1249,7 @@ gnw1: dup_
     mov  eax, 0x0f800 ;# green
     cmp dword ptr  bas, offset dot10
     jz   0f
-        mov  eax, 0x0c000 ;# dark green
+    mov  eax, 0x0c000 ;# dark green
     jmp  0f
 
 sw: mov  edx, [-4+edi*4]
@@ -1262,7 +1262,7 @@ nw1: dup_
     mov  eax, yellow
     cmp dword ptr  bas, offset dot10
     jz   0f
-        mov  eax, 0x0c0c000 ;# dark yellow
+    mov  eax, 0x0c0c000 ;# dark yellow
 0: call color
     dup_
     mov  eax, edx
@@ -1278,7 +1278,7 @@ refresh: call show
     mov  edi, blk
     shl  edi, 10-2
     mov  pcad, edi ;# for curs=0
-ref1:   test dword ptr [edi*4], 0x0f
+ref1: test dword ptr [edi*4], 0x0f
     jz   0f
     call qring
 0:  mov  edx, [edi*4]
@@ -1351,7 +1351,7 @@ actv: mov dword ptr  action, 12
     mov dword ptr  aword, offset 0f
     jmp  actn
 
-0: dup_
+0:  dup_
     xor  eax, eax
     inc dword ptr  words
     jmp  insert
@@ -1473,25 +1473,25 @@ format: test dword ptr action, 012 ;# ignore 3 and 9
     jnz  format2
 0:  shl  eax, 5
     xor  al, 2 ;# 6
-    cmp dword ptr  action, 4
+    cmp  dword ptr  action, 4
     jz   0f
     xor  al, 013 ;# 8
-0:  cmp dword ptr  base, 10
+0:  cmp  dword ptr  base, 10
     jz   0f
     xor  al, 020
-0:  mov dword ptr  words, 1
+0:  mov  dword ptr  words, 1
     jmp  insert
 
 format2: dup_
     mov  eax, 1 ;# 5
-    cmp dword ptr  action, 4
+    cmp  dword ptr  action, 4
     jz   0f
     mov  al, 3 ;# 2
-0:  cmp dword ptr  base, 10
+0:  cmp  dword ptr  base, 10
     jz   0f
     xor  al, 020
 0:  xchg eax, [esi]
-    mov dword ptr  words, 2
+    mov  dword ptr  words, 2
     jmp  insert
 
 del: call enstack
@@ -1502,7 +1502,7 @@ del: call enstack
     push esi
     mov  esi, cad
     shl  esi, 2
-    rep movsd
+    rep  movsd
     pop  esi
     jmp  mcur
 
