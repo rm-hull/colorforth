@@ -11,3 +11,4 @@ debug: action=report
 log: $BXRC.txt
 mouse: enabled=0
 vga_update_interval: 150000
+debugger_log: $BXRC.debug.txt

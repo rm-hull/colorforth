@@ -7,6 +7,10 @@ oldcf := a.img
 newcf := b.img
 export
 default: newbxnewcf
+%.debug.uniq.txt: %.debug.txt
+	uniq -f 4 -c $< > $@
+%cf.uniq.txt: %cf.txt
+	uniq -f 1 -c $< > $@
 oldbx%: template.bxrc a.img b.img
 	-export BXRC=$@ && \
 	export BOOTFLOPPY=$($*) && \
@@ -16,8 +20,10 @@ oldbx%: template.bxrc a.img b.img
 	else \
 	 $(BOCHS)/bochs -f $< -q; \
 	fi
-	sed -i 's/\r//' $@.txt
-	uniq -f 1 -c $@.txt > $@.uniq.txt
+	touch $@.txt $@.debug.txt
+	sed -i 's/\r//' $@.txt $@.debug.txt
+	$(MAKE) $@.uniq.txt
+	$(MAKE) $@.debug.uniq.txt
 	less $@.uniq.txt
 newbx%: template.bxrc a.img b.img
 	-export BXRC=$@ && \
@@ -28,8 +34,10 @@ newbx%: template.bxrc a.img b.img
 	else \
 	 $(BOCHS_SRC)/bochs -f $< -q; \
 	fi
-	sed -i 's/\r//' $@.txt
-	uniq -f 1 -c $@.txt > $@.uniq.txt
+	touch $@.txt $@.debug.txt
+	sed -i 's/\r//' $@.txt $@.debug.txt
+	$(MAKE) $@.uniq.txt
+	$(MAKE) $@.debug.uniq.txt
 	less $@.uniq.txt
 a.img:	$(CF_SRC)/colorforth/color.com
 	dd if=/dev/zero of=$@ bs=1024 count=1440
