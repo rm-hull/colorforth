@@ -43,9 +43,11 @@ colortags = [
 highbit =  0x80000000L
 mask =     0xffffffffL
 
-format = ''  # use 'html' or 'color', otherwise plain text
-formats = ['', 'html', 'color']
+format = ''  # use 'html' or 'color', otherwise plain text with or without tag
+formats = ['', 'html', 'color', 'plaintext']
 print_formats = []
+
+printing = False
 
 debugging = False
 
@@ -60,16 +62,22 @@ def putchar(character):
 def print_normal(printing, tagtype):
  if printing and tagtype == 3:
   putchar('\n')
+ if tagtype < 0x20:
+  if tagtype != 3:
+   putchar(' ')
 
 def print_color(printing, tagtype):
- color = colortags[tagtype]
  if printing:
   output.write('%s[%d;%dm' % (escape, 0,
    30 + colors.index('normal')))
  if printing and tagtype == 3:
   putchar('\n')
- output.write('%s[%d;%dm' % (escape, color != 'normal',
-  30 + colors.index(color)))
+ if tagtype < 0x20:
+  color = colortags[tagtype]
+  if tagtype != 3:
+   putchar(' ')
+  output.write('%s[%d;%dm' % (escape, color != 'normal',
+   30 + colors.index(color)))
 
 def print_text(coded):
  debug('coded: %08x' % coded)
@@ -90,32 +98,44 @@ def print_tags(printing, tagtype):
  if printing:
   output.write('</code>')
  if printing and (tagtype == 3):
-  output.write('</br>')
- output.write('<code class="%s">' % function[tagtype - 1])
+  output.write('<br>')
+ if tagtype < 0x20:
+  output.write('<code class=%s>' % function[tagtype - 1])
+  if tagtype != 3:
+   putchar(' ')
 
 def print_format(printing, tagtype):
  index = formats.index(format)
  print_formats[index](printing, tagtype)
- if tagtype != 3:
-  putchar(' ')
 
 def print_hex(integer):
  output.write('%x' % integer)
 
 def print_decimal(integer):
+ if highbit & integer:
+  integer = 0x100000000 - integer
  output.write('%d' % integer) 
 
 def print_colors(printing, color):
  if printing:
   print_color(colortags[color & 0x1f])
 
+def print_plain(printing, color):
+ if printing and tagtype == 3:
+  putchar('\n')
+ if tagtype < 0x20:
+  if tagtype != 3:
+   putchar(' ')
+  output.write('<%02x>' % (color & 0x1f))
+
 def dump_block(chunk):
  """see http://www.colorforth.com/parsed.html for meaning of bit patterns"""
+ global printing
  state = 'default'
- printing = False
  for index in range(0, len(chunk), 4):
   integer = struct.unpack('<L', chunk[index:index + 4])[0]
-  tagtype = integer & 0xf
+  tagtype = integer & 0x1f
+  tag = integer & 0xf
   if state == 'print number as hex':
    print_hex(integer)
    state = 'default'
@@ -124,32 +144,36 @@ def dump_block(chunk):
    state = 'default'
   elif not tagtype:
    print_text(integer)
-  elif tagtype == 2 or tagtype == 5:
-   print_format(printing, tagtype & 0x1f)
+  elif tag == 2 or tag == 5:
+   print_format(printing, tagtype)
    if integer & 0x10:
     state = 'print number as hex'
    else:
     state = 'print number as decimal'
-  elif tagtype == 6 or tagtype == 8:
-   print_format(printing, tagtype & 0x1f)
+  elif tag == 6 or tag == 8:
+   print_format(printing, tagtype)
    if integer & 0x10:
     print_hex(integer >> 5)
    else:
     print_decimal(integer >> 5)
   elif tagtype == 0xc:
-   print_format(printing, tagtype & 0xf)
+   print_format(printing, tag)
    print_text(integer & 0xfffffff0)
    state = 'print number as decimal'
   else:
-   print_format(printing, tagtype & 0xf)
+   print_format(printing, tag)
    print_text(integer & 0xfffffff0)
   printing = True
+ print_format(printing, 0x20);
+ if printing:
+  output.write('\n')
 
 def init():
  global print_formats
- print_formats = [print_normal, print_tags, print_color]
+ print_formats = [print_normal, print_tags, print_color, print_plain]
 
 def cfdump(filename):
+ global printing
  init()
  if not filename:
   file = sys.stdin
@@ -158,17 +182,35 @@ def cfdump(filename):
  data = file.read()
  file.close()
  debug('dumping %d bytes' % len(data))
+ if format == 'html':
+  output.write('<html>\n')
+  output.write('<link rel=stylesheet type="text/css" href="colorforth.css">\n')
  for block in range(0, len(data), 1024):
   chunk = data[block:block + 1024]
-  debug('dumping block %d' % (block / 1024))
+  if format == 'html':
+   output.write('{block %d}\n' % (block / 1024))
+   output.write('<div class=code>\n')
+  else:
+   debug('dumping block %d' % (block / 1024))
   dump_block(chunk)
+  if printing:
+   printing = False
+   if format == 'html':
+    output.write('</div>\n<hr>\n')
+ if format == 'html':
+  output.write('</html>\n')
 
-def dump_color(filename):
+def cf2text(filename):
+ global format
+ format = 'plaintext'
+ cfdump(filename)
+
+def cf2ansi(filename):
  global format
  format = 'color'
  cfdump(filename)
 
-def dump_html(filename):
+def cf2html(filename):
  global format
  format = 'html'
  cfdump(filename)
@@ -176,6 +218,7 @@ def dump_html(filename):
 if __name__ == '__main__':
  os.path.split
  command = os.path.splitext(os.path.split(sys.argv[0])[1])[0]
+ sys.argv += ['']  # make sure there's at least 1 arg
  (eval(command))(sys.argv[1])
 else:
  pass
