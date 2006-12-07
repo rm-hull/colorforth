@@ -69,7 +69,7 @@ new:	color.asm
 	$(MAKE) color.com
 kbd:	color.asm
 	touch $<
-	$(MAKE) DEBUG_KBD=1 color.com
+	$(MAKE) SMALLSCREEN=1 DEBUG_KBD=1 color.com
 small:	color.asm
 	touch $<
 	$(MAKE) SMALLSCREEN=1 color.com

@@ -19,18 +19,30 @@ start: jmp  start0
     .long 80*2*18 ;# sectors again
     .byte 0       ;# drive
 
-command: .byte 0
+command:
+.ifdef QUESTIONABLE
+    .byte 0xc5 ;# in compiled color.com from CM website
+;# probably just there from save-system or similar command? just a guess
+.else
+    .byte 0
+.endif
     .byte 0   ;# head, drive
-cylinder: .byte 0 ;# 1 in compiled color.com from CM website...
+cylinder:
+.ifdef QUESTIONABLE
+    .byte 1 ;# 1 in compiled color.com from CM website
 ;# causes load to skip from cylinder 0 directly to cylinder 2,
 ;# missing bytes 0x4800 to 0x9000 in color.com image
+.else
+    .byte 0
+.endif
     .byte 0   ;# head
     .byte 1   ;# sector
     .byte 2   ;# 512 bytes/sector
     .byte 18  ;# sectors/track
     .byte 0x1b ;# gap
     .byte 0x0ff
-.align 4
+.align 4  ;# if you see any crud in disassembly here it shouldn't matter
+;# two nonsense bytes in CM's 2001 color.com are 0x8b 0xc0
 nc: .long 9 ;# forth+icons+blocks 24-161 ;# number of cylinders, 9 (out of 80)
 gdt: .word 0x17
     .long gdt0

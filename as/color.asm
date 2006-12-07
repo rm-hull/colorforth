@@ -3,6 +3,8 @@
 ;#.486p
 
 .macro debugout
+/* CM used this, presumably with custom hardware, for debugging colorForth.
+/* jc is also using this, with a modified keyboard.cc, under Bochs. */
     out 0xe1, al
 .endm
 
@@ -62,7 +64,7 @@ start1:
 
 ;# This version of colorforth has cooperative round-robin multi-tasking.
 ;# the tasks are: God (the forth kernel), and main
-;# Each has two grows-down stacks; 's' indicates the
+;# Each has two grow-down stacks; 's' indicates the
 ;# return stack, 'd' indicates the data stack.  Thus 'Gods' and 'Godd'
 ;# are the tops of the return and data stacks, respectively, for the
 ;# God task.
@@ -89,10 +91,6 @@ main: .long 0 ;# mains-2*4
     jmp  round
 
 pause: dup_ ;# save cached datum from top of data stack
-.ifdef DEBUG_KBD
-    mov  al, 1
-    debugout
-.endif
     push esi ;# save data stack pointer on return stack
     mov  eax, me ;# get current task
     mov  [eax], esp ;# put our stack pointer into [me]
@@ -100,12 +98,6 @@ pause: dup_ ;# save cached datum from top of data stack
     jmp  eax ;# execute the CALL or JMP
 
 unpause: pop  eax ;# return address is that of 'main' slot above
-.ifdef DEBUG_KBD
-    push eax
-    mov  al, 2
-    debugout
-    pop  eax
-.endif
     mov  esp, [eax] ;# load 'main' task return stack
     mov  me, eax ;# 'main' task becomes 'me', current task
     pop  esi ;# restore my task's data-stack pointer
@@ -989,7 +981,7 @@ hex: mov dword ptr  base, 16
     mov dword ptr  board, offset octals-4
     ret
 
-octal: xor dword ptr current, (offset decimal-offset start) xor (offset hex-offset start)
+octal: xor dword ptr current, (offset decimal-offset start) ^ (offset hex-offset start)
     xor  byte ptr numb0+18, 041 xor 016 ;# f vs 9
     call current
     jmp  number0
