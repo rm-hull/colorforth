@@ -46,7 +46,7 @@ cylinder:
 nc: .long 9 ;# forth+icons+blocks 24-161 ;# number of cylinders, 9 (out of 80)
 gdt: .word 0x17
     .long gdt0
-.align 8
+.align 8 ;# more garbage seen in dump/disassembly here: 2e8bc02e8bc0
 gdt0: .word 0, 0, 0, 0
     .word 0x0ffff, 0, 0x9a00, 0x0cf ;# code
     .word 0x0ffff, 0, 0x9200, 0x0cf ;# data
@@ -72,12 +72,14 @@ start0:
 .endif
     int  0x10
     cli
+.code32
     xor  ax, ax    ;# move code to 0
 .ifdef QUESTIONABLE  # some things in CM's source which can be left out?
     mov  bx, ax
-    mov  bx, cs
-    mov  ds, bx
-    mov  es, ax
+.code32
+    mov  ebx, cs
+    mov  ds, ebx
+    mov  es, eax
     mov  di, ax
     mov  si, ax
 .else
@@ -85,6 +87,7 @@ start0:
     mov  bx, cs
     mov  ds, bx
 .endif
+.code16
     call loc ;# where are we? ip+4*cs
 loc: pop  si
     sub  si, offset loc-offset start
@@ -157,7 +160,7 @@ spin: mov  cl, 0x1c
 ;#  out  dx, al
 0:  call sense_
     jns  0b
-    mov dword ptr  cylinder, 0 ;# calibrate
+    mov byte ptr cylinder, 0 ;# calibrate
     mov  al, 7
     mov  cl, 2
     call cmd
