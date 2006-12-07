@@ -75,8 +75,12 @@ start1:
 .align 4
 ;# 'me' points to the save slot for the current task
 me: .long god
-screen: .long 0 ;# logo
-
+screen:
+.ifdef QUESTIONABLE
+    .long 0x100f1f ;# found in cm2001 color.com binary
+.else
+    .long 0 ;# logo
+.endif
 ;# When we switch tasks, we need to switch stacks as well.  We do this
 ;# by pushing eax (cached top-of-stack) onto the data stack, pushing
 ;# the data stack pointer onto the return stack, and then saving the
@@ -85,9 +89,19 @@ screen: .long 0 ;# logo
 ;# these are the save slots - each is followed by code to resume the
 ;# next task - the last one jumps 'round to the first.
 round: call unpause
-god: .long 0 ;# gods-2*4
+god:
+.ifdef QUESTIONABLE
+    .long 0x9ffe8 ;# found in cm2001 color.com binary
+.else
+    .long 0 ;# gods-2*4
+.endif
     call unpause
-main: .long 0 ;# mains-2*4
+main:
+.ifdef QUESTIONABLE
+    .long 0x9dcd0
+.else
+    .long 0 ;# mains-2*4
+.endif
     jmp  round
 
 pause: dup_ ;# save cached datum from top of data stack
@@ -982,8 +996,11 @@ hex: mov dword ptr  base, 16
     ret
 
 octal: xor dword ptr current, (offset decimal-offset start) ^ (offset hex-offset start)
-    xor  byte ptr numb0+18, 041 xor 016 ;# f vs 9
+    xor  byte ptr numb0+18, 041 ^ 016 ;# f vs 9
     call current
+.ifdef QUESTIONABLE
+    nop ;# can't force 6-byte assembly of call ds:current
+.endif
     jmp  number0
 
 xn: drop
@@ -1003,7 +1020,10 @@ minus:
 number0: drop
     jmp  number3
 number: call current
-    mov dword ptr  sign, 0
+.ifdef QUESTIONABLE
+    nop ;# can't force 6-byte assembly of call ds:current
+.endif
+    mov byte ptr sign, 0
     xor  eax, eax
 number3: call key
     call letter
@@ -1013,7 +1033,7 @@ number3: call key
 0:  test al, al
     jz   number0
     mov  al, [digit-4+eax]
-    test dword ptr sign, 037
+    test byte ptr sign, 037
     jz   0f
     neg  eax
 0:  mov  edx, [esi]
@@ -1343,9 +1363,9 @@ actn: mov  keyc, eax
     drop
     jmp  accept
 
-actv: mov dword ptr  action, 12
+actv: mov byte ptr action, 12
     mov  eax, 0x0ff00ff ;# magenta
-    mov dword ptr  aword, offset 0f
+    mov dword ptr aword, offset 0f
     jmp  actn
 
 0:  dup_
@@ -1459,7 +1479,7 @@ insert: call insert0
     xor  [edi*4], cl
     jmp  accept
 
-format: test dword ptr action, 012 ;# ignore 3 and 9
+format: test byte ptr action, 012 ;# ignore 3 and 9
     jz   0f
     drop
     ret
@@ -1470,7 +1490,7 @@ format: test dword ptr action, 012 ;# ignore 3 and 9
     jnz  format2
 0:  shl  eax, 5
     xor  al, 2 ;# 6
-    cmp  dword ptr  action, 4
+    cmp  byte ptr  action, 4
     jz   0f
     xor  al, 013 ;# 8
 0:  cmp  dword ptr  base, 10
@@ -1481,7 +1501,7 @@ format: test dword ptr action, 012 ;# ignore 3 and 9
 
 format2: dup_
     mov  eax, 1 ;# 5
-    cmp  dword ptr  action, 4
+    cmp  byte ptr  action, 4
     jz   0f
     mov  al, 3 ;# 2
 0:  cmp  dword ptr  base, 10
