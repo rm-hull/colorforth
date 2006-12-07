@@ -1,4 +1,9 @@
 BOCHS := /usr/src/bochs
+CF_BOCHS := $(PWD)
+BOCHS_LOGIN :=  cvs \
+ -d:pserver:anonymous@bochs.cvs.sourceforge.net:/cvsroot/bochs login
+BOCHS_CHECKOUT :=  cvs -z3 \
+ -d:pserver:anonymous@bochs.cvs.sourceforge.net:/cvsroot/bochs co -P bochs
 export
 # make bochsdbg.exe first because it builds as bochs.exe!
 all:	$(BOCHS)/bochsdbg.exe $(BOCHS)/bochs.exe
@@ -51,3 +56,16 @@ test:
 %.link:
 	cd $(BOCHS)/iodev && ln -sf floppy.cc.$* floppy.cc
 	cd $(BOCHS)/iodev && ln -sf floppy.h.$* floppy.h
+links:	*.cc *.h
+	for file in $+; do \
+	 declare original=$$(find $(BOCHS) -maxdepth 2 -name $$file); \
+	 if [ -f $$original.orig ]; then \
+	  rm -f $$original; else \
+	  mv -f $$original $$original.orig; \
+	 fi; \
+	( cd $$(dirname $$original) && \
+	  ln -sf $(CF_BOCHS)/$$file $$file) ; \
+	done
+checkout:
+	@[ -d $(BOCHS) ] && echo Already checked out || \
+	 cd $(shell dirname $(BOCHS)); $(BOCHS_LOGIN); $(BOCHS_CHECKOUT)
