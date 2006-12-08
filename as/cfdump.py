@@ -73,7 +73,7 @@ def print_color(printing, tagtype):
  if printing and tagtype == 3:
   putchar('\n')
  if tagtype < 0x20:
-  color = colortags[tagtype]
+  color = colortags[tagtype - 1]
   if tagtype != 3:
    putchar(' ')
   output.write('%s[%d;%dm' % (escape, color != 'normal',
@@ -118,15 +118,15 @@ def print_decimal(integer):
 
 def print_colors(printing, color):
  if printing:
-  print_color(colortags[color & 0x1f])
+  print_color(colortags[(color & 0x1f) - 1])
 
-def print_plain(printing, color):
+def print_plain(printing, tagtype):
  if printing and tagtype == 3:
   putchar('\n')
  if tagtype < 0x20:
   if tagtype != 3:
    putchar(' ')
-  output.write('<%02x>' % (color & 0x1f))
+  output.write('<%02x>' % (tagtype & 0x1f))
 
 def dump_block(chunk):
  """see http://www.colorforth.com/parsed.html for meaning of bit patterns"""
