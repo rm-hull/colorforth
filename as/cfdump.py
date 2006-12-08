@@ -22,6 +22,8 @@ escape = chr(0x1b)
 colors = ['', 'red', 'green', 'yellow', 'blue',
  'magenta', 'cyan', 'white', '', 'normal'] # escape codes 30 to 39
 
+# function and colortags are one-based, remember to subtract 1 before indexing
+
 function = [
  'execute', 'execute', 'define', 'compile',
  'compile', 'compile', 'compilemacro', 'execute',
@@ -59,22 +61,22 @@ def putchar(character):
  debug('putchar "%s"' % character);
  output.write(character)
 
-def print_normal(printing, tagtype):
- if printing and tagtype == 3:
+def print_normal(printing, fulltag):
+ if printing and fulltag == 3:
   putchar('\n')
- if tagtype < 0x20:
-  if tagtype != 3:
+ if fulltag < 0x20:
+  if fulltag != 3:
    putchar(' ')
 
-def print_color(printing, tagtype):
+def print_color(printing, fulltag):
  if printing:
   output.write('%s[%d;%dm' % (escape, 0,
    30 + colors.index('normal')))
- if printing and tagtype == 3:
+ if printing and fulltag == 3:
   putchar('\n')
- if tagtype < 0x20:
-  color = colortags[tagtype - 1]
-  if tagtype != 3:
+ if fulltag < 0x20:
+  color = colortags[fulltag - 1]
+  if fulltag != 3:
    putchar(' ')
   output.write('%s[%d;%dm' % (escape, color != 'normal',
    30 + colors.index(color)))
@@ -94,39 +96,39 @@ def print_text(coded):
    putchar(code[(coded >> 29) + (8 * (nybble - 10))])
    coded = (coded << 3) & mask
 
-def print_tags(printing, tagtype):
+def print_tags(printing, fulltag):
  if printing:
   output.write('</code>')
- if printing and (tagtype == 3):
+ if printing and (fulltag == 3):
   output.write('<br>')
- if tagtype < 0x20:
-  output.write('<code class=%s>' % function[tagtype - 1])
-  if tagtype != 3:
+ if fulltag < 0x20:
+  output.write('<code class=%s>' % function[fulltag - 1])
+  if fulltag != 3:
    putchar(' ')
 
-def print_format(printing, tagtype):
+def print_format(printing, fulltag):
  index = formats.index(format)
- print_formats[index](printing, tagtype)
+ print_formats[index](printing, fulltag)
 
 def print_hex(integer):
  output.write('%x' % integer)
 
 def print_decimal(integer):
- if highbit & integer:
-  integer = 0x100000000 - integer
+ if (highbit & integer):
+  integer -= 0x100000000
  output.write('%d' % integer) 
 
 def print_colors(printing, color):
  if printing:
   print_color(colortags[(color & 0x1f) - 1])
 
-def print_plain(printing, tagtype):
- if printing and tagtype == 3:
+def print_plain(printing, fulltag):
+ if printing and fulltag == 3:
   putchar('\n')
- if tagtype < 0x20:
-  if tagtype != 3:
+ if fulltag < 0x20:
+  if fulltag != 3:
    putchar(' ')
-  output.write('<%02x>' % (tagtype & 0x1f))
+  output.write('<%02x>' % (fulltag & 0x1f))
 
 def dump_block(chunk):
  """see http://www.colorforth.com/parsed.html for meaning of bit patterns"""
@@ -134,7 +136,7 @@ def dump_block(chunk):
  state = 'default'
  for index in range(0, len(chunk), 4):
   integer = struct.unpack('<L', chunk[index:index + 4])[0]
-  tagtype = integer & 0x1f
+  fulltag = integer & 0x1f
   tag = integer & 0xf
   if state == 'print number as hex':
    print_hex(integer)
@@ -142,24 +144,31 @@ def dump_block(chunk):
   elif state == 'print number as decimal':
    print_decimal(integer)
    state = 'default'
-  elif not tagtype:
+  elif tag == 0:
    print_text(integer)
   elif tag == 2 or tag == 5:
-   print_format(printing, tagtype)
+   print_format(printing, fulltag)
    if integer & 0x10:
     state = 'print number as hex'
    else:
     state = 'print number as decimal'
   elif tag == 6 or tag == 8:
-   print_format(printing, tagtype)
+   print_format(printing, fulltag)
    if integer & 0x10:
-    print_hex(integer >> 5)
+    if integer & highbit:
+     print_hex((integer >> 5) | 0xf8000000)
+    else:
+     print_hex(integer >> 5)
    else:
-    print_decimal(integer >> 5)
-  elif tagtype == 0xc:
+    if integer & highbit:
+     print_decimal((integer >> 5) | 0xf8000000)
+    else:
+     print_decimal(integer >> 5)
+  elif tag == 0xc:
    print_format(printing, tag)
    print_text(integer & 0xfffffff0)
    state = 'print number as decimal'
+   print_format(True, 4)
   else:
    print_format(printing, tag)
    print_text(integer & 0xfffffff0)
@@ -187,8 +196,8 @@ def cfdump(filename):
   output.write('<link rel=stylesheet type="text/css" href="colorforth.css">\n')
  for block in range(0, len(data), 1024):
   chunk = data[block:block + 1024]
+  output.write('{block %d}\n' % (block / 1024))
   if format == 'html':
-   output.write('{block %d}\n' % (block / 1024))
    output.write('<div class=code>\n')
   else:
    debug('dumping block %d' % (block / 1024))
