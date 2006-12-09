@@ -424,19 +424,35 @@ inter: mov  edx, [edi*4]
 
 .align 4
 spaces: .long qignore, execute, num
-adefine: .long 5+macro_ ;# macrod ?
+adefine:
+.ifdef QUESTIONABLE
+    .long forthd ;# as found in CM2001 color.com binary
+.else
+    .long 5+macro_ ;# macrod ?
+.endif
     .long qcompile, cnum, cshort, compile
     .long short_, nul, nul, nul
     .long variable, nul, nul, nul
 
 lit: .long adup
+.ifdef QUESTIONABLE ;# match CM2001 color.com binary
+mk: .long 0x2e, 0x5e, 0x101028
+h: .long 0x101137
+last: .long 0x59f
+class: .long 0
+list: .long 0x101132, 0x10111e
+macros: .long 0x2e
+forths: .long 0x67
+.else
 mk: .long 0, 0, 0
-h: .long 0x40000*4
+h: .long 0x40000*4 ;# start compiling at 0x100000
 last: .long 0
 class: .long 0
 list: .long 0, 0
 macros: .long 0
 forths: .long 0
+.endif
+
 macro0: .long 0170 << 25 ;# ;
     .long ((0140 << 7+0146)<< 7+0142)<< 11 ;# dup
     .long (((0177 << 7+0140)<< 7+0146)<< 7+0142)<< 4 ;# ?dup
@@ -444,6 +460,20 @@ macro0: .long 0170 << 25 ;# ;
     .long (((2 << 7+0144)<< 4+4)<< 4+6)<< 13 ;# then
     .long ((((0143 << 4+4)<< 5+025)<< 4+7)<< 4+6)<< 8 ;# begin
 macro1: .rept 128 .long 0; .endr
+/* in CM2001 color.com there are 42 new compressed words following 'begin':
+from 0x7e0 (these are defined in block 24): swap 0 if -if a a! 2* a,
+from 0x800 (start of block 2), 35 words:
+ @ ! nip + or
+ binary and u+ ? (defined in block 26:) over
+ push pop - for *next
+ next 0next -next i *end
+ end +! nop align or!
+ * star/ /mod / mod  (an asterisk before the / would end the comment)
+ (defined in block 28:) 2/ time (block 50:) p@ p!
+ (following that is some nonsense:)
+  0xc9800000 hd (a valid packed word but one that isn't defined anywhere), and
+  0x00005811, which isn't a valid packed word
+*/
 forth0: .long (((0143 << 4+3)<< 4+3)<< 4+2)<< 13 ;# boot
     .long (((027 << 4+5)<< 4+1)<< 5+021)<< 14 ;# warm
     .long ((((0142 << 4+5)<< 7+0146)<< 5+020)<< 4+4)<< 5 ;# pause
@@ -503,6 +533,12 @@ forth0: .long (((0143 << 4+3)<< 4+3)<< 4+2)<< 13 ;# boot
     .long (020 << 7+0142)<< 20 ;# sp
     .long (((024 << 4+5)<< 5+020)<< 4+2)<< 14 ;# last
     .long (((((0146 << 4+6)<< 7+0142)<< 4+5)<< 5+022))<< 5 ;# unpac k
+;# in CM2001 color.com binary, we find 44 new packed words here:
+;# @ ! + */ * / 2/ dup negate min
+;# abs max v+ writes reads oadf save block white green
+;# blue silver black screen 5* cf logo empty dump icons
+;# print file north colors blks w/c buffe(r) size set cyls
+;# put get .com format
 forth1: .rept 512 .long 0; .endr
 macro2: .long semi
     .long cdup
@@ -510,6 +546,8 @@ macro2: .long semi
     .long cdrop
     .long then
     .long begin
+;# in CM2001 color.com object code, we find 42 of these 128 slots filled:
+;# starting with 0x1008d0 at 0x12e4, to 0x0552 at 0x138c.
     .rept 128 .long 0; .endr
 forth2: .long boot
     .long warm
@@ -570,6 +608,10 @@ forth2: .long boot
     .long sps
     .long last_
     .long unpack
+;# leave 512 slots for new word definitions.
+;# in the CM2001 color.com object file, there are 45 entries, starting
+;# with 0x100d12 and ending with 0x1008c1.
+;# (why 45 new entries for only 44 new words?)
     .rept 512 .long 0; .endr
 
 boot: mov  al, 0x0fe ;# reset
@@ -621,12 +663,21 @@ debug: mov dword ptr  xy,  offset (3*0x10000+(vc-2)*ih+3)
 .equ ih, 24+6
 .equ hc, hp/iw ;# 46
 .equ vc, vp/ih ;# 25
-.align 4
+.align 4 ;# MASM's 3-byte NOP for alignment is 2e8bc0, cs: mov eax,eax
+;# whereas gas's is 8d7600, lea esi,[esi].
+.ifdef QUESTIONABLE ;# match CM2001 color.com object code
+xy: .long 0x033d02e5
+lm: .long 3
+rm: .long hc*iw
+xycr: .long 3*0x10000+3
+fov: .long 10*(2*vp+vp/2)
+.else
 xy: .long 3*0x10000+3
 lm: .long 3
 rm: .long hc*iw ;# 1012
 xycr: .long 0
 fov: .long 10*(2*vp+vp/2)
+.endif
 
 nc_: dup_
     mov  eax, (offset nc-offset start)/4
@@ -670,7 +721,12 @@ green: dup_
     mov  eax, 0x8000ff00
     jmp  color
 
-history: .rept 11 .byte 0; .endr
+history:
+.ifdef QUESTIONABLE ;# match CM2001 color.com binary
+    .byte 0, 0, 0, 0, 0, 0, 0, 37, 10, 3, 9
+.else
+    .rept 11 .byte 0; .endr
+.endif
 echo_: push esi
     mov  ecx, 11-1
     lea  edi, history
@@ -897,6 +953,16 @@ numb1: .long number0, xn, endn, number0
     .byte 025, 045,  0 , 0 ;# x .
 
 board: .long alpha-4
+.ifdef QUESTIONABLE ;# match CM2001 color.com binary
+shift: .long alpha1
+base: .long 10
+current: .long decimal
+keyc: .long yellow
+chars: .long 5
+aword: .long ex1
+anumber: .long nul
+words: .long 0
+.else
 shift: .long alpha0
 base: .long 10
 current: .long decimal
@@ -905,6 +971,7 @@ chars: .long 1
 aword: .long ex1
 anumber: .long nul
 words: .long 1
+.endif
 
 nul0: drop
     jmp  0f
@@ -918,7 +985,12 @@ accept1: mov  board, edi
     mov  edx, shift
     jmp  dword ptr [edx+eax*4]
 
-bits: .byte 28
+bits:
+.ifdef QUESTIONABLE
+   .byte 7 ;# matches CM2001 color.com binary
+.else
+   .byte 28
+.endif
 0:  add  eax, 0120
     mov  cl, 7
     jmp  0f
@@ -1317,16 +1389,24 @@ tens: .long 10, 100, 1000, 10000, 100000, 1000000
     .long 10000000, 100000000, 1000000000
 bas: .long dot10
 blk: .long 18
+.ifdef QUESTIONABLE ;# match CM2001 color.com binary
+curs: .long 2
+cad: .long 0x1204
+pcad: .long 0x1202
+lcad: .long 0x122c
+trash: .long buffer*4+12
+.else
 curs: .long 0
 cad: .long 0
 pcad: .long 0
 lcad: .long 0
 trash: .long buffer*4
+.endif
 /* the editor keys and their actions */
 ekeys: .long nul, del, eout, destack
-    .long act1, act3, act4, shadow
-    .long mcur, mmcur, ppcur, pcur
-    .long mblk, actv, act7, pblk
+    .long act1, act3, act4, shadow ;# white, red, green, to shadow block
+    .long mcur, mmcur, ppcur, pcur ;# left, up, down, right
+    .long mblk, actv, act7, pblk ;# previous block, , , next block
     .long nul, act11, act10, act9
     .long nul, nul, nul, nul
 ekbd0: .long nul, nul, nul, nul
@@ -1340,7 +1420,11 @@ ekbd: .byte 017,  1 , 015, 055 ;# w  r  g  *
 actc: .long yellow, 0, 0x0ff0000, 0x0c000, 0, 0, 0x0ffff
     .long 0, 0x0ffffff, 0x0ffffff, 0x0ffffff, 0x8080ff
 vector: .long 0
+.ifdef QUESTIONABLE
+action: .byte 10 ;# matches CM2001 color.com binary
+.else
 action: .byte 1
+.endif
 
 act1: mov  al, 1
     jmp  0f

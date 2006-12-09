@@ -13,10 +13,17 @@
 ;# multiply vp (vertical pixels) by hp (horizontal pixels) by 2 bytes (16 bits)
 ;# to determine the location of the framebuffer
 frame: .long 0x2000000-hp*vp*2 ;# 32 m
+.ifdef QUESTIONABLE ;# match CM2001 color.com binary
+displ: .long 0x0f5000000
+fore:  .long 0x0f7c0
+xc:    .long 0x0327
+yc:    .long 0x02e5
+.else
 displ: .long 0x0f0000000 ;# fujitsu (physical address of video memory)
 fore:  .long 0x0f7de ;# half-brightness white in 565 color mode
 xc:    .long 0
 yc:    .long 0
+.endif
 
 rgb: ror  eax, 8
     shr  ax, 2
