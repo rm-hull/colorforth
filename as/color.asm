@@ -533,6 +533,7 @@ forth0: .long (((0143 << 4+3)<< 4+3)<< 4+2)<< 13 ;# boot
     .long (020 << 7+0142)<< 20 ;# sp
     .long (((024 << 4+5)<< 5+020)<< 4+2)<< 14 ;# last
     .long (((((0146 << 4+6)<< 7+0142)<< 4+5)<< 5+022))<< 5 ;# unpac k
+;# now we are at address 0xacc
 ;# in CM2001 color.com binary, we find 44 new packed words here:
 ;# @ ! + */ * / 2/ dup negate min
 ;# abs max v+ writes reads oadf save block white green
@@ -540,6 +541,7 @@ forth0: .long (((0143 << 4+3)<< 4+3)<< 4+2)<< 13 ;# boot
 ;# print file north colors blks w/c buffe(r) size set cyls
 ;# put get .com format
 forth1: .rept 512 .long 0; .endr
+;# this brings us to address 0x12cc
 macro2: .long semi
     .long cdup
     .long qdup
@@ -610,7 +612,7 @@ forth2: .long boot
     .long unpack
 ;# leave 512 slots for new word definitions.
 ;# in the CM2001 color.com object file, there are 45 entries, starting
-;# with 0x100d12 and ending with 0x1008c1.
+;# with 0x100d12 at 0x15d0 and ending with 0x1008c1 at 0x1680.
 ;# (why 45 new entries for only 44 new words?)
     .rept 512 .long 0; .endr
 
