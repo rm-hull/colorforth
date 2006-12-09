@@ -13,6 +13,8 @@ newcode  = ' rtoeani' + 'smcylgfw' + 'dvpbhxuq' + '01234567' + \
 code = newcode  # assume Tim knows what he's doing
 #code = oldcode  # assume Chuck knows what he's saying
 
+blocktext = '' # global, written by many subroutines
+
 output = sys.stdout
 
 hexadecimal = '0123456789abcdef'
@@ -47,7 +49,7 @@ mask =     0xffffffffL
 
 format = ''  # use 'html' or 'color', otherwise plain text with or without tag
 formats = ['', 'html', 'color', 'plaintext']
-print_formats = []
+print_formats = [] # filled in during initialization; nothing defined yet
 
 printing = False
 
@@ -58,8 +60,9 @@ def debug(*args):
   sys.stderr.write('%s\n' % repr(args))
 
 def putchar(character):
+ global blocktext
  debug('putchar "%s"' % character);
- output.write(character)
+ blocktext += character
 
 def print_normal(printing, fulltag):
  if printing and fulltag == 3:
@@ -69,17 +72,17 @@ def print_normal(printing, fulltag):
    putchar(' ')
 
 def print_color(printing, fulltag):
+ global blocktext
  if printing:
-  output.write('%s[%d;%dm' % (escape, 0,
-   30 + colors.index('normal')))
+  blocktext += '%s[%d;%dm' % (escape, 0, 30 + colors.index('normal'))
  if printing and fulltag == 3:
   putchar('\n')
  if fulltag < 0x20:
   color = colortags[fulltag - 1]
   if fulltag != 3:
    putchar(' ')
-  output.write('%s[%d;%dm' % (escape, color != 'normal',
-   30 + colors.index(color)))
+  blocktext += '%s[%d;%dm' % (escape, color != 'normal',
+   30 + colors.index(color))
 
 def print_text(coded):
  debug('coded: %08x' % coded)
@@ -97,12 +100,13 @@ def print_text(coded):
    coded = (coded << 3) & mask
 
 def print_tags(printing, fulltag):
+ global blocktext
  if printing:
-  output.write('</code>')
+  blocktext += '</code>'
  if printing and (fulltag == 3):
-  output.write('<br>')
+  blocktext += '<br>'
  if fulltag < 0x20:
-  output.write('<code class=%s>' % function[fulltag - 1])
+  blocktext += '<code class=%s>' % function[fulltag - 1]
   if fulltag != 3:
    putchar(' ')
 
@@ -111,28 +115,31 @@ def print_format(printing, fulltag):
  print_formats[index](printing, fulltag)
 
 def print_hex(integer):
- output.write('%x' % integer)
+ global blocktext
+ blocktext += '%x' % integer
 
 def print_decimal(integer):
+ global blocktext
  if (highbit & integer):
   integer -= 0x100000000
- output.write('%d' % integer) 
+ blocktext += '%d' % integer
 
 def print_colors(printing, color):
  if printing:
   print_color(colortags[(color & 0x1f) - 1])
 
 def print_plain(printing, fulltag):
+ global blocktext
  if printing and fulltag == 3:
   putchar('\n')
  if fulltag < 0x20:
   if fulltag != 3:
    putchar(' ')
-  output.write('<%02x>' % (fulltag & 0x1f))
+  blocktext += '<%02x>' % (fulltag & 0x1f)
 
 def dump_block(chunk):
  """see http://www.colorforth.com/parsed.html for meaning of bit patterns"""
- global printing
+ global printing, blocktext
  state = 'default'
  for index in range(0, len(chunk), 4):
   integer = struct.unpack('<L', chunk[index:index + 4])[0]
@@ -175,14 +182,14 @@ def dump_block(chunk):
   printing = True
  print_format(printing, 0x20);
  if printing:
-  output.write('\n')
+  blocktext += '\n'
 
 def init():
  global print_formats
  print_formats = [print_normal, print_tags, print_color, print_plain]
 
 def cfdump(filename):
- global printing
+ global printing, blocktext
  init()
  if not filename:
   file = sys.stdin
@@ -196,12 +203,14 @@ def cfdump(filename):
   output.write('<link rel=stylesheet type="text/css" href="colorforth.css">\n')
  for block in range(0, len(data), 1024):
   chunk = data[block:block + 1024]
+  blocktext = ''
   output.write('{block %d}\n' % (block / 1024))
   if format == 'html':
    output.write('<div class=code>\n')
   else:
    debug('dumping block %d' % (block / 1024))
   dump_block(chunk)
+  output.write(blocktext)
   if printing:
    printing = False
    if format == 'html':
