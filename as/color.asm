@@ -55,10 +55,11 @@ start1:
 .else
     pop [displ]  # use address determined by VBE2 call in boot.asm
 .endif
-    call show0
+    call show0 ;# set up 'main' task to draw screen
     mov  dword ptr  forths,  offset ((forth1-forth0)/4)
     mov  dword ptr  macros,  offset ((macro1-macro0)/4)
-    mov  eax, 18
+    mov  eax, 18 ;# load start screen, 18
+;# the start screen loads a bunch of definitions, then 'empty' which shows logo
     call load
     jmp  accept ;# wait for keyhit
 
@@ -118,15 +119,15 @@ unpause: pop  eax ;# return address is that of 'main' slot above
     drop ;# load previously dup'd datum back into EAX
     ret
 
-act: mov  edx, maind-4
-    mov  [edx], eax
-    mov  eax, mains-4
-    pop  [eax]
-    sub  eax, 4
-    mov  [eax], edx
-    mov  main, eax
-    drop
-    ret
+act: mov  edx, maind-4 ;# data stack of 'main' task
+    mov  [edx], eax ;# 0 if called from 'show'
+    mov  eax, mains-4 ;# return stack of 'main' task
+    pop  [eax] ;# return of 'god' task now on 'main' stack
+    sub  eax, 4 ;# down one slot on 'main' stack
+    mov  [eax], edx ;# store 'main' data stack pointer
+    mov  main, eax ;# store 'main' return stack pointer in 'main' slot
+    drop ;# what was 'dup'd before now into eax
+    ret ;# to previous caller, since we already popped 'our' return address
 
 show0: call show
     ret
@@ -157,7 +158,7 @@ empty: mov  ecx, mk+2*4
     mov  forths, ecx
     mov  ecx, mk
     mov  macros, ecx
-    mov  dword ptr  class, 0
+    mov  dword ptr class, 0
     ret
 
 mfind: mov  ecx, macros
@@ -885,21 +886,21 @@ alpha: .byte 015, 012,  1 , 014
     .byte 022, 013, 016,  7
     .byte  5 ,  3 ,  4 , 026
     .byte 027, 044, 025, 020
-graphics: .byte 031, 032, 033,  0
-    .byte 034, 035, 036, 030
-    .byte 037, 040, 041, 057
+graphics: .byte 031, 032, 033, 0 ;# 1 2 3
+    .byte 034, 035, 036, 030 ;# 4 5 6 0
+    .byte 037, 040, 041, 057 ;# 7 8 9 ?
     .byte 051, 050, 052, 054 ;# : ; ! @
     .byte 046, 042, 045, 056 ;# z j . ,
     .byte 055, 047, 053, 043 ;# * / + -
-numbers: .byte 031, 032, 033,  0
-    .byte 034, 035, 036, 030
-    .byte 037, 040, 041,  0
+numbers: .byte 031, 032, 033, 0 ;# 1 2 3
+    .byte 034, 035, 036, 030 ;# 4 5 6 0
+    .byte 037, 040, 041,  0  ;# 7 8 9 ?
     .byte  0,   0 ,  0 ,  0
     .byte  0,   0 ,  0 ,  0
     .byte  0,   0 ,  0 ,  0
-octals: .byte 031, 032, 033,  0
-    .byte 034, 035, 036, 030
-    .byte 037, 040, 041,  0
+octals: .byte 031, 032, 033, 0 ;# 1 2 3
+    .byte 034, 035, 036, 030 ;# 4 5 6 0
+    .byte 037, 040, 041,  0  ;# 7 8 9
     .byte  0 ,  5 , 023, 012
     .byte  0 , 020,  4 , 016
     .byte  0 ,  0 ,  0 ,  0
@@ -1428,19 +1429,19 @@ action: .byte 10 ;# matches CM2001 color.com binary
 action: .byte 1
 .endif
 
-act1: mov  al, 1
+act1: mov  al, 1 ;# word execute, yellow
     jmp  0f
-act3: mov  al, 3
+act3: mov  al, 3 ;# word define, red
     jmp  0f
-act4: mov  al, 4
+act4: mov  al, 4 ;# word compile, green
     jmp  0f
-act9: mov  al, 9
+act9: mov  al, 9 ;# word comment, white
     jmp  0f
-act10: mov  al, 10
+act10: mov  al, 10 ;# word comment, white capitalized
     jmp  0f
-act11: mov  al, 11
+act11: mov  al, 11 ;# word comment, ALL CAPS
     jmp  0f
-act7: mov  al, 7
+act7: mov  al, 7 ;# macro compile, cyan
 0:  mov  action, al
     mov  eax, [actc-4+eax*4]
     mov dword ptr  aword, offset insert
@@ -1449,39 +1450,39 @@ actn: mov  keyc, eax
     drop
     jmp  accept
 
-actv: mov byte ptr action, 12
+actv: mov byte ptr action, 12 ;# variable
     mov  eax, 0x0ff00ff ;# magenta
     mov dword ptr aword, offset 0f
     jmp  actn
 
 0:  dup_
     xor  eax, eax
-    inc dword ptr  words
+    inc  dword ptr words
     jmp  insert
 
-mcur: dec dword ptr  curs
+mcur: dec dword ptr curs ;# minus cursor: move left
     jns  0f
-pcur: inc dword ptr  curs
+pcur: inc dword ptr curs ;# plus cursor: move right
 0:  ret
 
-mmcur: sub dword ptr  curs, 8
+mmcur: sub dword ptr curs, 8 ;# move up one row
     jns  0f
     mov dword ptr  curs, 0
 0:  ret
-ppcur: add dword ptr  curs, 8
+ppcur: add dword ptr  curs, 8 ;# move down one row
     ret
 
-pblk: add dword ptr  blk, 2
+pblk: add dword ptr  blk, 2 ;# plus one block (+2 since odd are shadows)
     add  dword ptr [esi], 2
     ret
-mblk: cmp dword ptr  blk, 20
-    js   0f
+mblk: cmp dword ptr  blk, 20 ;# minus one block unless below 20
+    js   0f ;# (18 is first block available for editing)
     sub dword ptr  blk, 2
     sub  dword ptr [esi], 2
 0:  ret
-
-shadow: xor dword ptr  blk, 1
-    xor  dword ptr [esi], 1
+;# shadow screens in Forth are documentation for corresponding source screens
+shadow: xor dword ptr  blk, 1 ;# switch between shadow and source
+    xor  dword ptr [esi], 1 ;# change odd to even and vice versa
     ret
 
 e0: drop
