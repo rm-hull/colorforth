@@ -1,5 +1,5 @@
 #!/usr/bin/python
-"""dump a colorForth image file
+"""dump a colorForth image file -- jc.unternet.net
 
    public domain code based on Tim Neitz's cf2html"""
 
@@ -14,6 +14,8 @@ code = newcode  # assume Tim knows what he's doing
 #code = oldcode  # assume Chuck knows what he's saying
 
 emptyblock = '\0' * 1024
+
+high_level_block = 18  # first high-level code block in CM2001
 
 output = sys.stdout
 
@@ -163,10 +165,13 @@ def print_code(chunk):
 def dump_block(chunk):
  """see http://www.colorforth.com/parsed.html for meaning of bit patterns"""
  state = 'default'
- dump['dirty'] = False  # assume high-level code until proven otherwise
+ if (dump['block'] / 1024) < high_level_block:  # assume machine code
+  dump['dirty'] = True
+ else:  # assume high-level Forth
+  dump['dirty'] = False
  for dump['index'] in range(0, len(chunk), 4):
   integer = struct.unpack('<L', chunk[dump['index']:dump['index'] + 4])[0]
-  fulltag = integer & 0x1f  # bit 4 indicates hex or decimal numeric output
+  fulltag = integer & 0x1f  # bit 4 set indicates hex numeric output
   tag = integer & 0xf  # only 0 to 0xc used as of CM2001 colorForth
   #debug('fulltag: 0x%x' % fulltag)
   if state == 'print number as hex':
@@ -176,8 +181,11 @@ def dump_block(chunk):
    print_decimal(integer)
    state = 'default'
   elif tag == uniquefunction.index('extension'):
-   if dump['dirty'] and not dump['original']:
-    print_format(uniquefunction.index('extension'))
+   if (chunk[dump['index']:] == emptyblock[dump['index']:]) and \
+    not dump['original']:
+    break
+   elif dump['dirty'] and not dump['original']:
+    print_format(fulltag)
    print_text(integer)
   elif tag == uniquefunction.index('executelong') or \
    tag == uniquefunction.index('compilelong'):
@@ -235,10 +243,10 @@ def cfdump(filename):
  if dump['format'] == 'html':
   output.write('<html>\n')
   output.write('<link rel=stylesheet type="text/css" href="colorforth.css">\n')
- for block in range(0, len(data), 1024):
-  chunk = data[block:block + 1024]
-  debug('block %d: %s' % (block / 1024, repr(chunk)))
-  output.write('{block %d}\n' % (block / 1024))
+ for dump['block'] in range(0, len(data), 1024):
+  chunk = data[dump['block']:dump['block'] + 1024]
+  debug('block %d: %s' % (dump['block'] / 1024, repr(chunk)))
+  output.write('{block %d}\n' % (dump['block'] / 1024))
   if dump['format'] == 'html':
    output.write('<div class=code>\n')
   dump_block(chunk)
