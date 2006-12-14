@@ -45,6 +45,8 @@ recipes += byte word dword here equ labels dup ascii
 recipes += offset orgminus use16 use32
 sed := sed $(foreach regex, $(recipes), $($(regex)))
 GAS := as -R
+DEFINES := $(shell cat *.asm | grep '\.ifdef' | \
+ awk '{print $$2}' | sort | uniq)
 export
 help:
 	@echo To build the most universally usable color.com: make new
@@ -54,10 +56,8 @@ help:
 	$(GAS) -ahlmns=$*.lst -o $*.o $<
 	objcopy $*.o -O binary $@
 color.com: $(sources) secondpass
-	$(GAS) $(if $(SMALLSCREEN),--defsym SMALLSCREEN=$(SMALLSCREEN)) \
-	 $(if $(QUESTIONABLE),--defsym QUESTIONABLE=$(QUESTIONABLE)) \
-	 $(if $(AGP),--defsym AGP=$(AGP)) \
-	 $(if $(DEBUG_KBD),--defsym DEBUG_KBD=$(DEBUG_KBD)) \
+	$(GAS) $(foreach definition,$(DEFINES),\
+	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
 	 -ahlmns=color.lst -o color.o color.asm
 	objcopy color.o -O binary color.bin
 	# now get original color.com for its data blocks starting at 0x3000

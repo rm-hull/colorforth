@@ -1,5 +1,7 @@
 .intel_syntax ;# floppy boot segment
+.ifdef DMA
 ;# Floppy boot segment. Modified 7/17/01 for Asus P2B-D Floppy I/O Terry Loveall
+.endif
 
 .org 0 ;# actually 7c00
 start: jmp  start0
