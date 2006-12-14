@@ -244,7 +244,7 @@ def cfdump(filename):
   output.write(dump['blocktext'])
   if dump['blocktext']:
    dump['blocktext'] = ''
-  if dump['original']:
+  if dump['original'] and dump['format'] == 'html':
    output.write('</code>\n')
   if dump['format'] == 'html':
    output.write('</div>\n<hr>\n')
