@@ -14,6 +14,7 @@ code = newcode  # assume Tim knows what he's doing
 #code = oldcode  # assume Chuck knows what he's saying
 
 blocktext = '' # global, written by many subroutines
+emptyblock = '\0' * 1024
 
 output = sys.stdout
 
@@ -55,6 +56,8 @@ printing = False
 
 debugging = False
 
+dirty = False  # global set by any routine that detects low-level code
+
 def debug(*args):
  if debugging:
   sys.stderr.write('%s\n' % repr(args))
@@ -86,18 +89,23 @@ def print_color(printing, fulltag):
 
 def print_text(coded):
  debug('coded: %08x' % coded)
- while coded:
+ bits = 32 - 4  # 28 bits used for compressed text
+ text = ''
+ while coded and (bits >= 4):
   nybble = coded >> 28
   coded = (coded << 4) & mask
+  bits -= 4
   debug('nybble: %01x, coded: %08x' % (nybble, coded))
   if nybble < 0x8:  # 4-bit coded character
-   putchar(code[nybble])
+   text += code[nybble]
   elif nybble < 0xc: # 5-bit code
-   putchar(code[(((nybble ^ 0xc) << 1) | (coded & highbit > 0))])
+   text += code[(((nybble ^ 0xc) << 1) | (coded & highbit > 0))]
    coded = (coded << 1) & mask
+   bits -= 1
   else:  # 7-bit code
-   putchar(code[(coded >> 29) + (8 * (nybble - 10))])
+   text += code[(coded >> 29) + (8 * (nybble - 10))]
    coded = (coded << 3) & mask
+   bits -= 3
 
 def print_tags(printing, fulltag):
  global blocktext
@@ -137,14 +145,22 @@ def print_plain(printing, fulltag):
    putchar(' ')
   blocktext += '<%02x>' % (fulltag & 0x1f)
 
+def dump_code(chunk):
+ """dump block as raw hex so it can be undumped"""
+ global blocktext
+ blocktext = '%02x' * len(chunk) % tuple(map(ord, chunk))
+
 def dump_block(chunk):
  """see http://www.colorforth.com/parsed.html for meaning of bit patterns"""
- global printing, blocktext
+ global printing, blocktext, dirty
  state = 'default'
+ dirty = False  # assume high-level code until proven otherwise
  for index in range(0, len(chunk), 4):
   integer = struct.unpack('<L', chunk[index:index + 4])[0]
   fulltag = integer & 0x1f
   tag = integer & 0xf
+  if tag > 0xc:
+   dirty = True
   if state == 'print number as hex':
    print_hex(integer)
    state = 'default'
