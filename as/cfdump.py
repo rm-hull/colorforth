@@ -219,7 +219,8 @@ def dump_block(chunk):
 
 def init():
  dump['debugging'] = os.getenv('DEBUGGING')
- dump['original'] = os.getenv('TIM_NEITZ')
+ if dump['format'] == 'html':
+  dump['original'] = os.getenv('TIM_NEITZ')
  dump['print_formats'] = [print_normal, print_tags, print_color, print_plain]
 
 def cfdump(filename):
@@ -244,7 +245,7 @@ def cfdump(filename):
   output.write(dump['blocktext'])
   if dump['blocktext']:
    dump['blocktext'] = ''
-  if dump['original'] and dump['format'] == 'html':
+  if dump['original']:
    output.write('</code>\n')
   if dump['format'] == 'html':
    output.write('</div>\n<hr>\n')
