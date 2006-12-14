@@ -45,7 +45,7 @@ recipes += byte word dword here equ labels dup ascii
 recipes += offset orgminus use16 use32
 sed := sed $(foreach regex, $(recipes), $($(regex)))
 GAS := as -R
-DEFINES := $(shell cat *.asm | grep '\.ifdef' | \
+DEFINES := $(shell cat *.asm | grep '\.ifn\?def' | \
  awk '{print $$2}' | sort | uniq)
 export
 help:
