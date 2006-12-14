@@ -154,7 +154,7 @@ def print_plain(fulltag):
  if dump['blocktext'] and fulltag == uniquefunction.index('define'):
   dump['blocktext'] += '\n'
  if fulltag < uniquefunction.index('end_of_block'):
-  if fulltag != uniquefunction.index('define'):
+  if dump['blocktext'] and fulltag != uniquefunction.index('define'):
    dump['blocktext'] += ' '
   dump['blocktext'] += '<%02x>' % (fulltag & 0x1f)
 
