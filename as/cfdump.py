@@ -24,7 +24,19 @@ escape = chr(0x1b)
 colors = ['', 'red', 'green', 'yellow', 'blue',
  'magenta', 'cyan', 'white', '', 'normal'] # escape codes 30 to 39
 
-# function and colortags are one-based, remember to subtract 1 before indexing
+uniquefunction = [
+ 'extension', 'execute', 'executelong', 'define',
+ 'compile', 'compilelong', 'compileshort', 'compilemacro',
+ 'executeshort', 'text', 'textcapitalized', 'textallcaps',
+ 'variable', 'undefined', 'undefined', 'undefined',
+ 'undefined', 'undefined', 'executehexlong', 'undefined',
+ 'undefined', 'compilehexlong', 'compilehexshort', '',
+ 'executehexshort', 'undefined', 'undefined', 'undefined',
+ 'undefined', 'undefined', 'undefined', 'binary',
+ 'end_of_block'
+]
+
+# the following arrays are one-based, remember to subtract 1 before indexing
 
 function = [
  'execute', 'execute', 'define', 'compile',
@@ -33,15 +45,19 @@ function = [
  '', '', '', '',
  '', 'executehex', '', '',
  'compilehex', 'compilehex', '', 'executehex',
+ '', '', '', '',
+ '', '', '', '',
 ]
 
 colortags = [
- 'yellow', 'yellow', 'red', 'green',
- 'green', 'green', 'cyan', 'yellow',
- 'white', 'white', 'white', 'magenta',
- 'normal', 'normal', 'normal', 'normal',
- 'normal', 'yellow', 'normal', 'normal',
- 'green', 'green', 'normal', 'yellow',
+ 'yellow', 'yellow', 'red', 'green',  # 1-4
+ 'green', 'green', 'cyan', 'yellow', # 5-8
+ 'white', 'white', 'white', 'magenta', # 9-0xc
+ 'normal', 'normal', 'normal', 'normal', # 0xd-0x10
+ 'normal', 'yellow', 'normal', 'normal', # 0x11-0x14
+ 'green', 'green', 'normal', 'yellow', # 0x15-0x18
+ 'normal', 'normal', 'normal', 'normal', # 0x19-0x1c
+ 'normal', 'normal', 'normal', 'normal', # 0x1d-0x20
 ]
 
 highbit =  0x80000000L
@@ -53,9 +69,10 @@ dump = {  # set up globals as dictionary to avoid declaring globals everywhere
  'dirty': False,  # low-level code detected in a block
  'blocktext': '',  # decompiled high-level Forth
  'print_formats': [],  # filled in during init; routines not yet defined
- 'debugging': False,
+ 'debugging': False,  # set True for copious debugging messages
  'original': False,  # set True for output similar to Tim Neitz's cf2html.c
- 'format': ''  # use 'html' or 'color', otherwise plain text
+ 'format': '',  # use 'html' or 'color', otherwise plain text
+ 'index': 0,  # index into block, to match cf2html.c bug
 }
 
 def debug(*args):
@@ -63,34 +80,34 @@ def debug(*args):
   sys.stderr.write('%s\n' % repr(args))
 
 def print_normal(fulltag):
- if dump['blocktext'] and fulltag == 3:
+ if dump['blocktext'] and fulltag == uniquefunction.index('define'):
   dump['blocktext'] += '\n'
- if fulltag < 0x20:  # 0x20 is fake 'tag' for end-of-block closure
-  if dump['blocktext'] and fulltag != 3:
+ if fulltag < uniquefunction.index('end_of_block'):
+  if dump['blocktext'] and fulltag != uniquefunction.index('define'):
    dump['blocktext'] += ' '
 
 def print_color(fulltag):
- debug('print_color(0x%x)' % fulltag)
+ #debug('print_color(0x%x)' % fulltag)
  if dump['blocktext']:  # close previous color tag
   dump['blocktext'] += '%s[%d;%dm' % (escape, 0, 30 + colors.index('normal'))
- if dump['blocktext'] and fulltag == 3: # newline before definition
+ if dump['blocktext'] and fulltag == uniquefunction.index('define'):
   dump['blocktext'] += '\n'
- if fulltag < 0x20:  # 0x20 is fake 'tag' for end-of-block closure
+ if fulltag < uniquefunction.index('end_of_block'):
   color = colortags[fulltag - 1]
-  if dump['blocktext'] and fulltag != 3:
+  if dump['blocktext'] and fulltag != uniquefunction.index('define'):
    dump['blocktext'] += ' '
   dump['blocktext'] += '%s[%d;%dm' % (escape, color != 'normal',
    30 + colors.index(color))
 
 def print_text(coded):
- debug('coded: %08x' % coded)
+ #debug('coded: %08x' % coded)
  bits = 32 - 4  # 28 bits used for compressed text
  text = ''
  while coded:
   nybble = coded >> 28
   coded = (coded << 4) & mask
   bits -= 4
-  debug('nybble: %01x, coded: %08x' % (nybble, coded))
+  #debug('nybble: %01x, coded: %08x' % (nybble, coded))
   if nybble < 0x8:  # 4-bit coded character
    text += code[nybble]
   elif nybble < 0xc: # 5-bit code
@@ -101,17 +118,18 @@ def print_text(coded):
    text += code[(coded >> 29) + (8 * (nybble - 10))]
    coded = (coded << 3) & mask
    bits -= 3
- debug('text: "%s"' % text)
+ #debug('text: "%s"' % text)
  dump['blocktext'] += text
 
 def print_tags(fulltag):
- if dump['blocktext']:
+ if dump['blocktext'] or (dump['original'] and dump['index']):
   dump['blocktext'] += '</code>'
- if dump['blocktext'] and (fulltag == 3):
-  dump['blocktext'] += '<br>'
- if fulltag < 0x20:
+ if dump['blocktext']:
+  if fulltag == uniquefunction.index('define'):
+   dump['blocktext'] += '<br>'
+ if fulltag < uniquefunction.index('end_of_block'):
   dump['blocktext'] += '<code class=%s>' % function[fulltag - 1]
-  if fulltag != 3:
+  if fulltag != uniquefunction.index('define'):
    dump['blocktext'] += ' '
 
 def print_format(fulltag):
@@ -131,41 +149,45 @@ def print_colors(color):
   print_color(colortags[(color & 0x1f) - 1])
 
 def print_plain(fulltag):
- if dump['blocktext'] and fulltag == 3:
+ if dump['blocktext'] and fulltag == uniquefunction.index('define'):
   dump['blocktext'] += '\n'
- if fulltag < 0x20:
-  if fulltag != 3:
+ if fulltag < uniquefunction.index('end_of_block'):
+  if fulltag != uniquefunction.index('define'):
    dump['blocktext'] += ' '
   dump['blocktext'] += '<%02x>' % (fulltag & 0x1f)
 
-def dump_code(chunk):
- """dump block as raw hex so it can be undumped"""
+def print_code(chunk):
+ """dump as raw hex so it can be undumped"""
  dump['blocktext'] += '%02x' * len(chunk) % tuple(map(ord, chunk))
 
 def dump_block(chunk):
  """see http://www.colorforth.com/parsed.html for meaning of bit patterns"""
  state = 'default'
  dump['dirty'] = False  # assume high-level code until proven otherwise
- for index in range(0, len(chunk), 4):
-  integer = struct.unpack('<L', chunk[index:index + 4])[0]
-  fulltag = integer & 0x1f
-  tag = integer & 0xf
-  debug('fulltag: 0x%x' % fulltag)
+ for dump['index'] in range(0, len(chunk), 4):
+  integer = struct.unpack('<L', chunk[dump['index']:dump['index'] + 4])[0]
+  fulltag = integer & 0x1f  # bit 4 indicates hex or decimal numeric output
+  tag = integer & 0xf  # only 0 to 0xc used as of CM2001 colorForth
+  #debug('fulltag: 0x%x' % fulltag)
   if state == 'print number as hex':
    print_hex(integer)
    state = 'default'
   elif state == 'print number as decimal':
    print_decimal(integer)
    state = 'default'
-  elif tag == 0:
+  elif tag == uniquefunction.index('extension'):
+   if dump['dirty'] and not dump['original']:
+    print_format(uniquefunction.index('extension'))
    print_text(integer)
-  elif tag == 2 or tag == 5:
+  elif tag == uniquefunction.index('executelong') or \
+   tag == uniquefunction.index('compilelong'):
    print_format(fulltag)
    if integer & 0x10:
     state = 'print number as hex'
    else:
     state = 'print number as decimal'
-  elif tag == 6 or tag == 8:
+  elif tag == uniquefunction.index('compileshort') or \
+   tag == uniquefunction.index('executeshort'):
    print_format(fulltag)
    if integer & 0x10:
     if integer & highbit:
@@ -177,20 +199,22 @@ def dump_block(chunk):
      print_decimal((integer >> 5) | 0xf8000000)
     else:
      print_decimal(integer >> 5)
-  elif tag == 0xc:
+  elif tag == uniquefunction.index('variable'):
    print_format(tag)
    print_text(integer & 0xfffffff0)
    state = 'print number as decimal'
-   print_format(4)
+   print_format(uniquefunction.index('compile'))
   elif not dump['original'] and tag > 0xc:
-   debug('block is dirty: tag = 0x%x' % tag)
+   #debug('block is dirty: tag = 0x%x' % tag)
    dump['dirty'] = True
-   dump_code(struct.pack('<L', integer))
+   print_format(uniquefunction.index('binary'))
+   print_code(struct.pack('<L', integer))
   else:
    print_format(tag)
    print_text(integer & 0xfffffff0)
- print_format(0x20)  # 'fake' format that just closes previous tags
- if dump['blocktext']:
+ if not ((dump['format'] == 'html') and dump['original']):
+  print_format(uniquefunction.index('end_of_block'))
+ if dump['blocktext'] and not dump['original']:
   dump['blocktext'] += '\n'
 
 def init():
@@ -212,15 +236,16 @@ def cfdump(filename):
   output.write('<link rel=stylesheet type="text/css" href="colorforth.css">\n')
  for block in range(0, len(data), 1024):
   chunk = data[block:block + 1024]
+  debug('block %d: %s' % (block / 1024, repr(chunk)))
   output.write('{block %d}\n' % (block / 1024))
   if dump['format'] == 'html':
    output.write('<div class=code>\n')
-  else:
-   debug('dumping block %d' % (block / 1024))
   dump_block(chunk)
   output.write(dump['blocktext'])
   if dump['blocktext']:
    dump['blocktext'] = ''
+  if dump['original']:
+   output.write('</code>\n')
   if dump['format'] == 'html':
    output.write('</div>\n<hr>\n')
  if dump['format'] == 'html':
