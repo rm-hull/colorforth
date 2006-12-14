@@ -51,9 +51,10 @@ formats = ['', 'html', 'color', 'plaintext']
 
 dump = {  # set up globals as dictionary to avoid declaring globals everywhere
  'dirty': False,  # low-level code detected in a block
- 'blocktext': '',
+ 'blocktext': '',  # decompiled high-level Forth
  'print_formats': [],  # filled in during init; routines not yet defined
  'debugging': False,
+ 'original': False,  # set True for output similar to Tim Neitz's cf2html.c
  'format': ''  # use 'html' or 'color', otherwise plain text
 }
 
@@ -85,7 +86,7 @@ def print_text(coded):
  debug('coded: %08x' % coded)
  bits = 32 - 4  # 28 bits used for compressed text
  text = ''
- while coded and (bits >= 4):
+ while coded:
   nybble = coded >> 28
   coded = (coded << 4) & mask
   bits -= 4
@@ -100,6 +101,7 @@ def print_text(coded):
    text += code[(coded >> 29) + (8 * (nybble - 10))]
    coded = (coded << 3) & mask
    bits -= 3
+ debug('text: "%s"' % text)
  dump['blocktext'] += text
 
 def print_tags(fulltag):
@@ -138,19 +140,17 @@ def print_plain(fulltag):
 
 def dump_code(chunk):
  """dump block as raw hex so it can be undumped"""
- dump['blocktext'] = '%02x' * len(chunk) % tuple(map(ord, chunk))
+ dump['blocktext'] += '%02x' * len(chunk) % tuple(map(ord, chunk))
 
 def dump_block(chunk):
  """see http://www.colorforth.com/parsed.html for meaning of bit patterns"""
  state = 'default'
- dirty = False  # assume high-level code until proven otherwise
+ dump['dirty'] = False  # assume high-level code until proven otherwise
  for index in range(0, len(chunk), 4):
   integer = struct.unpack('<L', chunk[index:index + 4])[0]
   fulltag = integer & 0x1f
   tag = integer & 0xf
   debug('fulltag: 0x%x' % fulltag)
-  if tag > 0xc:
-   dirty = True
   if state == 'print number as hex':
    print_hex(integer)
    state = 'default'
@@ -182,6 +182,10 @@ def dump_block(chunk):
    print_text(integer & 0xfffffff0)
    state = 'print number as decimal'
    print_format(4)
+  elif not dump['original'] and tag > 0xc:
+   debug('block is dirty: tag = 0x%x' % tag)
+   dump['dirty'] = True
+   dump_code(struct.pack('<L', integer))
   else:
    print_format(tag)
    print_text(integer & 0xfffffff0)
@@ -190,6 +194,8 @@ def dump_block(chunk):
   dump['blocktext'] += '\n'
 
 def init():
+ dump['debugging'] = os.getenv('DEBUGGING')
+ dump['original'] = os.getenv('TIM_NEITZ')
  dump['print_formats'] = [print_normal, print_tags, print_color, print_plain]
 
 def cfdump(filename):
@@ -215,8 +221,8 @@ def cfdump(filename):
   output.write(dump['blocktext'])
   if dump['blocktext']:
    dump['blocktext'] = ''
-   if dump['format'] == 'html':
-    output.write('</div>\n<hr>\n')
+  if dump['format'] == 'html':
+   output.write('</div>\n<hr>\n')
  if dump['format'] == 'html':
   output.write('</html>\n')
 
