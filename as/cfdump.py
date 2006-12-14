@@ -13,7 +13,6 @@ newcode  = ' rtoeani' + 'smcylgfw' + 'dvpbhxuq' + '01234567' + \
 code = newcode  # assume Tim knows what he's doing
 #code = oldcode  # assume Chuck knows what he's saying
 
-blocktext = '' # global, written by many subroutines
 emptyblock = '\0' * 1024
 
 output = sys.stdout
@@ -48,43 +47,38 @@ colortags = [
 highbit =  0x80000000L
 mask =     0xffffffffL
 
-format = ''  # use 'html' or 'color', otherwise plain text with or without tag
 formats = ['', 'html', 'color', 'plaintext']
-print_formats = [] # filled in during initialization; nothing defined yet
 
-printing = False
-
-debugging = False
-
-dirty = False  # global set by any routine that detects low-level code
+dump = {  # set up globals as dictionary to avoid declaring globals everywhere
+ 'dirty': False,  # low-level code detected in a block
+ 'blocktext': '',
+ 'print_formats': [],  # filled in during init; routines not yet defined
+ 'debugging': False,
+ 'format': ''  # use 'html' or 'color', otherwise plain text
+}
 
 def debug(*args):
- if debugging:
+ if dump['debugging']:
   sys.stderr.write('%s\n' % repr(args))
 
-def putchar(character):
- global blocktext
- debug('putchar "%s"' % character);
- blocktext += character
+def print_normal(fulltag):
+ if dump['blocktext'] and fulltag == 3:
+  dump['blocktext'] += '\n'
+ if fulltag < 0x20:  # 0x20 is fake 'tag' for end-of-block closure
+  if dump['blocktext'] and fulltag != 3:
+   dump['blocktext'] += ' '
 
-def print_normal(printing, fulltag):
- if printing and fulltag == 3:
-  putchar('\n')
- if fulltag < 0x20:
-  if fulltag != 3:
-   putchar(' ')
-
-def print_color(printing, fulltag):
- global blocktext
- if printing:
-  blocktext += '%s[%d;%dm' % (escape, 0, 30 + colors.index('normal'))
- if printing and fulltag == 3:
-  putchar('\n')
- if fulltag < 0x20:
+def print_color(fulltag):
+ debug('print_color(0x%x)' % fulltag)
+ if dump['blocktext']:  # close previous color tag
+  dump['blocktext'] += '%s[%d;%dm' % (escape, 0, 30 + colors.index('normal'))
+ if dump['blocktext'] and fulltag == 3: # newline before definition
+  dump['blocktext'] += '\n'
+ if fulltag < 0x20:  # 0x20 is fake 'tag' for end-of-block closure
   color = colortags[fulltag - 1]
-  if fulltag != 3:
-   putchar(' ')
-  blocktext += '%s[%d;%dm' % (escape, color != 'normal',
+  if dump['blocktext'] and fulltag != 3:
+   dump['blocktext'] += ' '
+  dump['blocktext'] += '%s[%d;%dm' % (escape, color != 'normal',
    30 + colors.index(color))
 
 def print_text(coded):
@@ -106,59 +100,55 @@ def print_text(coded):
    text += code[(coded >> 29) + (8 * (nybble - 10))]
    coded = (coded << 3) & mask
    bits -= 3
+ dump['blocktext'] += text
 
-def print_tags(printing, fulltag):
- global blocktext
- if printing:
-  blocktext += '</code>'
- if printing and (fulltag == 3):
-  blocktext += '<br>'
+def print_tags(fulltag):
+ if dump['blocktext']:
+  dump['blocktext'] += '</code>'
+ if dump['blocktext'] and (fulltag == 3):
+  dump['blocktext'] += '<br>'
  if fulltag < 0x20:
-  blocktext += '<code class=%s>' % function[fulltag - 1]
+  dump['blocktext'] += '<code class=%s>' % function[fulltag - 1]
   if fulltag != 3:
-   putchar(' ')
+   dump['blocktext'] += ' '
 
-def print_format(printing, fulltag):
- index = formats.index(format)
- print_formats[index](printing, fulltag)
+def print_format(fulltag):
+ index = formats.index(dump['format'])
+ dump['print_formats'][index](fulltag)
 
 def print_hex(integer):
- global blocktext
- blocktext += '%x' % integer
+ dump['blocktext'] += '%x' % integer
 
 def print_decimal(integer):
- global blocktext
  if (highbit & integer):
   integer -= 0x100000000
- blocktext += '%d' % integer
+ dump['blocktext'] += '%d' % integer
 
-def print_colors(printing, color):
- if printing:
+def print_colors(color):
+ if dump['blocktext']:
   print_color(colortags[(color & 0x1f) - 1])
 
-def print_plain(printing, fulltag):
- global blocktext
- if printing and fulltag == 3:
-  putchar('\n')
+def print_plain(fulltag):
+ if dump['blocktext'] and fulltag == 3:
+  dump['blocktext'] += '\n'
  if fulltag < 0x20:
   if fulltag != 3:
-   putchar(' ')
-  blocktext += '<%02x>' % (fulltag & 0x1f)
+   dump['blocktext'] += ' '
+  dump['blocktext'] += '<%02x>' % (fulltag & 0x1f)
 
 def dump_code(chunk):
  """dump block as raw hex so it can be undumped"""
- global blocktext
- blocktext = '%02x' * len(chunk) % tuple(map(ord, chunk))
+ dump['blocktext'] = '%02x' * len(chunk) % tuple(map(ord, chunk))
 
 def dump_block(chunk):
  """see http://www.colorforth.com/parsed.html for meaning of bit patterns"""
- global printing, blocktext, dirty
  state = 'default'
  dirty = False  # assume high-level code until proven otherwise
  for index in range(0, len(chunk), 4):
   integer = struct.unpack('<L', chunk[index:index + 4])[0]
   fulltag = integer & 0x1f
   tag = integer & 0xf
+  debug('fulltag: 0x%x' % fulltag)
   if tag > 0xc:
    dirty = True
   if state == 'print number as hex':
@@ -170,13 +160,13 @@ def dump_block(chunk):
   elif tag == 0:
    print_text(integer)
   elif tag == 2 or tag == 5:
-   print_format(printing, fulltag)
+   print_format(fulltag)
    if integer & 0x10:
     state = 'print number as hex'
    else:
     state = 'print number as decimal'
   elif tag == 6 or tag == 8:
-   print_format(printing, fulltag)
+   print_format(fulltag)
    if integer & 0x10:
     if integer & highbit:
      print_hex((integer >> 5) | 0xf8000000)
@@ -188,24 +178,21 @@ def dump_block(chunk):
     else:
      print_decimal(integer >> 5)
   elif tag == 0xc:
-   print_format(printing, tag)
+   print_format(tag)
    print_text(integer & 0xfffffff0)
    state = 'print number as decimal'
-   print_format(True, 4)
+   print_format(4)
   else:
-   print_format(printing, tag)
+   print_format(tag)
    print_text(integer & 0xfffffff0)
-  printing = True
- print_format(printing, 0x20);
- if printing:
-  blocktext += '\n'
+ print_format(0x20)  # 'fake' format that just closes previous tags
+ if dump['blocktext']:
+  dump['blocktext'] += '\n'
 
 def init():
- global print_formats
- print_formats = [print_normal, print_tags, print_color, print_plain]
+ dump['print_formats'] = [print_normal, print_tags, print_color, print_plain]
 
 def cfdump(filename):
- global printing, blocktext
  init()
  if not filename:
   file = sys.stdin
@@ -214,39 +201,35 @@ def cfdump(filename):
  data = file.read()
  file.close()
  debug('dumping %d bytes' % len(data))
- if format == 'html':
+ if dump['format'] == 'html':
   output.write('<html>\n')
   output.write('<link rel=stylesheet type="text/css" href="colorforth.css">\n')
  for block in range(0, len(data), 1024):
   chunk = data[block:block + 1024]
-  blocktext = ''
   output.write('{block %d}\n' % (block / 1024))
-  if format == 'html':
+  if dump['format'] == 'html':
    output.write('<div class=code>\n')
   else:
    debug('dumping block %d' % (block / 1024))
   dump_block(chunk)
-  output.write(blocktext)
-  if printing:
-   printing = False
-   if format == 'html':
+  output.write(dump['blocktext'])
+  if dump['blocktext']:
+   dump['blocktext'] = ''
+   if dump['format'] == 'html':
     output.write('</div>\n<hr>\n')
- if format == 'html':
+ if dump['format'] == 'html':
   output.write('</html>\n')
 
 def cf2text(filename):
- global format
- format = 'plaintext'
+ dump['format'] = 'plaintext'
  cfdump(filename)
 
 def cf2ansi(filename):
- global format
- format = 'color'
+ dump['format'] = 'color'
  cfdump(filename)
 
 def cf2html(filename):
- global format
- format = 'html'
+ dump['format'] = 'html'
  cfdump(filename)
 
 if __name__ == '__main__':
