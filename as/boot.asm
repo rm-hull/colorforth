@@ -180,31 +180,30 @@ start2: call stop
 .endif
 .equ us, 1000/6
 .equ ms, 1000*us
-spin: mov  cl, 0x1c
-    call onoff
+spin:
 .ifdef DMA
-    mov  ecx, 400*ms
-.endif
-0:
-.ifndef DMA
-    call sense_
+    mov  al, 0x1c
+    call onoff
+    mov  ecx, 400*ms ;# what processor speed was this set for?
+0:  loop 0b  ;# damn but I hate busy-waits (jc)
+    mov  cylinder, cl ;# calibrate
+    mov  al, 7 ;# recalibrate command
+    mov  cl, 2
+    jmp  cmdi
+.else
+    mov  cl, 0x1c
+    call onoff
+0:  call sense_
     jns  0b
     mov  byte ptr cylinder, 0 ;# calibrate
-.else
-    loop 0b
-    mov  byte ptr cylinder, cl
-.endif
     mov  al, 7
     mov  cl, 2
-.ifndef DMA
     call cmd
     mov  ecx, 500*ms
 0:  loop 0b
 cmdi: call sense_
     js   cmdi
     ret
-.else
-    jmp  cmdi
 .endif
 
 ready: ;#call delay
@@ -341,18 +340,18 @@ dma:
     mov  cl, 3
     call cmd
     mov  word ptr command+1, 0
-    mov  eax, buffer*4
-    out  4, al
+    mov  eax, buffer*4 ;# 0x7000 in CM2001
+    out  4, al ;# set DMA-1 base and current address to 0x7000
     mov  al, ah
     out  4, al
-    shr  eax, 16
-    out  0x81, al
-    mov  eax, 512*18*2-1 ;# DMA 2
-    out  5, al
+    shr  eax, 16 ;# load page register value into al (9)
+    out  0x81, al ;# set DMA-1 page register 2 = 09
+    mov  eax, 512*18*2-1 ;# DMA channel 2
+    out  5, al ;# set DMA-1 base and current count to 0x47ff
     mov  al, ah
     out  5, al
     mov  al, 0xb
-    out  0xf, al
+    out  0xf, al ;# write all mask bits, address = 0xb, value = 16
     ret
 .endif
 read:
