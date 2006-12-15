@@ -26,6 +26,11 @@
     lodsd
 .endm
 
+.ifdef CM2001 ;# Chuck Moore's 2001 code includes AGP-specific video...
+ .equ QUESTIONABLE, 1 ;# ...and other weird stuff found in color.com binary
+ .equ AGP, 1
+.endif
+
 .ifndef SMALLSCREEN
  .equ hp, 1024 ;# 1024 or 800
  .equ vp, 768 ;# 768 or 600
@@ -77,8 +82,8 @@ start1:
 ;# 'me' points to the save slot for the current task
 me: .long god
 screen:
-.ifdef QUESTIONABLE
-    .long 0x100f1f ;# found in cm2001 color.com binary
+.ifdef CM2001
+    .long 0x100f1f ;# matches cm2001 color.com binary
 .else
     .long 0 ;# logo
 .endif
@@ -91,14 +96,14 @@ screen:
 ;# next task - the last one jumps 'round to the first.
 round: call unpause
 god:
-.ifdef QUESTIONABLE
+.ifdef CM2001
     .long 0x9ffe8 ;# found in cm2001 color.com binary
 .else
     .long 0 ;# gods-2*4
 .endif
     call unpause
 main:
-.ifdef QUESTIONABLE
+.ifdef CM2001
     .long 0x9dcd0
 .else
     .long 0 ;# mains-2*4
@@ -426,7 +431,7 @@ inter: mov  edx, [edi*4]
 .align 4
 spaces: .long qignore, execute, num
 adefine:
-.ifdef QUESTIONABLE
+.ifdef CM2001
     .long forthd ;# as found in CM2001 color.com binary
 .else
     .long 5+macro_ ;# macrod ?
@@ -436,7 +441,7 @@ adefine:
     .long variable, nul, nul, nul
 
 lit: .long adup
-.ifdef QUESTIONABLE ;# match CM2001 color.com binary
+.ifdef CM2001
 mk: .long 0x2e, 0x5e, 0x101028
 h: .long 0x101137
 last: .long 0x59f
@@ -668,7 +673,7 @@ debug: mov dword ptr  xy,  offset (3*0x10000+(vc-2)*ih+3)
 .equ vc, vp/ih ;# 25
 .align 4 ;# MASM's 3-byte NOP for alignment is 2e8bc0, cs: mov eax,eax
 ;# whereas gas's is 8d7600, lea esi,[esi].
-.ifdef QUESTIONABLE ;# match CM2001 color.com object code
+.ifdef CM2001
 xy: .long 0x033d02e5
 lm: .long 3
 rm: .long hc*iw
@@ -725,7 +730,7 @@ green: dup_
     jmp  color
 
 history:
-.ifdef QUESTIONABLE ;# match CM2001 color.com binary
+.ifdef CM2001
     .byte 0, 0, 0, 0, 0, 0, 0, 37, 10, 3, 9
 .else
     .rept 11 .byte 0; .endr
@@ -956,7 +961,7 @@ numb1: .long number0, xn, endn, number0
     .byte 025, 045,  0 , 0 ;# x .
 
 board: .long alpha-4
-.ifdef QUESTIONABLE ;# match CM2001 color.com binary
+.ifdef CM2001
 shift: .long alpha1
 base: .long 10
 current: .long decimal
@@ -989,7 +994,7 @@ accept1: mov  board, edi
     jmp  dword ptr [edx+eax*4]
 
 bits:
-.ifdef QUESTIONABLE
+.ifdef CM2001
    .byte 7 ;# matches CM2001 color.com binary
 .else
    .byte 28
@@ -1073,7 +1078,7 @@ hex: mov dword ptr  base, 16
 octal: xor dword ptr current, (offset decimal-offset start) ^ (offset hex-offset start)
     xor  byte ptr numb0+18, 041 ^ 016 ;# f vs 9
     call current
-.ifdef QUESTIONABLE
+.ifdef CM2001
     nop ;# can't force 6-byte assembly of call ds:current
 .endif
     jmp  number0
@@ -1095,7 +1100,7 @@ minus:
 number0: drop
     jmp  number3
 number: call current
-.ifdef QUESTIONABLE
+.ifdef CM2001
     nop ;# can't force 6-byte assembly of call ds:current
 .endif
     mov byte ptr sign, 0
@@ -1392,7 +1397,7 @@ tens: .long 10, 100, 1000, 10000, 100000, 1000000
     .long 10000000, 100000000, 1000000000
 bas: .long dot10
 blk: .long 18
-.ifdef QUESTIONABLE ;# match CM2001 color.com binary
+.ifdef CM2001 ;# match CM2001 color.com binary
 curs: .long 2
 cad: .long 0x1204
 pcad: .long 0x1202
@@ -1423,7 +1428,7 @@ ekbd: .byte 017,  1 , 015, 055 ;# w  r  g  *
 actc: .long yellow, 0, 0x0ff0000, 0x0c000, 0, 0, 0x0ffff
     .long 0, 0x0ffffff, 0x0ffffff, 0x0ffffff, 0x8080ff
 vector: .long 0
-.ifdef QUESTIONABLE
+.ifdef CM2001
 action: .byte 10 ;# matches CM2001 color.com binary
 .else
 action: .byte 1

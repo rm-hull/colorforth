@@ -22,7 +22,7 @@ start: jmp  start0
     .byte 0       ;# drive
 
 command:
-.ifdef QUESTIONABLE
+.ifdef CM2001
     .byte 0xc5 ;# in compiled color.com from CM website
 ;# probably just there from save-system or similar command? just a guess
 .else
@@ -209,7 +209,7 @@ cmdi: call sense_
 ready: ;#call delay
     mov  dx, 0x3f4
 0:  in   al, dx
-.ifdef QUESTIONABLE
+.ifdef CM2001
     debugout
 .endif
     shl  al, 1
@@ -232,7 +232,7 @@ cmd1:
     jmp  cmd1
 0:  lodsb
     out  dx, al
-.ifdef QUESTIONABLE
+.ifdef CM2001
     debugout
 .endif
     loop cmd1
@@ -276,7 +276,7 @@ sense_: mov  al, 8
     call ready
 .endif
     in   al, dx
-.ifdef QUESTIONABLE
+.ifdef CM2001
     debugout
 .endif
     and  al, al
@@ -313,7 +313,7 @@ onoff:
 .endif
     mov  dx, 0x3f2
     out  dx, al
-.ifdef QUESTIONABLE
+.ifdef CM2001
     debugout
 .endif
 .ifndef DMA
@@ -375,7 +375,7 @@ read:
     mov  cx, 18*2*512 ;# two heads, 18 sectors/track, 512 bytes/sector
 0:  call ready
     in   al, dx
-.ifdef QUESTIONABLE
+.ifdef CM2001
     debugout
 .endif
     stosb
@@ -384,7 +384,7 @@ read:
     ret
 
 ;# don't need 'write' till after bootup
-.ifndef QUESTIONABLE
+.ifndef CM2001
 .org 0x1fe ;# mark boot sector
     .word 0x0aa55
 ;# end of boot sector
@@ -408,14 +408,14 @@ write:
 0:  call ready
     lodsb
     out  dx, al
-.ifdef QUESTIONABLE
+.ifdef CM2001
     debugout
 .endif
     next 0b
     ret
 .endif
 
-.ifdef QUESTIONABLE
+.ifdef CM2001
 .org 0x1fe ;# mark boot sector
     .word 0x0aa55
 ;# end of boot sector
@@ -438,7 +438,7 @@ flop:
     dup_
     mov  dx, 0x3f2
     in   al, dx
-.ifdef QUESTIONABLE
+.ifdef CM2001
     debugout
 .endif
     test al, 0x10

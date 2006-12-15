@@ -75,7 +75,7 @@ small:	color.asm
 	$(MAKE) SMALLSCREEN=1 color.com
 cm2001: color.asm
 	touch $<
-	$(MAKE) AGP=1 QUESTIONABLE=1 color.com
+	$(MAKE) CM2001=1 color.com
 $(sources): $(original)
 	for file in $+; do \
 	 $(sed) $$file | sed $(code16) | \

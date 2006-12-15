@@ -13,7 +13,7 @@
 ;# multiply vp (vertical pixels) by hp (horizontal pixels) by 2 bytes (16 bits)
 ;# to determine the location of the framebuffer
 frame: .long 0x2000000-hp*vp*2 ;# 32 m
-.ifdef QUESTIONABLE ;# match CM2001 color.com binary
+.ifdef AGP ;# match CM2001 color.com binary
 displ: .long 0x0f5000000
 fore:  .long 0x0f7c0
 xc:    .long 0x0327
