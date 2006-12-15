@@ -26,6 +26,11 @@ escape = chr(0x1b)
 colors = ['', 'red', 'green', 'yellow', 'blue',
  'magenta', 'cyan', 'white', '', 'normal'] # escape codes 30 to 39
 
+# added 'fake' functions here:
+# 'icon' is character graphics, stored between 0x3000 and 0x4800 in color.com
+# 'binary' is machine code, from 0x0 to 0x3000 (with some other stuff too)
+# 'end_of_block' is just so the markup routines can be called at end-of-block;
+# to close open tags and whatnot
 uniquefunction = [
  'extension', 'execute', 'executelong', 'define',
  'compile', 'compilelong', 'compileshort', 'compilemacro',
@@ -34,7 +39,7 @@ uniquefunction = [
  'undefined', 'undefined', 'executehexlong', 'undefined',
  'undefined', 'compilehexlong', 'compilehexshort', '',
  'executehexshort', 'undefined', 'undefined', 'undefined',
- 'undefined', 'undefined', 'undefined', 'binary',
+ 'undefined', 'undefined', 'icon', 'binary',
  'end_of_block'
 ]
 
