@@ -3,8 +3,13 @@
 ;#.486p
 
 .macro debugout
-/* CM used this, presumably with custom hardware, for debugging colorForth.
-/* jc is also using this, with a modified keyboard.cc, under Bochs. */
+/* CM referred to this as "Terry Loveall's e1 strobe" in some online docs, but
+/* I can't find anything regarding port 0xe1 anywhere else, and the data
+/* sent doesn't make any sense anyway. The boot failure problems mentioned in
+/* that online document would more likely be due to the hardcoded millisecond
+/* calculations for busy-wait routines than any "strobe" effect.
+/* jc is also using this for debugging, with a modified keyboard.cc,
+/* under Bochs. */
     out 0xe1, al
 .endm
 
@@ -29,6 +34,7 @@
 .ifdef CM2001 ;# Chuck Moore's 2001 code includes AGP-specific video...
  .equ QUESTIONABLE, 1 ;# ...and other weird stuff found in color.com binary
  .equ AGP, 1
+ .equ AUTO_REFRESH, 1 ;# screen refresh constantly runs
 .endif
 
 .ifndef SMALLSCREEN
@@ -48,8 +54,8 @@
 ;#    9f800 top of data stack
 ;#    9d800 free
 ;#    97000 floppy buffer
-;#     4800 source
-.equ icons, 12*256*4 ;# 3000
+;#     4800 source ;# block 18, first high-level source block (load screen)
+.equ icons, 12*256*4 ;# 3000, block 12 start of character maps
 ;#     7c00 bios boot sector
 ;#        0 forth
 
@@ -61,8 +67,8 @@ start1:
     pop [displ]  # use address determined by VBE2 call in boot.asm
 .endif
     call show0 ;# set up 'main' task to draw screen
-    mov  dword ptr  forths,  offset ((forth1-forth0)/4)
-    mov  dword ptr  macros,  offset ((macro1-macro0)/4)
+    mov  dword ptr forths, offset ((forth1-forth0)/4) ;# number of Forth words
+    mov  dword ptr macros, offset ((macro1-macro0)/4) ;# number of macros
     mov  eax, 18 ;# load start screen, 18
 ;# the start screen loads a bunch of definitions, then 'empty' which shows logo
     call load
@@ -124,7 +130,8 @@ unpause: pop  eax ;# return address is that of 'main' slot above
     drop ;# load previously dup'd datum back into EAX
     ret
 
-act: mov  edx, maind-4 ;# data stack of 'main' task
+act: ;# set currently active task
+    mov  edx, maind-4 ;# data stack of 'main' task
     mov  [edx], eax ;# 0 if called from 'show'
     mov  eax, mains-4 ;# return stack of 'main' task
     pop  [eax] ;# return of 'god' task now on 'main' stack
@@ -136,15 +143,15 @@ act: mov  edx, maind-4 ;# data stack of 'main' task
 
 show0: call show
     ret
-show: pop  screen ;# pops address of 'ret' just preceding
+show: pop  screen ;# pop return address into screen; 'ret' if from show0
     dup_
     xor  eax, eax
-    call act
-0:  call graphic
-    call [screen] ;# ret?
-    call switch
-    inc  eax
-    jmp  0b
+    call act ;# make following infinite loop the 'active task'
+0:  call graphic ;# just 'ret' in gen.asm
+    call [screen] ;# ret if called from show0
+    call switch ;# load framebuffer into video, then switch task
+    inc  eax ;# why bother?
+    jmp  0b ;# loop eternally
 
 c_: mov  esi, godd+4
     ret
@@ -166,28 +173,30 @@ empty: mov  ecx, mk+2*4
     mov  dword ptr class, 0
     ret
 
-mfind: mov  ecx, macros
-    push edi
-    lea  edi, [macro0-4+ecx*4]
-    jmp  0f
+mfind: ;# find pointer to macro code
+    mov  ecx, macros ;# number of macros, 1-based
+    push edi ;# save destination pointer, we need to use it momentarily
+    lea  edi, [macro0-4+ecx*4] ;# point to last macro
+    jmp  0f ;# search dictionary
 
-find: mov  ecx, forths
-    push edi
-    lea  edi, [forth0-4+ecx*4]
+find: ;# locate code of high- or low-level Forth word
+    mov  ecx, forths ;# current number of Forth definitions
+    push edi ;# save destination pointer so we can use it
+    lea  edi, [forth0-4+ecx*4] ;# point it to last packed Forth word
 0:  std  ;# search backwards
-    repne scasd
-    cld
-    pop  edi
+    repne scasd ;# continue moving until we hit a match
+    cld  ;# clear direction flag again
+    pop  edi ;# no longer need this, can tell from ECX where match was found
     ret
 
-ex1: dec dword ptr  words ;# from keyboard
+ex1: dec dword ptr words ;# from keyboard
     jz   0f
     drop
     jmp  ex1
 0:  call find
     jnz  abort1
     drop
-    jmp  [forth2+ecx*4]
+    jmp  [forth2+ecx*4] ;# jump to low-level code of Forth word or macro
 
 execute: mov dword ptr  lit, offset alit
     dup_
@@ -240,7 +249,7 @@ forthd: mov  ecx, forths
 cdrop: mov  edx, h
     mov  list, edx
     mov  byte ptr [edx], 0x0ad ;# lodsd
-    inc dword ptr  h
+    inc  dword ptr h
     ret
 
 qdup: mov  edx, h
@@ -667,10 +676,10 @@ debug: mov dword ptr  xy,  offset (3*0x10000+(vc-2)*ih+3)
     mov  eax, esi
     jmp  dot
 
-.equ iw, 16+6
-.equ ih, 24+6
-.equ hc, hp/iw ;# 46
-.equ vc, vp/ih ;# 25
+.equ iw, 16+6 ;# icon width, including 6 pixels padding
+.equ ih, 24+6 ;# icon height, including padding
+.equ hc, hp/iw ;# 46 ;# number of horizontal characters on screen
+.equ vc, vp/ih ;# 25 ;# number of vertical characters
 .align 4 ;# MASM's 3-byte NOP for alignment is 2e8bc0, cs: mov eax,eax
 ;# whereas gas's is 8d7600, lea esi,[esi].
 .ifdef CM2001
@@ -709,24 +718,24 @@ last_: dup_
 
 .include "gen.asm" ;# cce.asm pio.asm ati128.asm ati64.asm gen.asm
 
-.equ yellow, 0x0ffff00
+.equ yellow, 0xffff00 ;# RG0 is yellow
 cyan: dup_
-    mov  eax, 0x0ffff
+    mov  eax, 0x00ffff ;# 0GB is cyan
     jmp  color
 magenta: dup_
-    mov  eax, 0x0ff00ff
+    mov  eax, 0xff00ff ;# R0B is magenta
     jmp  color
-silver: dup_
-    mov  eax, 0x0c0c0c0
+silver: dup_ ;# half-brightness white
+    mov  eax, 0xc0c0c0 ;# rgb, 4 bits of each
     jmp  color
 blue: dup_
-    mov  eax, 0x4040ff
+    mov  eax, 0x4040ff ;# a little r and g to make it brighter
     jmp  color
 red: dup_
-    mov  eax, 0x0ff0000
+    mov  eax, 0xff0000 ;# pure red
     jmp  color
 green: dup_
-    mov  eax, 0x8000ff00
+    mov  eax, 0x8000ff00 ;# what's that 0x80 for?
     jmp  color
 
 history:
