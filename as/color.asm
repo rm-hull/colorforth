@@ -1191,6 +1191,8 @@ hdot: mov  ecx, 8
     drop
     ret
 
+/* '.', 'dot' is the original Forth 'word' for
+/* displaying a number off the stack */
 dot: mov  ecx, 7
 0:  call odig
     jnz  @h
@@ -1343,33 +1345,37 @@ type2: call unpack
     drop
     ret
 
+;# green (compiled) short (27 bits) word
 gsw: mov  edx, [-4+edi*4]
-    sar  edx, 5
+    sar  edx, 5 ;# shift into position
     jmp  gnw1
 
 var: call magenta
     call type_
+;# green (compiled) normal (32 bits) word
 gnw: mov  edx, [edi*4]
     inc  edi
 gnw1: dup_
     mov  eax, 0x0f800 ;# green
-    cmp dword ptr  bas, offset dot10
-    jz   0f
-    mov  eax, 0x0c000 ;# dark green
+    cmp dword ptr bas, offset dot10 ;# is it base 10?
+    jz   0f ;# bright green if so
+    mov  eax, 0x0c000 ;# else dark green
     jmp  0f
 
+;# short (27 bits) yellow (executable) word
 sw: mov  edx, [-4+edi*4]
-    sar  edx, 5
+    sar  edx, 5 ;# shift into position
     jmp  nw1
 
+;# normal (32 bits) yellow (executable) word
 nw: mov  edx, [edi*4]
     inc  edi
 nw1: dup_
     mov  eax, yellow
-    cmp dword ptr  bas, offset dot10
-    jz   0f
-    mov  eax, 0x0c0c000 ;# dark yellow
-0: call color
+    cmp dword ptr bas, offset dot10 ;# is it base 10?
+    jz   0f ;# bright yellow if so
+    mov  eax, 0x0c0c000 ;# else dark yellow
+0:  call color
     dup_
     mov  eax, edx
     jmp  [bas]

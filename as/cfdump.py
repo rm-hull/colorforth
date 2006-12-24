@@ -57,9 +57,9 @@ function = [
 ]
 
 colortags = [
- 'yellow', 'yellow', 'red', 'green',  # 1-4
- 'green', 'green', 'cyan', 'yellow', # 5-8
- 'white', 'white', 'white', 'magenta', # 9-0xc
+ 'brightyellow', 'brightyellow', 'brightred', 'brightgreen',  # 1-4
+ 'brightgreen', 'brightgreen', 'brightcyan', 'brightyellow', # 5-8
+ 'brightwhite', 'brightwhite', 'brightwhite', 'brightmagenta', # 9-0xc
  'normal', 'normal', 'normal', 'normal', # 0xd-0x10
  'normal', 'yellow', 'normal', 'normal', # 0x11-0x14
  'green', 'green', 'normal', 'yellow', # 0x15-0x18
@@ -101,10 +101,13 @@ def print_color(fulltag):
   dump['blocktext'] += '\n'
  if fulltag < uniquefunction.index('end_of_block'):
   color = colortags[fulltag - 1]
+  bright = 0
+  if color[0:6] == 'bright':
+   bright = 1
+   color = color[6:]
   if dump['blocktext'] and fulltag != uniquefunction.index('define'):
    dump['blocktext'] += ' '
-  dump['blocktext'] += '%s[%d;%dm' % (escape, color != 'normal',
-   30 + colors.index(color))
+  dump['blocktext'] += '%s[%d;%dm' % (escape, bright, 30 + colors.index(color))
 
 def print_text(coded):
  #debug('coded: %08x' % coded)
@@ -150,10 +153,6 @@ def print_decimal(integer):
  if (highbit & integer):
   integer -= 0x100000000
  dump['blocktext'] += '%d' % integer
-
-def print_colors(color):
- if dump['blocktext']:
-  print_color(colortags[(color & 0x1f) - 1])
 
 def print_plain(fulltag):
  if dump['blocktext'] and fulltag == uniquefunction.index('define'):

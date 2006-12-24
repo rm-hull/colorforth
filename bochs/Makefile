@@ -13,8 +13,10 @@ force:
 	$(MAKE) all
 set:
 	set
-%.diff:
+%.wdiff:
 	-diff -y -W160 $* $(shell find $(BOCHS) -name "$*.orig")
+%.diff:
+	-diff $* $(shell find $(BOCHS) -name "$*.orig")
 checkin:
 	cd .. && cvs commit
 cvsdiff:
@@ -69,3 +71,16 @@ links:	*.cc *.h
 checkout:
 	@[ -d $(BOCHS) ] && echo Already checked out || \
 	 cd $(shell dirname $(BOCHS)); $(BOCHS_LOGIN); $(BOCHS_CHECKOUT)
+nolinks:
+	for file in $$(find $(BOCHS) -name "*.orig"); do \
+	 if [ -f "$$(basename $$file .orig)" ]; then \
+	  if [ -L "$$(dirname $$file)/$$(basename $$file .orig)" ]; then \
+	   rm "$$(dirname $$file)/$$(basename $$file .orig)"; \
+	   mv "$$file" "$$(dirname $$file)/$$(basename $$file .orig)"; \
+	  else \
+	   echo "$$(dirname $$file)/$$(basename $$file .orig)" not a link; \
+	  fi; \
+	 else \
+	  echo No such file "$$(basename $$file .orig)"; \
+	 fi; \
+	done
