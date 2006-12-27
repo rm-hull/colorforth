@@ -8,6 +8,9 @@
 /* sent doesn't make any sense anyway. The boot failure problems mentioned in
 /* that online document would more likely be due to the hardcoded millisecond
 /* calculations for busy-wait routines than any "strobe" effect.
+/* milliseconds should be calulated, with a single loop, using the
+/* pc clock chip, like bogoMIPS. or, better yet, the clock should be used for
+/* timing rather than busy-wait loops.
 /* jc is also using this for debugging, with a modified keyboard.cc,
 /* under Bochs. */
     out 0xe1, al
@@ -20,7 +23,7 @@
 .endm
 
 ;# save contents of eax on data stack
-;# often used as copy of return stack pointer
+;# (eax is already a copy of top of data stack)
 .macro dup_
     lea  esi, [esi-4]
     mov  [esi], eax
@@ -156,21 +159,23 @@ show: pop  screen ;# pop return address into screen; 'ret' if from show0
 c_: mov  esi, godd+4
     ret
 
-mark: mov  ecx, macros
+mark: ;# save current state so we can recover later with 'empty'
+    mov  ecx, macros ;# save number of macros in longword mk
     mov  mk, ecx
-    mov  ecx, forths
+    mov  ecx, forths ;# number of forth words in mk+1
     mov  mk+4, ecx
-    mov  ecx, h
+    mov  ecx, h ;# 'here' pointer in mk+2
     mov  mk+2*4, ecx
     ret
 
-empty: mov  ecx, mk+2*4
-    mov  h, ecx
+empty: ;# restore state saved at last 'mark'
+    mov  ecx, mk+2*4
+    mov  h, ecx ;# 'here' pointer restored
     mov  ecx, mk+4
-    mov  forths, ecx
+    mov  forths, ecx ;# number of forth words restored
     mov  ecx, mk
-    mov  macros, ecx
-    mov  dword ptr class, 0
+    mov  macros, ecx ;# number of macros restored
+    mov  dword ptr class, 0 ;# (jc) not sure what this is for yet
     ret
 
 mfind: ;# find pointer to macro code
@@ -234,7 +239,7 @@ forthd: mov  ecx, forths
 0:  mov  edx, [-4+edi*4]
     and  edx, -020
     mov  [ecx], edx
-    mov  edx, h
+    mov  edx, h ;# 'here' pointer, place available for new compiled code
     mov  [forth2-forth0+ecx], edx
     lea  edx, [forth2-forth0+ecx]
     shr  edx, 2
@@ -375,7 +380,7 @@ semi: mov  edx, h
     inc  byte ptr [edx] ;# jmp
     ret
 0:  mov  byte ptr [5+edx], 0x0c3 ;# ret
-    inc dword ptr  h
+    inc  dword ptr h
     ret
 
 then: mov  list, esp
@@ -931,20 +936,25 @@ keys: .byte 16, 17, 18, 19,  0,  0,  4,  5 ;# 20
     .byte  0,  1, 12, 13, 14, 15,  0,  0 ;# 60 n
     .byte  3,  2 ;# alt space
 
-key: dup_             ;# save copy of return stack pointer(?)
-    xor  eax, eax     ;# used as index later, so clear it
-0:  call pause        ;# give other task a chance to run
-    in   al, 0x64     ;# keyboard status port
-    test al, 1        ;# see if there is a byte waiting
-    jz   0b           ;# if not, loop
-    in   al, 0x60     ;# fetch the scancode
+key: ;# loop forever, returning keyhits when available
+/* the original CM2001 version uses this as the multitasking loop,
+/* by calling 'pause' each time through the loop. this is what enables
+/* the constant screen refresh, which causes significant delays in
+/* keystroke processing under Bochs. */
+    dup_             ;# save copy of return stack pointer(?)
+    xor  eax, eax    ;# used as index later, so clear it
+0:  call pause       ;# give other task a chance to run
+    in   al, 0x64    ;# keyboard status port
+    test al, 1       ;# see if there is a byte waiting
+    jz   0b          ;# if not, loop
+    in   al, 0x60    ;# fetch the scancode
 .ifdef DEBUG_KBD
     debugout
 .endif
-    test al, 0xf0     ;# top row of keyboard generates scancodes < 0x10
-    jz   0b           ;# we don't use that row (the numbers row), so ignore it
-    cmp  al, 58       ;# 57, right shift, is the highest scancode we use
-    jnc  0b           ;# so if it's over, ignore that too
+    test al, 0xf0    ;# top row of keyboard generates scancodes < 0x10
+    jz   0b          ;# we don't use that row (the numbers row), so ignore it
+    cmp  al, 58      ;# 57, right shift, is the highest scancode we use
+    jnc  0b          ;# so if it's over, ignore that too
     /* since we're ignoring scancodes less than 0x10, we subtract that
     /* before indexing into the table, that way the table doesn't have
     /* to have 16 wasted bytes */
@@ -1153,12 +1163,12 @@ alph: mov dword ptr  shift, offset alpha1
     /* (4 bytes) from the start of the table into which we index */
     lea  edi, alpha-4
     jmp  0f
-graph: mov dword ptr  shift, offset graph1
+graph: mov dword ptr shift, offset graph1
     lea  edi, graphics-4
 0:  mov  board, edi
     jmp  word0
 
-first: add dword ptr  shift, 4*4+4
+first: add dword ptr shift, 4*4+4
     call word_
     call [aword]
     jmp  accept
@@ -1301,7 +1311,8 @@ ww: dup_
     call color
     jmp  type_
 
-type0: sub dword ptr  xy, iw*0x10000 ;# call bspcr
+type0: ;# display continuation of previous word
+    sub  dword ptr xy, iw*0x10000 ;# call bspcr
     test dword ptr [-4+edi*4], -020
     jnz  type1
     dec  edi
@@ -1312,7 +1323,8 @@ type0: sub dword ptr  xy, iw*0x10000 ;# call bspcr
     drop
     jmp  keyboard
 
-cap: call white
+cap: ;# display a capitalized comment word
+    call white
     dup_
     mov  eax, [-4+edi*4]
     and  eax, -020
@@ -1321,7 +1333,8 @@ cap: call white
     call emit
     jmp  type2
 
-caps: call white
+caps: ;# display an all-caps comment word
+    call white
     dup_
     mov  eax, [-4+edi*4]
     and  eax, -020
@@ -1350,8 +1363,10 @@ gsw: mov  edx, [-4+edi*4]
     sar  edx, 5 ;# shift into position
     jmp  gnw1
 
-var: call magenta
+var: ;# within editor, display a variable name
+    call magenta
     call type_
+;# fall through to next routine to display its value
 ;# green (compiled) normal (32 bits) word
 gnw: mov  edx, [edi*4]
     inc  edi
@@ -1527,11 +1542,11 @@ e:  dup_
 eout: pop  eax
     drop
     drop
-    mov dword ptr  aword, offset ex1
-    mov dword ptr  anumber, offset nul
+    mov  dword ptr aword, offset ex1
+    mov  dword ptr anumber, offset nul
     mov  byte ptr alpha0+4*4, 0
-    mov dword ptr  alpha0+4, offset nul0
-    mov dword ptr  keyc, yellow
+    mov  dword ptr alpha0+4, offset nul0
+    mov  dword ptr keyc, yellow
     jmp  accept
 
 destack: mov  edx, trash

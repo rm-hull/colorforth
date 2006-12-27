@@ -24,10 +24,6 @@ fore:  .long 0x0f7de ;# less-brightness white (silver) in 565 color mode
 xc:    .long 0
 yc:    .long 0
 .endif
-.ifndef AUTO_REFRESH
-needrefresh:
-       .long 0
-.endif
 
 rgb: ;# change 8:8:8 bit format to 5:6:5
     ror  eax, 8 ;# rotate blue bits into upper word
@@ -87,10 +83,6 @@ fifof: drop
 graphic: ret
 
 switch: ;# refresh screen, then switch tasks
-.ifndef AUTO_REFRESH
-    cmp dword ptr needrefresh, 0
-    jz   0b
-.endif
     push esi
     mov  esi, frame ;# source address, framebuffer
     push edi
@@ -99,12 +91,10 @@ switch: ;# refresh screen, then switch tasks
     rep  movsd ;# from buffer into video RAM
     pop  edi
     pop  esi
-.ifndef AUTO_REFRESH
-    mov dword ptr needrefresh, 0
-.endif
 0:  jmp  pause ;# switch task
 
-clip: mov edi, xy
+clip:
+    mov edi, xy
     mov  ecx, edi
     test cx, cx
     jns  0f
@@ -143,28 +133,27 @@ b32: shl  eax, 1
     next b32
     ret
 
-emit: call qcr
-    push esi
+emit: ;# paint a character on the screen
+    call qcr ;# issue CRLF if at end of line
+    push esi ;# save registers we need...
     push edi
     push edx
-    imul eax, 16*24/8
-    lea  esi, icons[eax]
+    imul eax, 16*24/8 ;# index into icon table...
+    lea  esi, icons[eax] ;# point to the bit-representation of this character
     call clip
-    mov  edx, fore
+    mov  edx, fore ;# get foreground color into EDX
     mov  ecx, 24
 0:  push ecx
     call bit16
     add  edi, (hp-16)*2
     pop  ecx
     next 0b
-    pop  edx
+    pop  edx ;# restore registers...
     pop  edi
     pop  esi
-.ifndef AUTO_REFRESH
-    mov dword ptr needrefresh, 1
-.endif
 bl_: drop
-space: add dword ptr xy, iw*0x10000
+space:
+    add dword ptr xy, iw*0x10000
     ret
 
 emit2: push esi
@@ -183,11 +172,8 @@ emit2: push esi
     pop  edx
     pop  edi
     pop  esi
-    add  dword ptr  xy, iw*0x10000*2
+    add  dword ptr xy, iw*0x10000*2
     drop
-.ifndef AUTO_REFRESH
-    mov dword ptr needrefresh, 1
-.endif
     ret
 
 text1: call white
@@ -202,18 +188,16 @@ line: call clip
     mov  ecx, eax
     mov  eax, fore
     rep stosw
-    inc dword ptr  xy
+    inc dword ptr xy
     drop
     drop
-.ifndef AUTO_REFRESH
-    mov dword ptr needrefresh, 1
-.endif
     ret
 
-box: call clip
-    cmp  eax, vp+1
-    js   0f
-    mov  eax, vp
+box: ;# draw a box and fill with foreground color
+    call clip
+    cmp  eax, vp+1 ;# past vertical end of screen?
+    js   0f ;# continue if not
+    mov  eax, vp ;# else set vertical parameter to end of screen
 0:  mov  ecx, eax
     sub  ecx, yc
     jng  no
@@ -233,9 +217,6 @@ box: call clip
     add  edi, edx
     pop  ecx
     next 0b
-.ifndef AUTO_REFRESH
-    mov dword ptr needrefresh, 1
-.endif
 no: drop
     drop
     ret
