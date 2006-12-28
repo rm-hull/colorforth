@@ -515,6 +515,7 @@ forths: .long 0
 
 macro0:
     packword ";", dup, ?dup, drop, then, begin
+macro1:
 .ifdef CM2001
 /* words are defined starting in block 24... their packed representations
 /* and longword pointers are stored in these tables */
@@ -526,10 +527,8 @@ macro0:
     # following that is some nonsense:
     .long 0xc9800000 # hd (a valid packed word but isn't defined anywhere)
     .long 0x00005811 # which isn't a valid packed word
-macro1: .rept 134 - ((.-macro0)/4) .long 0; .endr
-.else
-macro1: .rept 128 .long 0; .endr
 .endif
+    .rept 128 - ((.-macro1)/4) .long 0; .endr ;# room for new macros
 forth0:
     packword boot, warm, pause, macro, forth, c, stop, read, write, nc
     packword command, seek, ready, act, show, load, here, ?lit, "3,", "2,"
@@ -537,6 +536,7 @@ forth0:
     packword emit, digit, 2emit, ., h., h.n, cr, space, down, edit
     packword e, lm, rm, graphic, text, keyboard, debug, at, +at, xy
     packword fov, fifo, box, line, color, octant, sp, last, unpack
+forth1:
 .ifdef CM2001
 ;# now we are at address 0xacc
     packword @, !, +, */, *, /, 2/, dup, negate, min
@@ -545,27 +545,24 @@ forth0:
     packword icons, print, file, north, colors, blks, w/c, buffer, size, set
     packword cyls, put, get, .com, format
 ;# this brings us to address 0x12cc
-forth1: .rept 571 - ((.-forth0)/4) .long 0; .endr
-.else
-forth1: .rept 512 .long 0; .endr
 .endif
+    .rept 512 - ((.-forth1)/4) .long 0; .endr
 macro2:
     .long semi, cdup, qdup, cdrop, then, begin
+0:
 .ifdef CM2001
 ;# slots filled starting with 0x1008d0 at 0x12e4, to 0x0552 at 0x138c.
     .long 0x1008d0, 0x1008ee, 0x100902, 0x100916, 0x10092a
     .long 0x10093e, 0x10096d, 0x10097c, 0x100985, 0x1009c0
     .long 0x100a2b, 0x100a3a, 0x100a69, 0x100a73, 0x100a99
-    .long 0x100aa8, 0x100ad7, 0x100af0, 0x100b04, 0x100b10
+    .long 0x100aa8, 0x100ad7, 0x100af0, 0x100b04, 0x100b18
     .long 0x100b2c, 0x100b3b, 0x100b45, 0x100b4b, 0x100b55
     .long 0x100b7a, 0x100b89, 0x100b9d, 0x100ba3, 0x100bc3
     .long 0x100c2e, 0x100c3d, 0x100c57, 0x100c7c, 0x100c90
     .long 0x100cb8, 0x100cdb, 0x100ce5, 0x100cef, 0x100cfe
     .long 0x100758, 0x10076c, 0x000552
-    .rept 134 - ((.-macro2)/4) .long 0; .endr
-.else
-    .rept 128 .long 0; .endr
 .endif
+    .rept 128 - ((.-0b)/4) .long 0; .endr
 forth2:
     .long boot, warm, pause, macro_, forth, c_, stop, readf, writef, nc_
     .long cmdf, seekf, readyf, act, show, load, here, qlit, comma3, comma2
@@ -573,6 +570,7 @@ forth2:
     .long emit, edig, emit2, dot10, hdot, hdotn, cr, space, down, edit
     .long e, lms, rms, graphic, text1, keyboard, debug, at, pat, xy_
     .long fov_, fifof, box, line, color, octant, sps, last_, unpack
+0:
 .ifdef CM2001
 ;# in the CM2001 color.com object file, there are 45 entries, starting
 ;# 45 entries, from 0x100d12 at 0x15d0 to 0x1008c1 at 0x1680.
@@ -585,11 +583,8 @@ forth2:
     .long 0x100fdd, 0x100fec, 0x100ffb, 0x10100a, 0x101019
     .long 0x101028, 0x101039, 0x101044, 0x10104f, 0x10107d
     .long 0x1010a5, 0x1010d3, 0x1010f5, 0x101119, 0x1008c1
-    .rept 571 - ((.-forth2)/4) .long 0; .endr
-.else
-;# leave 512 slots for new word definitions.
-    .rept 512 .long 0; .endr
 .endif
+    .rept 512 - ((.-0b)/4) .long 0; .endr ;# room for new definitions
 
 boot: mov  al, 0x0fe ;# reset
     out  0x64, al
