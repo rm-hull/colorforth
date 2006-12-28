@@ -27,6 +27,7 @@ colors = ['', 'red', 'green', 'yellow', 'blue',
  'magenta', 'cyan', 'white', '', 'normal'] # escape codes 30 to 39
 
 # added 'fake' functions here:
+# 'dictentry' is same as 'extension' but in a "dirty" block
 # 'icon' is character graphics, stored between 0x3000 and 0x4800 in color.com
 # 'binary' is machine code, from 0x0 to 0x3000 (with some other stuff too)
 # 'end_of_block' is just so the markup routines can be called at end-of-block;
@@ -39,8 +40,8 @@ uniquefunction = [
  'undefined', 'undefined', 'executehexlong', 'undefined',
  'undefined', 'compilehexlong', 'compilehexshort', '',
  'executehexshort', 'undefined', 'undefined', 'undefined',
- 'undefined', 'undefined', 'icon', 'binary',
- 'end_of_block'
+ 'undefined', 'undefined', 'undefined', 'undefined',
+ 'end_of_block', 'binary', 'icon', 'dictentry',
 ]
 
 # the following arrays are one-based, remember to subtract 1 before indexing
@@ -160,7 +161,7 @@ def print_plain(fulltag):
  if fulltag < uniquefunction.index('end_of_block'):
   if dump['blocktext'] and fulltag != uniquefunction.index('define'):
    dump['blocktext'] += ' '
-  dump['blocktext'] += '<%02x>' % (fulltag & 0x1f)
+  dump['blocktext'] += '<%s>' % uniquefunction[fulltag]
 
 def print_code(chunk):
  """dump as raw hex so it can be undumped"""

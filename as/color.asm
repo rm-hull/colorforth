@@ -34,6 +34,46 @@
     lodsd
 .endm
 
+# compile Forth words with Huffman coding
+.macro packword words:vararg
+ .irp word, \words
+ .equ packed, 0
+ .equ bitcount, 32
+ .equ stoppacking, 0
+ .irpc letter, "\word"
+  .equ savepacked, packed
+  .equ huffindex, 0
+  .equ huffcode, 0
+  .irpc huffman, " rtoeanismcylgfwdvpbhxuq0123456789j-k.z/;:!+@*,?"
+   .ifeqs "\letter", "\huffman"
+    .equ bitshift, 4 + (huffindex / 8)
+    .ifge bitshift - 6
+     .equ bitshift, 7
+    .endif
+    .ifeq stoppacking
+     .equ packed, packed | (huffcode << (bitcount - bitshift))
+     .equ bitcount, bitcount - bitshift
+    .endif
+   .else
+    .equ huffindex, huffindex + 1
+    .equ huffcode, huffcode + 1
+    .ifeq huffcode - 0b00001000 # going from 4-bit to 5-bit code
+     .equ huffcode, 0b00010000
+    .endif
+    .ifeq huffcode - 0b00011000 # going from 5-bit to 7-bit code
+     .equ huffcode, 0b01100000
+    .endif
+   .endif
+  .endr
+  .ifne packed & 0xf # low 4 bits cannot be occupied with packed stuff
+   .equ packed, savepacked
+   .equ stoppacking, -1
+  .endif
+ .endr
+ .long packed
+ .endr
+.endm
+
 .ifdef CM2001 ;# Chuck Moore's 2001 code includes AGP-specific video...
  .equ QUESTIONABLE, 1 ;# ...and other weird stuff found in color.com binary
  .equ AGP, 1
@@ -473,168 +513,83 @@ macros: .long 0
 forths: .long 0
 .endif
 
-macro0: .long 0170 << 25 ;# ;
-    .long ((0140 << 7+0146)<< 7+0142)<< 11 ;# dup
-    .long (((0177 << 7+0140)<< 7+0146)<< 7+0142)<< 4 ;# ?dup
-    .long (((0140 << 4+1)<< 4+3)<< 7+0142)<< 10 ;# drop
-    .long (((2 << 7+0144)<< 4+4)<< 4+6)<< 13 ;# then
-    .long ((((0143 << 4+4)<< 5+025)<< 4+7)<< 4+6)<< 8 ;# begin
+macro0:
+    packword ";", dup, ?dup, drop, then, begin
+.ifdef CM2001
+/* words are defined starting in block 24... their packed representations
+/* and longword pointers are stored in these tables */
+    packword swap, 0, if, -if, a, a!, 2*, "a," @, !
+    packword nip, +, or, binary, and, u+, ?, over, push, pop
+    packword -, for, *next, next, 0next, -next, i, *end, end, +!
+    packword nop, align, or!, *, */, /mod, /, mod, 2/, time
+    packword p@, p!
+    # following that is some nonsense:
+    .long 0xc9800000 # hd (a valid packed word but isn't defined anywhere)
+    .long 0x00005811 # which isn't a valid packed word
+macro1: .rept 134 - ((.-macro0)/4) .long 0; .endr
+.else
 macro1: .rept 128 .long 0; .endr
-/* in CM2001 color.com there are 42 new compressed words following 'begin':
-from 0x7e0 (these are defined in block 24): swap 0 if -if a a! 2* a,
-from 0x800 (start of block 2), 35 words:
- @ ! nip + or
- binary and u+ ? (defined in block 26:) over
- push pop - for *next
- next 0next -next i *end
- end +! nop align or!
- * star/ /mod / mod  (an asterisk before the / would end the comment)
- (defined in block 28:) 2/ time (block 50:) p@ p!
- (following that is some nonsense:)
-  0xc9800000 hd (a valid packed word but one that isn't defined anywhere), and
-  0x00005811, which isn't a valid packed word
-*/
-forth0: .long (((0143 << 4+3)<< 4+3)<< 4+2)<< 13 ;# boot
-    .long (((027 << 4+5)<< 4+1)<< 5+021)<< 14 ;# warm
-    .long ((((0142 << 4+5)<< 7+0146)<< 5+020)<< 4+4)<< 5 ;# pause
-    .long ((((021 << 4+5)<< 5+022)<< 4+1)<< 4+3)<< 10 ;# .macro
-    .long ((((026 << 4+3)<< 4+1)<< 4+2)<< 7+0144)<< 8 ;# forth
-    .long 022 << 27 ;# c
-    .long (((020 << 4+2)<< 4+3)<< 7+0142)<< 12 ;# stop
-    .long (((1 << 4+4)<< 4+5)<< 7+0140)<< 13 ;# read
-    .long ((((027 << 4+1)<< 4+7)<< 4+2)<< 4+4)<< 11 ;# write
-    .long (6 << 5+022)<< 23 ;# nc
-    .long (((((022 << 4+3)<< 5+021)<< 5+021)<< 4+5)<< 4+6)<< 5;# comman d
-    .long (((020 << 4+4)<< 4+4)<< 7+0164)<< 12 ;# seek
-    .long ((((1 << 4+4)<< 4+5)<< 7+0140)<< 5+023)<< 8 ;# ready
-    .long ((5 << 5+022)<< 4+2)<< 19 ;# act
-    .long (((020 << 7+0144)<< 4+3) << 5+027)<< 11 ;# show
-    .long (((024 << 4+3)<< 4+5)<< 7+0140)<< 12 ;# load
-    .long (((0144 << 4+4)<< 4+1)<< 4+4)<< 13 ;# here
-    .long (((0177 << 5+024)<< 4+7)<< 4+2)<< 12 ;# ?lit
-    .long (0153 << 7+0176) << 18 ;# 3,
-    .long (0152 << 7+0176) << 18 ;# 2,
-    .long (0151 << 7+0176) << 18 ;# 1,
-    .long 0176 << 25 ;# ,
-    .long (((024 << 4+4)<< 5+020)<< 5+020)<< 13 ;# less
-    .long (((0162 << 7+0146)<< 5+021)<< 7+0142)<< 6 ;# jump
-    .long (((((5 << 5+022)<< 5+022)<< 4+4)<< 7+0142)<< 4+2)<< 3 ;# accept
-    .long ((0142 << 4+5)<< 7+0140)<< 14 ;# pad
-    .long ((((4 << 4+1)<< 4+5)<< 5+020)<< 4+4)<< 11 ;# erase
-    .long (((022 << 4+3)<< 7+0142)<< 5+023)<< 11 ;# copy
-    .long (((021 << 4+5)<< 4+1)<< 7+0164)<< 12 ;# mark
-    .long (((4 << 5+021)<< 7+0142)<< 4+2)<< 12 ;# empt
-    .long (((4 << 5+021)<< 4+7)<< 4+2)<< 15 ;# emit
-    .long ((((0140 << 4+7)<< 5+025)<< 4+7)<< 4+2)<< 8 ;# digit
-    .long ((((0152 << 4+4)<< 5+021)<< 4+7)<< 4+2)<< 8 ;# 2emit
-    .long 0165 << 25 ;# .
-    .long (0144 << 7+0165)<< 18 ;# h.
-    .long ((0144 << 7+0165)<< 4+6)<< 14 ;# h.n
-    .long (022 << 4+1)<< 23 ;# cr
-    .long ((((020 << 7+0142)<< 4+5)<< 5+022)<< 4+4)<< 7 ;# space
-    .long (((0140 << 4+3)<< 5+027)<< 4+6)<< 12 ;# down
-    .long (((4 << 7+0140)<< 4+7)<< 4+2)<< 13 ;# edit
-    .long 4 << 28 ;# e
-    .long (024 << 5+021)<< 22 ;# lm
-    .long (1 << 5+021)<< 23 ;# rm
-    .long ((((025 << 4+1)<< 4+5)<< 7+0142)<< 7+0144)<< 5 ;# graph ic
-    .long (((2 << 4+4)<< 7+0145)<< 4+2)<< 13 ;# text
-    .long ((((0164 << 4+4)<< 5+023)<< 7+0143)<< 4+3)<< 5 ;# keybo ard
-    .long (((0140 << 4+4)<< 7+0143)<< 7+0146)<< 7 ;# debu g
-    .long (5 << 4+2)<< 24 ;# at
-    .long ((0173 << 4+5)<< 4+2)<< 17 ;# +at
-    .long (0145 << 5+023)<< 20 ;# xy
-    .long ((026 << 4+3)<< 7+0141)<< 16 ;# fov
-    .long (((026 << 4+7)<< 5+026)<< 4+3)<< 14 ;# fifo
-    .long ((0143 << 4+3)<< 7+0145)<< 14 ;# box
-    .long (((024 << 4+7)<< 4+6)<< 4+4)<< 15 ;# line
-    .long ((((022 << 4+3)<< 5+024)<< 4+3)<< 4+1)<< 10 ;# color
-    .long (((((3 << 5+022)<< 4+2)<< 4+5)<< 4+6)<< 4+2)<< 7 ;# octant
-    .long (020 << 7+0142)<< 20 ;# sp
-    .long (((024 << 4+5)<< 5+020)<< 4+2)<< 14 ;# last
-    .long (((((0146 << 4+6)<< 7+0142)<< 4+5)<< 5+022))<< 5 ;# unpac k
+.endif
+forth0:
+    packword boot, warm, pause, macro, forth, c, stop, read, write, nc
+    packword command, seek, ready, act, show, load, here, ?lit, "3,", "2,"
+    packword "1,", ",", less, jump, accept, pad, erase, copy, mark, empt
+    packword emit, digit, 2emit, ., h., h.n, cr, space, down, edit
+    packword e, lm, rm, graphic, text, keyboard, debug, at, +at, xy
+    packword fov, fifo, box, line, color, octant, sp, last, unpack
+.ifdef CM2001
 ;# now we are at address 0xacc
-;# in CM2001 color.com binary, we find 44 new packed words here:
-;# @ ! + */ * / 2/ dup negate min
-;# abs max v+ writes reads oadf save block white green
-;# blue silver black screen 5* cf logo empty dump icons
-;# print file north colors blks w/c buffe(r) size set cyls
-;# put get .com format
-forth1: .rept 512 .long 0; .endr
+    packword @, !, +, */, *, /, 2/, dup, negate, min
+    packword abs, max, v+, writes, reads, oadf, save, block, white, red
+    packword green, blue, silver, black, screen, 5*, cf, logo, empty, dump
+    packword icons, print, file, north, colors, blks, w/c, buffer, size, set
+    packword cyls, put, get, .com, format
 ;# this brings us to address 0x12cc
-macro2: .long semi
-    .long cdup
-    .long qdup
-    .long cdrop
-    .long then
-    .long begin
-;# in CM2001 color.com object code, we find 42 of these 128 slots filled:
-;# starting with 0x1008d0 at 0x12e4, to 0x0552 at 0x138c.
+forth1: .rept 571 - ((.-forth0)/4) .long 0; .endr
+.else
+forth1: .rept 512 .long 0; .endr
+.endif
+macro2:
+    .long semi, cdup, qdup, cdrop, then, begin
+.ifdef CM2001
+;# slots filled starting with 0x1008d0 at 0x12e4, to 0x0552 at 0x138c.
+    .long 0x1008d0, 0x1008ee, 0x100902, 0x100916, 0x10092a
+    .long 0x10093e, 0x10096d, 0x10097c, 0x100985, 0x1009c0
+    .long 0x100a2b, 0x100a3a, 0x100a69, 0x100a73, 0x100a99
+    .long 0x100aa8, 0x100ad7, 0x100af0, 0x100b04, 0x100b10
+    .long 0x100b2c, 0x100b3b, 0x100b45, 0x100b4b, 0x100b55
+    .long 0x100b7a, 0x100b89, 0x100b9d, 0x100ba3, 0x100bc3
+    .long 0x100c2e, 0x100c3d, 0x100c57, 0x100c7c, 0x100c90
+    .long 0x100cb8, 0x100cdb, 0x100ce5, 0x100cef, 0x100cfe
+    .long 0x100758, 0x10076c, 0x000552
+    .rept 134 - ((.-macro2)/4) .long 0; .endr
+.else
     .rept 128 .long 0; .endr
-forth2: .long boot
-    .long warm
-    .long pause
-    .long macro_
-    .long forth
-    .long c_
-    .long stop
-    .long readf
-    .long writef
-    .long nc_
-    .long cmdf
-    .long seekf
-    .long readyf
-    .long act
-    .long show
-    .long load
-    .long here
-    .long qlit
-    .long comma3
-    .long comma2
-    .long comma1
-    .long comma
-    .long less
-    .long jump
-    .long accept
-    .long pad
-    .long erase
-    .long copy
-    .long mark
-    .long empty
-    .long emit
-    .long edig
-    .long emit2
-    .long dot10
-    .long hdot
-    .long hdotn
-    .long cr
-    .long space
-    .long down
-    .long edit
-    .long e
-    .long lms
-    .long rms
-    .long graphic
-    .long text1
-    .long keyboard
-    .long debug
-    .long at
-    .long pat
-    .long xy_
-    .long fov_
-    .long fifof
-    .long box
-    .long line
-    .long color
-    .long octant
-    .long sps
-    .long last_
-    .long unpack
-;# leave 512 slots for new word definitions.
+.endif
+forth2:
+    .long boot, warm, pause, macro_, forth, c_, stop, readf, writef, nc_
+    .long cmdf, seekf, readyf, act, show, load, here, qlit, comma3, comma2
+    .long comma1, comma, less, jump, accept, pad, erase, copy, mark, empty
+    .long emit, edig, emit2, dot10, hdot, hdotn, cr, space, down, edit
+    .long e, lms, rms, graphic, text1, keyboard, debug, at, pat, xy_
+    .long fov_, fifof, box, line, color, octant, sps, last_, unpack
+.ifdef CM2001
 ;# in the CM2001 color.com object file, there are 45 entries, starting
-;# with 0x100d12 at 0x15d0 and ending with 0x1008c1 at 0x1680.
-;# (why 45 new entries for only 44 new words?)
+;# 45 entries, from 0x100d12 at 0x15d0 to 0x1008c1 at 0x1680.
+    .long 0x100d12, 0x100d1a, 0x100d26, 0x100d2c, 0x100d37
+    .long 0x100d3e, 0x100d4d, 0x100d50, 0x100d56, 0x100d5e
+    .long 0x100d6f, 0x100d79, 0x100d88, 0x100d94, 0x100da6
+    .long 0x100db8, 0x100db8, 0x100ddc, 0x100ded, 0x100dfc
+    .long 0x100e0b, 0x100e1a, 0x100e29, 0x100e38, 0x100e47
+    .long 0x100e74, 0x100e8e, 0x100f1a, 0x100fc4, 0x100fce
+    .long 0x100fdd, 0x100fec, 0x100ffb, 0x10100a, 0x101019
+    .long 0x101028, 0x101039, 0x101044, 0x10104f, 0x10107d
+    .long 0x1010a5, 0x1010d3, 0x1010f5, 0x101119, 0x1008c1
+    .rept 571 - ((.-forth2)/4) .long 0; .endr
+.else
+;# leave 512 slots for new word definitions.
     .rept 512 .long 0; .endr
+.endif
 
 boot: mov  al, 0x0fe ;# reset
     out  0x64, al

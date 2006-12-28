@@ -53,12 +53,12 @@ help:
 	@echo To build the closest thing to CM\'s 2001 color.com: make cm2001
 	@echo Read Makefile for other options.
 %.dat:	%.asm
-	$(GAS) -ahlmns=$*.lst -o $*.o $<
+	$(GAS) -ahlns=$*.lst --listing-cont-lines=10 -o $*.o $<
 	objcopy $*.o -O binary $@
 color.com: $(sources) secondpass
 	$(GAS) $(foreach definition,$(DEFINES),\
 	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
-	 -ahlmns=color.lst -o color.o color.asm
+	 -ahlns=color.lst --listing-cont-lines=10 -o color.o color.asm
 	objcopy color.o -O binary color.bin
 	# now get original color.com for its data blocks starting at 0x3000
 	cp -f ../color.com .
@@ -134,7 +134,11 @@ ci:
 	xxd $< > $@
 /tmp/gas_color.xxd: color.com
 	xxd $< > $@
+/tmp/gas_color.old.xxd: color.com.old
+	xxd $< > $@
 bindiff: /tmp/color.xxd /tmp/gas_color.xxd
+	diff -y -W180 $+
+macdiff: /tmp/gas_color.xxd /tmp/gas_color.old.xxd # using new macro
 	diff -y -W180 $+
 test:
 	cd ../test && $(MAKE)
