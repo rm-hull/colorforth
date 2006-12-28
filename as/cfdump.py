@@ -161,7 +161,7 @@ def print_plain(fulltag):
  if fulltag < uniquefunction.index('end_of_block'):
   if dump['blocktext'] and fulltag != uniquefunction.index('define'):
    dump['blocktext'] += ' '
-  dump['blocktext'] += '<%s>' % uniquefunction[fulltag]
+  dump['blocktext'] += '<%s>' % uniquefunction[fulltag].upper()
 
 def print_code(chunk):
  """dump as raw hex so it can be undumped"""
