@@ -11,9 +11,11 @@ oldcode  = ' rtoeani' + 'smcylgfw' + 'dvpbhxuq' + 'kzj34567' + \
 newcode  = ' rtoeani' + 'smcylgfw' + 'dvpbhxuq' + '01234567' + \
            '89j-k.z/' + ';:!+@*,?'
 code = newcode  # assume Tim knows what he's doing
-#code = oldcode  # assume Chuck knows what he's saying
+#code = oldcode  # assume Chuck's webpage is up-to-date (bad idea as of 2006)
 
 emptyblock = '\0' * 1024
+
+icon_block = 12  # first block of character maps
 
 high_level_block = 18  # first high-level code block in CM2001
 
@@ -111,6 +113,11 @@ def print_color(fulltag):
   dump['blocktext'] += '%s[%d;%dm' % (escape, bright, 30 + colors.index(color))
 
 def print_text(coded):
+ text = unpack(coded)
+ #debug('text: "%s"' % text)
+ dump['blocktext'] += text
+
+def unpack(coded):
  #debug('coded: %08x' % coded)
  bits = 32 - 4  # 28 bits used for compressed text
  text = ''
@@ -129,8 +136,7 @@ def print_text(coded):
    text += code[(coded >> 29) + (8 * (nybble - 10))]
    coded = (coded << 3) & mask
    bits -= 3
- #debug('text: "%s"' % text)
- dump['blocktext'] += text
+ return text
 
 def print_tags(fulltag):
  if dump['blocktext'] or (dump['original'] and dump['index']):
@@ -158,10 +164,10 @@ def print_decimal(integer):
 def print_plain(fulltag):
  if dump['blocktext'] and fulltag == uniquefunction.index('define'):
   dump['blocktext'] += '\n'
- if fulltag < uniquefunction.index('end_of_block'):
+ if fulltag != uniquefunction.index('end_of_block'):
   if dump['blocktext'] and fulltag != uniquefunction.index('define'):
    dump['blocktext'] += ' '
-  dump['blocktext'] += '<%s>' % uniquefunction[fulltag].upper()
+  dump['blocktext'] += '%s ' % uniquefunction[fulltag].upper()
 
 def print_code(chunk):
  """dump as raw hex so it can be undumped"""
@@ -170,7 +176,8 @@ def print_code(chunk):
 def dump_block(chunk):
  """see http://www.colorforth.com/parsed.html for meaning of bit patterns"""
  state = 'default'
- if (dump['block'] / 1024) < high_level_block:  # assume machine code
+ if (dump['block'] / 1024) < high_level_block and not dump['original']:
+  # assume machine code
   dump['dirty'] = True
  else:  # assume high-level Forth
   dump['dirty'] = False
@@ -185,13 +192,19 @@ def dump_block(chunk):
   elif state == 'print number as decimal':
    print_decimal(integer)
    state = 'default'
-  elif tag == uniquefunction.index('extension'):
+  elif tag == uniquefunction.index('extension') and ' ' in unpack(integer):
    if (chunk[dump['index']:] == emptyblock[dump['index']:]) and \
     not dump['original']:
     break
-   elif dump['dirty'] and not dump['original']:
-    print_format(fulltag)
+   else:
+    print_text(integer)
+  elif tag == uniquefunction.index('extension') and ' ' not in unpack(integer):
+   if dump['dirty']:
+    print_format(uniquefunction.index('dictentry'))
    print_text(integer)
+  elif dump['dirty']:
+   print_format(uniquefunction.index('binary'))
+   print_hex(integer)
   elif tag == uniquefunction.index('executelong') or \
    tag == uniquefunction.index('compilelong'):
    print_format(fulltag)

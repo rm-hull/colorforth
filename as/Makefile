@@ -144,3 +144,13 @@ test:
 	cd ../test && $(MAKE)
 debug:
 	cd ../test && $(MAKE) BXDEBUG=1
+htmldiff: /tmp/color_pydump.html /tmp/color.html
+	rm -f $<
+	$(MAKE) TIM_NEITZ=1 $<
+	diff -y -W180 $+
+/tmp/color_pydump.html: ../color.com
+	./cf2html $< > $@
+/tmp/color.html: ../color.com /usr/src/howerd/cf2html
+	/usr/src/howerd/cf2html $< > $@
+/usr/src/howerd/cf2html: /usr/src/howerd/cf2html.c
+	gcc -o $@ $<
