@@ -84,3 +84,5 @@ nolinks:
 	  echo No such file "$$(basename $$file .orig)"; \
 	 fi; \
 	done
+cf.patch:
+	-cd $(BOCHS) && cvs diff -u > $(CF_BOCHS)/$@
