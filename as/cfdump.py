@@ -36,7 +36,7 @@ colors = ['', 'red', 'green', 'yellow', 'blue',
 # to close open tags and whatnot
 uniquefunction = [
  'extension', 'execute', 'executelong', 'define',
- 'compile', 'compilelong', 'compileshort', 'compilemacro',
+ 'compileword', 'compilelong', 'compileshort', 'compilemacro',
  'executeshort', 'text', 'textcapitalized', 'textallcaps',
  'variable', 'undefined', 'undefined', 'undefined',
  'undefined', 'undefined', 'executehexlong', 'undefined',
@@ -68,6 +68,7 @@ colortags = [
  'green', 'green', 'normal', 'yellow', # 0x15-0x18
  'normal', 'normal', 'normal', 'normal', # 0x19-0x1c
  'normal', 'normal', 'normal', 'normal', # 0x1d-0x20
+ 'normal', 'normal', 'normal', 'normal', # 0x21-0x24
 ]
 
 highbit =  0x80000000L
@@ -92,7 +93,7 @@ def debug(*args):
 def print_normal(fulltag):
  if dump['blocktext'] and fulltag == uniquefunction.index('define'):
   dump['blocktext'] += '\n'
- if fulltag < uniquefunction.index('end_of_block'):
+ if fulltag != uniquefunction.index('end_of_block'):
   if dump['blocktext'] and fulltag != uniquefunction.index('define'):
    dump['blocktext'] += ' '
 
@@ -102,7 +103,7 @@ def print_color(fulltag):
   dump['blocktext'] += '%s[%d;%dm' % (escape, 0, 30 + colors.index('normal'))
  if dump['blocktext'] and fulltag == uniquefunction.index('define'):
   dump['blocktext'] += '\n'
- if fulltag < uniquefunction.index('end_of_block'):
+ if fulltag != uniquefunction.index('end_of_block'):
   color = colortags[fulltag - 1]
   bright = 0
   if color[0:6] == 'bright':
@@ -144,7 +145,7 @@ def print_tags(fulltag):
  if dump['blocktext']:
   if fulltag == uniquefunction.index('define'):
    dump['blocktext'] += '<br>'
- if fulltag < uniquefunction.index('end_of_block'):
+ if fulltag != uniquefunction.index('end_of_block'):
   dump['blocktext'] += '<code class=%s>' % function[fulltag - 1]
   if fulltag != uniquefunction.index('define'):
    dump['blocktext'] += ' '
@@ -229,7 +230,7 @@ def dump_block(chunk):
    print_format(tag)
    print_text(integer & 0xfffffff0)
    state = 'print number as decimal'
-   print_format(uniquefunction.index('compile'))
+   print_format(uniquefunction.index('compileword'))
   elif not dump['original'] and tag > 0xc:
    #debug('block is dirty: tag = 0x%x' % tag)
    dump['dirty'] = True
