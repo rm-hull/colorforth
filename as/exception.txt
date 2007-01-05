@@ -1,0 +1,62 @@
+Exception found when continuing after break at 0x23aa (in key:) and after
+hitting spacebar on blank screen (using make kbd and make debug). 'trace on'
+was set after first breakpoint, and a secondary breakpoint was set at abort,
+0x412, but never reached.
+
+(0).[41658264] [0x0000207a] 0008:0000207a (unk. ctxt): jle .+0x0000001a (0x00002
+096) ; 7e1a
+(0).[41658265] [0x0000207c] 0008:0000207c (unk. ctxt): mov edx, 0x00000320
+ ; ba20030000
+(0).[41658266] [0x00002081] 0008:00002081 (unk. ctxt): sub edx, dword ptr ds:[es
+i] ; 2b16
+(0).[41658267] [0x00002083] 0008:00002083 (unk. ctxt): shl edx, 1
+ ; d1e2
+(0).[41658268] [0x00002085] 0008:00002085 (unk. ctxt): mov eax, dword ptr ds:0x1
+ec4 ; a1c41e0000
+(0).[41658269] [0x0000208a] 0008:0000208a (unk. ctxt): push ecx
+ ; 51
+(0).[41658270] [0x0000208b] 0008:0000208b (unk. ctxt): mov ecx, dword ptr ds:[es
+i] ; 8b0e
+(0).[41658271] [0x0000208d] 0008:0000208d (unk. ctxt): rep stosw word ptr es:[ed
+i], ax ; f366ab
+CPU 0: Exception 0x0d occured (error_code=0x0000)
+CPU 0: Interrupt 0x0d occured (error_code=0x0000)
+CPU 0: Exception 0x0d occured (error_code=0x006a)
+CPU 0: Interrupt 0x08 occured (error_code=0x006b)
+CPU 0: Exception 0x0d occured (error_code=0x0042)
+Next at t=41658271
+(0) [0x0000208d] 0008:208d (unk. ctxt): rep stosw word ptr es:[edi], ax ; f366ab
+
+<bochs:7>
+
+
+It does it also with the fullscreen image of "make new" followed by
+"make debug". Note that you must click somewhere in the screen after it goes
+fullscreen in order for keyhits to be received by colorForth rather than by the
+Bochs console:
+
+(0).[29587920] [0x00002085] 0008:00002085 (unk. ctxt): mov eax, dword ptr ds:0x1
+ec4 ; a1c41e0000
+(0).[29587921] [0x0000208a] 0008:0000208a (unk. ctxt): push ecx
+ ; 51
+(0).[29587922] [0x0000208b] 0008:0000208b (unk. ctxt): mov ecx, dword ptr ds:[es
+i] ; 8b0e
+(0).[29587923] [0x0000208d] 0008:0000208d (unk. ctxt): rep stosw word ptr es:[ed
+i], ax ; f366ab
+CPU 0: Exception 0x0d occured (error_code=0x0000)
+CPU 0: Interrupt 0x0d occured (error_code=0x0000)
+CPU 0: Exception 0x0d occured (error_code=0x006a)
+CPU 0: Interrupt 0x08 occured (error_code=0x006b)
+CPU 0: Exception 0x0d occured (error_code=0x0042)
+Next at t=29587923
+(0) [0x0000208d] 0008:208d (unk. ctxt): rep stosw word ptr es:[edi], ax ; f366ab
+
+<bochs:5> c
+========================================================================
+Bochs is exiting with the following message:
+[WGUI ] Window closed, exiting!
+========================================================================
+# In bx_win32_gui_c::exit(void)!
+
+Bochs is exiting. Press ENTER when you're ready to close this window.
+
