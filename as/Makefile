@@ -145,6 +145,8 @@ test:
 debug:
 	cd ../test && $(MAKE) BXDEBUG=1
 htmldiff: /tmp/color_pydump.html /tmp/color.html
+	rm -f $+
+	$(MAKE) $+
 	diff -y -W180 $+
 /tmp/color_pydump.html: ../color.com
 	TIM_NEITZ=1 ./cf2html $< > $@
