@@ -57,7 +57,6 @@ function = [
  'compilehex', 'compilehex', '', 'executehex',
  '', '', '', '',
  '', '', '', '',
- '', '', '', '',
 ]
 
 colortags = [
@@ -85,7 +84,6 @@ dump = {  # set up globals as dictionary to avoid declaring globals everywhere
  'original': False,  # set True for output similar to Tim Neitz's cf2html.c
  'format': '',  # use 'html' or 'color', otherwise plain text
  'index': 0,  # index into block, to match cf2html.c bug
- 'state': 'default',  # globally-manipulable state machine
 }
 
 def debug(*args):
@@ -178,21 +176,23 @@ def print_code(chunk):
 
 def dump_block(chunk):
  """see http://www.colorforth.com/parsed.html for meaning of bit patterns"""
- dump['state'] = 'default'
+ state = 'default'
  if (dump['block'] / 1024) < high_level_block and not dump['original']:
-  dump['dirty'] = True # assume machine code
- else:
-  dump['dirty'] = False # assume high-level Forth
+  # assume machine code
+  dump['dirty'] = True
+ else:  # assume high-level Forth
+  dump['dirty'] = False
  for dump['index'] in range(0, len(chunk), 4):
   integer = struct.unpack('<L', chunk[dump['index']:dump['index'] + 4])[0]
   fulltag = integer & 0x1f  # bit 4 set indicates hex numeric output
   tag = integer & 0xf  # only 0 to 0xc used as of CM2001 colorForth
-  if dump['state'] == 'print number as hex':
+  #debug('fulltag: 0x%x' % fulltag)
+  if state == 'print number as hex':
    print_hex(integer)
-   dump['state'] = 'default'
-  elif dump['state'] == 'print number as decimal':
+   state = 'default'
+  elif state == 'print number as decimal':
    print_decimal(integer)
-   dump['state'] = 'default'
+   state = 'default'
   elif tag == uniquefunction.index('extension') and ' ' in unpack(integer):
    if (chunk[dump['index']:] == emptyblock[dump['index']:]) and \
     not dump['original']:
@@ -210,9 +210,9 @@ def dump_block(chunk):
    tag == uniquefunction.index('compilelong'):
    print_format(fulltag)
    if integer & 0x10:
-    dump['state'] = 'print number as hex'
+    state = 'print number as hex'
    else:
-    dump['state'] = 'print number as decimal'
+    state = 'print number as decimal'
   elif tag == uniquefunction.index('compileshort') or \
    tag == uniquefunction.index('executeshort'):
    print_format(fulltag)
@@ -229,7 +229,7 @@ def dump_block(chunk):
   elif tag == uniquefunction.index('variable'):
    print_format(tag)
    print_text(integer & 0xfffffff0)
-   dump['state'] = 'print number as decimal'
+   state = 'print number as decimal'
    print_format(uniquefunction.index('compileword'))
   elif not dump['original'] and tag > 0xc:
    #debug('block is dirty: tag = 0x%x' % tag)
@@ -252,8 +252,10 @@ def init():
 
 def cfdump(filename):
  init()
- if not filename: file = sys.stdin
- else: file = open(filename)
+ if not filename:
+  file = sys.stdin
+ else:
+  file = open(filename)
  data = file.read()
  file.close()
  debug('dumping %d bytes' % len(data))
@@ -264,13 +266,18 @@ def cfdump(filename):
   chunk = data[dump['block']:dump['block'] + 1024]
   debug('block %d: %s' % (dump['block'] / 1024, repr(chunk)))
   output.write('{block %d}\n' % (dump['block'] / 1024))
-  if dump['format'] == 'html': output.write('<div class=code>\n')
+  if dump['format'] == 'html':
+   output.write('<div class=code>\n')
   dump_block(chunk)
   output.write(dump['blocktext'])
-  if dump['blocktext']: dump['blocktext'] = ''
-  if dump['original']: output.write('</code>\n')
-  if dump['format'] == 'html': output.write('</div>\n<hr>\n')
- if dump['format'] == 'html': output.write('</html>\n')
+  if dump['blocktext']:
+   dump['blocktext'] = ''
+  if dump['original']:
+   output.write('</code>\n')
+  if dump['format'] == 'html':
+   output.write('</div>\n<hr>\n')
+ if dump['format'] == 'html':
+  output.write('</html>\n')
 
 def cf2text(filename):
  dump['format'] = 'plaintext'

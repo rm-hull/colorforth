@@ -243,14 +243,15 @@ ex1: dec dword ptr words ;# from keyboard
     drop
     jmp  [forth2+ecx*4] ;# jump to low-level code of Forth word or macro
 
-execute: mov dword ptr  lit, offset alit
-    dup_
+execute: mov dword ptr lit, offset alit
+    dup_ ;# save EAX on data stack
     mov  eax, [-4+edi*4]
-ex2: and  eax, -020
-    call find
-    jnz  abort
-    drop
-    jmp  [forth2+ecx*4]
+ex2:
+    and  eax, 0xfffffff0 ;# mask tag bits which indicate word type
+    call find ;# look for word in the dictionary
+    jnz  abort ;# if not found, abort
+    drop ;# restore EAX from data stack
+    jmp  [forth2+ecx*4] ;# execute the Forth word found
 
 abort: mov  curs, edi
     shr  edi, 10-2
@@ -273,12 +274,13 @@ macrod: mov  ecx, macros
     jmp  0f
 
 forth: call sdefine
-forthd: mov  ecx, forths
-    inc dword ptr  forths
-    lea  ecx, [forth0+ecx*4]
-0:  mov  edx, [-4+edi*4]
-    and  edx, -020
-    mov  [ecx], edx
+forthd:
+    mov  ecx, forths ;# current count of Forth words
+    inc dword ptr forths ;# make it one more
+    lea  ecx, [forth0+ecx*4] ;# point to the slot for the next definition
+0:  mov  edx, [-4+edi*4] ;# load the packed word from ???
+    and  edx, 0xfffffff0 ;# mask out the tag bits
+    mov  [ecx], edx ;# store the "naked" word in the dictionary
     mov  edx, h ;# 'here' pointer, place available for new compiled code
     mov  [forth2-forth0+ecx], edx
     lea  edx, [forth2-forth0+ecx]
@@ -356,27 +358,28 @@ literal: call qdup
 
 qcompile: call [lit]
     mov  eax, [-4+edi*4]
-    and  eax, -020
-    call mfind
-    jnz  0f
-    drop
-    jmp  [macro2+ecx*4]
-0:  call find
-    mov  eax, [forth2+ecx*4]
-0:  jnz  abort
-call_: mov  edx, h
+    and  eax, 0xfffffff0 ;# mask out tag bits
+    call mfind ;# locate word in macro dictionary
+    jnz  0f ;# if failed, try in Forth dictionary
+    drop ;# restore EAX
+    jmp  [macro2+ecx*4] ;# jmp to macro code
+0:  call find ;# try to find the word in the Forth dictionary
+    mov  eax, [forth2+ecx*4] ;# load code pointer in case there was a match
+0:  jnz  abort ;# abort if no match in Forth dictionary
+call_:
+    mov  edx, h ;# get 'here' pointer to where new compiled code goes
     mov  list, edx
-    mov  byte ptr [edx], 0x0e8
+    mov  byte ptr [edx], 0x0e8 ;# x86 "call" instruction
     add  edx, 5
-    sub  eax, edx
-    mov  [-4+edx], eax
-    mov  h, edx
-    drop
+    sub  eax, edx ;# it has to be a 32-bit offset rather than absolute address
+    mov  [-4+edx], eax ;# store it after the "call" instruction
+    mov  h, edx ;# point 'here' to end of just-compiled code
+    drop ;# restore EAX from data stack
     ret
 
 compile: call [lit]
     mov  eax, [-4+edi*4]
-    and  eax, -020
+    and  eax, 0xfffffff0 ;# mask out tag bits
     call mfind
     mov  eax, [macro2+ecx*4]
     jmp  0b
@@ -459,8 +462,8 @@ less: cmp  [esi], eax
     xor  ecx, ecx ;# flag z
 0:  ret
 
-qignore: test dword ptr [-4+edi*4], -020
-    jnz  nul
+qignore: test dword ptr [-4+edi*4], 0xfffffff0 ;# valid packed word?
+    jnz  nul  ;# return if so
     pop  edi
     pop  edi
 nul: ret
@@ -590,7 +593,8 @@ boot: mov  al, 0x0fe ;# reset
     out  0x64, al
     jmp  .
 
-erase: mov  ecx, eax
+erase:
+    mov  ecx, eax
     shl  ecx, 8
     drop
     push edi
@@ -1231,17 +1235,18 @@ qring: dup_
 0:  drop
     ret
 
-ring: mov  cad, edi
-    sub dword ptr  xy, iw*0x10000 ;# bksp
+ring:
+    mov  cad, edi
+    sub dword ptr xy, iw*0x10000 ;# bksp
     dup_
-    mov  eax, 0x0e04000
+    mov  eax, 0x0e04000 ;# ochre-colored cursor
     call color
     mov  eax, 060
     mov  cx, word ptr xy+2
     cmp  cx, word ptr rm
     js   0f
     call emit
-    sub dword ptr  xy, iw*0x10000 ;# bksp
+    sub dword ptr xy, iw*0x10000 ;# bksp
     ret
 0:  jmp  emit
 
@@ -1263,7 +1268,7 @@ ww: dup_
 
 type0: ;# display continuation of previous word
     sub  dword ptr xy, iw*0x10000 ;# call bspcr
-    test dword ptr [-4+edi*4], -020
+    test dword ptr [-4+edi*4], 0xfffffff0 ;# valid packed word?
     jnz  type1
     dec  edi
     mov  lcad, edi
@@ -1277,7 +1282,7 @@ cap: ;# display a capitalized comment word
     call white
     dup_
     mov  eax, [-4+edi*4]
-    and  eax, -020
+    and  eax, 0xfffffff0 ;# mask out tag bits
     call unpack
     add  al, 48
     call emit
@@ -1287,9 +1292,9 @@ caps: ;# display an all-caps comment word
     call white
     dup_
     mov  eax, [-4+edi*4]
-    and  eax, -020
+    and  eax, 0xfffffff0 ;# mask out tag bits
 0:  call unpack
-    jz   0f
+    jz   0f ;# space if it unpacked to nothing
     add  al, 48
     call emit
     jmp  0b
@@ -1298,7 +1303,7 @@ text: call white
 type_:
 type1: dup_
     mov  eax, [-4+edi*4]
-    and  eax, -020
+    and  eax, 0xfffffff0 ;# mask out tag bits
 type2: call unpack
     jz   0f
     call emit
@@ -1422,7 +1427,7 @@ act4: mov  al, 4 ;# word compile, green
     jmp  0f
 act9: mov  al, 9 ;# word comment, white
     jmp  0f
-act10: mov  al, 10 ;# word comment, white capitalized
+act10: mov  al, 10 ;# word comment, white Capitalized
     jmp  0f
 act11: mov  al, 11 ;# word comment, ALL CAPS
     jmp  0f
