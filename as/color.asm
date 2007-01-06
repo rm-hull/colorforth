@@ -793,7 +793,7 @@ octant: dup_
     xor  al, 1
 0:  cmp  edx, [esi]
     jns  0f
-        xor  al, 4
+    xor  al, 4
 0:  ret
 
 ;# keyboard
@@ -877,7 +877,8 @@ octals: .byte 031, 032, 033, 0 ;# 1 2 3
     .byte  0 ,  5 , 023, 012
     .byte  0 , 020,  4 , 016
     .byte  0 ,  0 ,  0 ,  0
-letter: cmp  al, 4
+letter:
+    cmp  al, 4
     js   0f
     mov  edx, board
     mov  al, [edx][eax]
@@ -1050,10 +1051,7 @@ hex: mov dword ptr  base, 16
 
 octal: xor dword ptr current, (offset decimal-offset start) ^ (offset hex-offset start)
     xor  byte ptr numb0+18, 041 ^ 016 ;# f vs 9
-    call current
-.ifdef CM2001
-    nop ;# can't force 6-byte assembly of call ds:current
-.endif
+    call [current]
     jmp  number0
 
 xn: drop
@@ -1072,10 +1070,7 @@ minus:
 
 number0: drop
     jmp  number3
-number: call current
-.ifdef CM2001
-    nop ;# can't force 6-byte assembly of call ds:current
-.endif
+number: call [current]
     mov byte ptr sign, 0
     xor  eax, eax
 number3: call key
