@@ -116,12 +116,13 @@ def text(prefix, number, suffix):
  while dump['index'] < len(dump['blockdata']):
   number = dump['blockdata'][dump['index']]
   if number == 0 or number & 0xf != 0:
-   debug('0x%x not an extension' % number)
+   debug('0x%x (%s) not an extension' % (number, unpack(number)))
    break
   else:
    debug('found an extension')
    string += unpack(number)
    dump['index'] += 1
+ debug('final string: %s' % string)
  return prefix + string + suffix
 
 def textcapitalized(prefix, number, suffix):
@@ -254,8 +255,7 @@ def dump_tags(number):
 
 def print_tags(number):
  prefix, suffix = '', '</code>'
- tagbits = tag(number)
- if tagbits in fivebit_tags: tagbits = fulltag(number)
+ tagbits = fulltag(number)
  if dump['printing']:
   if tag(number) == function.index('define'): prefix = '<br>'
   else: suffix += ' '
@@ -274,7 +274,11 @@ def tag(number):
  return number & 0xf
 
 def fulltag(number):
- return number & 0x1f
+ basetag = tag(number)
+ if basetag in fivebit_tags:
+  return number & 0x1f
+ else:
+  return basetag
 
 def hexadecimal(number):
  return number & 0x10 > 0
@@ -325,15 +329,14 @@ def set_default_state(state):
 def dump_block():
  set_default_state('')
  while dump['index'] < len(dump['blockdata']):
+  if not dump['original'] and allzero(dump['blockdata'][dump['index']:]):
+   break
   integer = dump['blockdata'][dump['index']]
   dump['index'] += 1
   debug('[0x%x]' % integer)
-  if not dump['original'] and allzero(dump['blockdata'][dump['index']:]):
-   break
-  else:
-   print_format(integer)
-   if tag(integer) == function.index('variable'):
-    print_format(function.index('executelong'))
+  print_format(integer)
+  if tag(integer) == function.index('variable'):
+   print_format(function.index('executelong'))
  if not dump['original']:
   dump['state'] = 'mark end of block'
   print_format(0)
