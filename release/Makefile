@@ -15,6 +15,6 @@ set:
 test:	cfbochs.zip
 	cp $< /cygdrive/c/WINDOWS/Temp/
 clean:
-	rm -f *.exe a.img
+	rm -f *.exe a.img *.zip cfBochs/*
 %.exe:
 	ln -sf $(BOCHS_SRC)/$@ .
