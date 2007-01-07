@@ -34,7 +34,7 @@
     lodsd
 .endm
 
-# compile Forth words with Huffman coding
+;# compile Forth words with Huffman coding
 .macro packword words:vararg
  .irp word, \words
  .equ packed, 0
@@ -57,15 +57,15 @@
    .else
     .equ huffindex, huffindex + 1
     .equ huffcode, huffcode + 1
-    .ifeq huffcode - 0b00001000 # going from 4-bit to 5-bit code
+    .ifeq huffcode - 0b00001000 ;# going from 4-bit to 5-bit code
      .equ huffcode, 0b00010000
     .endif
-    .ifeq huffcode - 0b00011000 # going from 5-bit to 7-bit code
+    .ifeq huffcode - 0b00011000 ;# going from 5-bit to 7-bit code
      .equ huffcode, 0b01100000
     .endif
    .endif
   .endr
-  .ifne packed & 0xf # low 4 bits cannot be occupied with packed stuff
+  .ifne packed & 0xf ;# low 4 bits cannot be occupied with packed stuff
    .equ packed, savepacked
    .equ stoppacking, -1
   .endif
@@ -83,12 +83,16 @@
 .ifndef SMALLSCREEN
  .equ hp, 1024 ;# 1024 or 800
  .equ vp, 768 ;# 768 or 600
- .equ vesa, 0x4117 ;# bit 12 sets linear address mode in 0x117 or 0x114
+.ifdef CM2001
+ .equ vesa, 0x0117 ;# 1024x768 mode
 .else
+ .equ vesa, 0x4117 ;# bit 12 sets linear address mode in 0x117 or 0x114
+.endif ;# CM2001
+.else ;# SMALLSCREEN
  .equ hp, 800
  .equ vp, 600
  .equ vesa, 0x4114
-.endif
+.endif ;# SMALLSCREEN
 .equ buffer, 604*256
 .include "boot.asm" ;# boot boot0 hard
 
@@ -105,9 +109,9 @@
 warm: dup_
 start1:
 .ifdef AGP
-    call ati0  # access North Bridge chipset to get display RAM address
+    call ati0  ;# access North Bridge chipset to get display RAM address
 .else
-    pop [displ]  # use address determined by VBE2 call in boot.asm
+    pop [displ]  ;# use address determined by VBE2 call in boot.asm
 .endif
     call show0 ;# set up 'main' task to draw screen
     mov  dword ptr forths, offset ((forth1-forth0)/4) ;# number of Forth words
@@ -527,9 +531,9 @@ macro1:
     packword -, for, *next, next, 0next, -next, i, *end, end, +!
     packword nop, align, or!, *, */, /mod, /, mod, 2/, time
     packword p@, p!
-    # following that is some nonsense:
-    .long 0xc9800000 # hd (a valid packed word but isn't defined anywhere)
-    .long 0x00005811 # which isn't a valid packed word
+    ;# following that is some nonsense:
+    .long 0xc9800000 ;# hd (a valid packed word but isn't defined anywhere)
+    .long 0x00005811 ;# which isn't a valid packed word
 .endif
     .rept 128 - ((.-macro1)/4) .long 0; .endr ;# room for new macros
 forth0:
@@ -639,16 +643,18 @@ debug: mov dword ptr  xy,  offset (3*0x10000+(vc-2)*ih+3)
 .equ ih, 24+6 ;# icon height, including padding
 .equ hc, hp/iw ;# 46 ;# number of horizontal characters on screen
 .equ vc, vp/ih ;# 25 ;# number of vertical characters
-.align 4 ;# MASM's 3-byte NOP for alignment is 2e8bc0, cs: mov eax,eax
+;# MASM's 3-byte NOP for alignment is 2e8bc0, cs: mov eax,eax
 ;# whereas gas's is 8d7600, lea esi,[esi].
 .ifdef CM2001
+     cs mov eax, eax
 xy: .long 0x033d02e5
 lm: .long 3
 rm: .long hc*iw
 xycr: .long 3*0x10000+3
 fov: .long 10*(2*vp+vp/2)
 .else
-xy: .long 3*0x10000+3
+.align 4 
+xy: .long 3*0x10000+3 ;# 3 pixels padding on each side of icons
 lm: .long 3
 rm: .long hc*iw ;# 1012
 xycr: .long 0

@@ -85,16 +85,20 @@ $(sources): $(original)
 	objdump --target binary \
 	 --architecture i386 \
 	 --disassemble-all \
+	 --no-show-raw-insn \
 	 --disassembler-options=intel \
 	 $< > $@
 /tmp/gas_color.dsm: color.com
 	objdump --target binary \
 	 --architecture i386 \
 	 --disassemble-all \
+	 --no-show-raw-insn \
 	 --disassembler-options=intel \
 	 $< > $@
+asmwdiff: /tmp/color.dsm /tmp/gas_color.dsm
+	diff -y -W160 $+
 asmdiff: /tmp/color.dsm /tmp/gas_color.dsm
-	diff -y -W180 $+
+	diff $+
 set:
 	set
 diff:	sources.txt original.txt

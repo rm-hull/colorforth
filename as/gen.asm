@@ -41,7 +41,7 @@ color: call rgb ;# change to 5:6:5 bit format
     drop
     ret
 
-.ifdef AGP # from CM's 2001 version at colorforth.com
+.ifdef AGP ;# from CM's 2001 version at colorforth.com
 north: mov  edx, 0x0cf8
     out  dx, eax
     add  edx, 4
@@ -77,7 +77,7 @@ ati0: call dev
 0:  mov  displ, eax
     drop
     ret
-.endif # AGP 
+.endif ;# AGP 
 
 fifof: drop
 graphic: ret

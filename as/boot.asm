@@ -43,12 +43,21 @@ cylinder:
     .byte 18  ;# sectors/track
     .byte 0x1b ;# gap
     .byte 0x0ff
-.align 4  ;# if you see any crud in disassembly here it shouldn't matter
-;# two nonsense bytes in CM's 2001 color.com are 0x8b 0xc0
+;# if you see any crud in disassembly here it shouldn't matter
+;# different assemblers use different NOP instructions to pad out alignment
+.ifdef CM2001
+     mov eax, eax
+.endif
+.align 4
 nc: .long 9 ;# forth+icons+blocks 24-161 ;# number of cylinders, 9 (out of 80)
 gdt: .word 0x17
     .long gdt0
-.align 8 ;# more garbage seen in dump/disassembly here: 2e8bc02e8bc0
+;# different assemblers use different NOP instructions to pad out alignment
+.ifdef CM2001
+     cs mov eax, eax
+     cs mov eax, eax
+.endif
+.align 8 ;# more garbage possibly in disassembly here, ignore it
 gdt0: .word 0, 0, 0, 0
     .word 0x0ffff, 0, 0x9a00, 0x0cf ;# code
     .word 0x0ffff, 0, 0x9200, 0x0cf ;# data
@@ -64,7 +73,7 @@ start0:
 .ifdef AGP
     mov  ax, 0x4f02 ;# video mode
     mov  bx, vesa ;# hp*vp rgb: 565
-.else  # use VBE call to determine RAM address of desired video mode
+.else  ;# use VBE call to determine RAM address of desired video mode
     mov  ax, 0x4f01 ;# get video mode info
     mov  cx, vesa ;# a 16-bit color linear video mode (5:6:5 rgb)
     mov  di, 0x7e00 ;# use buffer space just past loaded bootsector
@@ -76,7 +85,7 @@ start0:
     cli
 .code32
     xor  ax, ax    ;# move code to 0
-.ifdef QUESTIONABLE  # some things in CM's source which can be left out?
+.ifdef QUESTIONABLE  ;# some things in CM's source which can be left out?
     mov  bx, ax
 .code32
     mov  ebx, cs
@@ -161,7 +170,7 @@ cold:
     xor  edi, edi ;# cylinder 0 on top of address 0
 .ifdef DMA
     call read
-    inc dword ptr cylinder
+    inc byte ptr cylinder
 .endif
     mov  cl, byte ptr nc ;# number of cylinders used
 .ifdef DMA
@@ -170,7 +179,7 @@ cold:
 0:  push ecx
     call read
 .ifndef DMA
-    inc dword ptr cylinder
+    inc byte ptr cylinder
 .endif
     pop  ecx
     loop 0b
