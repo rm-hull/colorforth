@@ -1390,23 +1390,35 @@ pcad: .long 0
 lcad: .long 0
 trash: .long buffer*4
 .endif
+
 /* the editor keys and their actions */
-ekeys: .long nul, del, eout, destack
-    .long act1, act3, act4, shadow ;# white, red, green, to shadow block
-    .long mcur, mmcur, ppcur, pcur ;# left, up, down, right
-    .long mblk, actv, act7, pblk ;# previous block, , , next block
-    .long nul, act11, act10, act9
-    .long nul, nul, nul, nul
+ekeys:
+;# delete (cut), exit editor, insert (paste)
+    .long nul, del, eout, destack ;# n<space><alt>
+;# white (yellow), red, green, to shadow block
+    .long act1, act3, act4, shadow ;# uiop=yrg*
+;# left, up, down, right
+    .long mcur, mmcur, ppcur, pcur ;# jkl;=ludr
+;# previous block, magenta (variable), cyan (macro), next block
+    .long mblk, actv, act7, pblk ;# m,./=-mc+
+;# white (comment) all caps, white (comment) capitalized, white (comment)
+    .long nul, act11, act10, act9 ;# wer=SCt
+    .long nul, nul, nul, nul ;# df=fj (find and jump) not in this version
+;# these are the huffman encodings of the characters to display
 ekbd0: .long nul, nul, nul, nul
-    .byte 025, 045,  7 ,  0  ;# x  .  i
-ekbd: .byte 017,  1 , 015, 055 ;# w  r  g  *
-    .byte 014, 026, 020,  1  ;# l  u  d  r
-    .byte 043, 011, 012, 053 ;# -  m  c  +
-    .byte  0 , 070, 072,  2  ;#    s  c  t
-    .byte  0 ,  0 ,  0 ,  0
-    .byte  0 ,  0 ,  0 ,  0
-actc: .long yellow, 0, 0x0ff0000, 0x0c000, 0, 0, 0x0ffff
-    .long 0, 0x0ffffff, 0x0ffffff, 0x0ffffff, 0x8080ff
+    .byte 21, 37,  7,  0  ;# x  .  i
+ekbd:
+    .byte 15,  1, 13, 45  ;# w  r  g  *
+    .byte 12, 22, 16,  1  ;# l  u  d  r
+    .byte 35,  9, 10, 43  ;# -  m  c  +
+    .byte  0, 56, 58,  2  ;#    S  C  t
+    .byte  0,  0,  0,  0
+    .byte  0,  0,  0,  0
+;# 1-based array of colors used for various action modes
+actc:
+    .long yellow, 0, 0x0ff0000, 0x0c000 ;# 1=yellow, 2=none, 3=red, 4=green
+    .long 0, 0, 0x0ffff, 0 ;# 7=cyan
+    .long 0x0ffffff, 0x0ffffff, 0x0ffffff, 0x8080ff ;# 9-11=white, 12=magenta
 vector: .long 0
 .ifdef CM2001
 action: .byte 10 ;# matches CM2001 color.com binary
@@ -1427,35 +1439,36 @@ act10: mov  al, 10 ;# word comment, white Capitalized
 act11: mov  al, 11 ;# word comment, ALL CAPS
     jmp  0f
 act7: mov  al, 7 ;# macro compile, cyan
-0:  mov  action, al
-    mov  eax, [actc-4+eax*4]
-    mov dword ptr  aword, offset insert
+0:  mov  action, al ;# number of action
+    mov  eax, [actc-4+eax*4] ;# load color corresponding to action
+    mov dword ptr aword, offset insert ;# "insert" becomes the active word
+;# action for number
 actn: mov  keyc, eax
     pop  eax
     drop
     jmp  accept
-
+;# after 'm' pressed, change color and prepare to store variable name
 actv: mov byte ptr action, 12 ;# variable
     mov  eax, 0x0ff00ff ;# magenta
     mov dword ptr aword, offset 0f
     jmp  actn
-
-0:  dup_
-    xor  eax, eax
-    inc  dword ptr words
-    jmp  insert
+;# this is the action performed after the variable name is entered
+0:  dup_ ;# save EAX (packed word) on stack
+    xor  eax, eax ;# zero out EAX
+    inc  dword ptr words ;# add one to count of words
+    jmp  insert ;# insert new word into dictionary
 
 mcur: dec dword ptr curs ;# minus cursor: move left
-    jns  0f
+    jns  0f  ;# just return if it didn't go negative, otherwise undo it...
 pcur: inc dword ptr curs ;# plus cursor: move right
 0:  ret
 
 mmcur: sub dword ptr curs, 8 ;# move up one row
-    jns  0f
-    mov dword ptr  curs, 0
+    jns  0f  ;# return if it didn't go negative
+    mov dword ptr curs, 0  ;# otherwise set to 0
 0:  ret
-ppcur: add dword ptr  curs, 8 ;# move down one row
-    ret
+ppcur: add dword ptr curs, 8 ;# move down one row
+    ret  ;# guess it's ok to increment beyond end of screen (?)
 
 pblk: add dword ptr  blk, 2 ;# plus one block (+2 since odd are shadows)
     add  dword ptr [esi], 2
@@ -1473,22 +1486,27 @@ shadow: xor dword ptr  blk, 1 ;# switch between shadow and source
 e0: drop
     jmp  0f
 
+/* colorForth editor */
+;# when invoked with 'edit', the block number is passed on the stack
 edit: mov  blk, eax
     drop
+;# when invoked with 'e', uses block number in blk, by default 18
 e:  dup_
     mov  eax, blk
     mov dword ptr  anumber, offset format
     mov  byte ptr alpha0+4*4, 045 ;# .
-    mov dword ptr  alpha0+4, offset e0
+    mov dword ptr alpha0+4, offset e0
     call refresh
-0:  mov dword ptr  shift, offset ekbd0
-    mov dword ptr  board, offset ekbd-4
-    mov dword ptr  keyc, yellow
+0:  mov dword ptr shift, offset ekbd0
+    mov dword ptr board, offset ekbd-4
+    mov dword ptr keyc, yellow ;# default key color, yellow
+;# this is the main loop
 0:  call key
     call ekeys[eax*4]
     drop
     jmp  0b
 
+/* exit editor */
 eout: pop  eax
     drop
     drop
@@ -1496,13 +1514,14 @@ eout: pop  eax
     mov  dword ptr anumber, offset nul
     mov  byte ptr alpha0+4*4, 0
     mov  dword ptr alpha0+4, offset nul0
-    mov  dword ptr keyc, yellow
-    jmp  accept
+    mov  dword ptr keyc, yellow ;# restore key color to yellow
+    jmp  accept ;# revert to command-line processing
 
-destack: mov  edx, trash
-    cmp  edx, buffer*4
-    jnz  0f
-    ret
+/* insert, or paste */
+destack: mov  edx, trash ;# grab what was left by last "cut" operation
+    cmp  edx, buffer*4 ;# anything in there?
+    jnz  0f ;# continue if so...
+    ret  ;# otherwise, 'insert' is already the default action so nothing to do
 0:  sub  edx, 2*4
     mov  ecx, [edx+1*4]
     mov  words, ecx
@@ -1565,10 +1584,10 @@ format: test byte ptr action, 012 ;# ignore 3 and 9
     cmp  byte ptr  action, 4
     jz   0f
     xor  al, 013 ;# 8
-0:  cmp  dword ptr  base, 10
-    jz   0f
-    xor  al, 020
-0:  mov  dword ptr  words, 1
+0:  cmp  dword ptr base, 10 ;# base 10?
+    jz   0f ;# continue if so...
+    xor  al, 0x10 ;# otherwise remove 'hex' bit
+0:  mov  dword ptr words, 1
     jmp  insert
 
 format2: dup_
@@ -1576,13 +1595,14 @@ format2: dup_
     cmp  byte ptr  action, 4
     jz   0f
     mov  al, 3 ;# 2
-0:  cmp  dword ptr  base, 10
-    jz   0f
-    xor  al, 020
+0:  cmp  dword ptr base, 10 ;# base 10?
+    jz   0f ;# continue if so...
+    xor  al, 0x10 ;# otherwise remove 'hex' bit
 0:  xchg eax, [esi]
-    mov  dword ptr  words, 2
+    mov  dword ptr words, 2
     jmp  insert
 
+;# delete, or cut, current word in editor (to the left of pacman cursor)
 del: call enstack
     mov  edi, pcad
     mov  ecx, lcad

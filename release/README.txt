@@ -1,4 +1,4 @@
-This is a demo of colorForth running under the Bochs emulator. You will
+This is a demo of colorForth running under a patched Bochs emulator. You will
 need to download the latest version of Bochs from bochs.sourceforge.net for
 the necessary BIOS files. This has been tested with Bochs-2.3 only.
 
@@ -19,9 +19,9 @@ the emulator.
 For even better documentation, search the web for "colorforth tutorial".
 No coordinated effort has really yet emerged, but it's getting better.
 
-Then there is always the source code! Follow the links at
-http://colorforth.sourceforge.net/ to the SourceForge page for the
-colorForth project, then follow the CVS link to the instructions for
-anonymous CVS access.
+Then there is always the source code! Follow the Code menu at
+http://sourceforge.net/projects/colorforth/ to the CVS page, which gives
+instructions for anonymous CVS access. The compilation (assembly, to be
+precise) has only been tested under GNU/Cygwin under Windows XP.
 
-Enjoy! -- jc@unternet.net
+Enjoy! -- jcATunternet.net
