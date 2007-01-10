@@ -136,9 +136,19 @@ def debug(*args):
 
 def executeshort(prefix, number, suffix):
  if hexadecimal(number):
-  return prefix + print_hex(number >> 5) + suffix
+  return prefix + print_hex(asr(number, 5)) + suffix
  else:
-  return prefix + print_decimal(number >> 5) + suffix
+  return prefix + print_decimal(asr(number, 5)) + suffix
+
+def asr(number, shift):
+ "arithmetic shift right"
+ if highbit & number:
+  for i in range(shift):
+   number >>= 1
+   number |= highbit
+ else:
+  number >>= shift
+ return number 
 
 def executelong(prefix, number, suffix):
  """print 32-bit integer with specified prefix and suffix
@@ -252,17 +262,13 @@ def print_tags(number):
  prefix, suffix = '', '</code>'
  tagbits = fulltag(number)
  if dump['printing']:
-  if tag(number) == function.index('define'): prefix = '<br>'
-  else: suffix += ' '
+  if tagbits == function.index('define'): prefix = '<br>'
  if number:
   dump['printing'] = True
  if dump['state'] != 'mark end of block':
-  if dump['original'] and dump['index'] < len(dump['blockdata']) and \
-   tag(dump['blockdata'][dump['index']]) == function.index('extension'):
-   suffix = ''
   if not dump['original'] or tag(number) != function.index('extension'):
-   prefix = '<code class=%s>' % codetag[tagbits]
-   if dump['original']: prefix += ' '
+   prefix += '<code class=%s>' % codetag[tagbits]
+   if dump['original'] and tagbits != function.index('define'): prefix += ' '
   try:
    return eval(function[tag(number)])(prefix, number, suffix)
   except:
@@ -334,7 +340,7 @@ def set_default_state(state):
 def dump_block():
  set_default_state('')
  while dump['index'] < len(dump['blockdata']):
-  if not dump['original'] and allzero(dump['blockdata'][dump['index']:]):
+  if allzero(dump['blockdata'][dump['index']:]):
    break
   integer = dump['blockdata'][dump['index']]
   dump['index'] += 1
@@ -372,8 +378,7 @@ def cfdump(filename):
   if dump['format'] == 'html': output.write('<div class=code>\n')
   dump['index'] = 0
   if not allzero(dump['blockdata']): dump_block()
-  if dump['original']: output.write('</code>\n')
-  if dump['format'] == 'html': output.write('</div>\n<hr>\n')
+  if dump['format'] == 'html': output.write('\n</div>\n<hr>\n')
  if dump['format'] == 'html': output.write('</html>\n')
 
 def cf2text(filename):
