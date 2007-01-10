@@ -44,28 +44,26 @@ fivebit_tags = [
  function.index('executeshort'),
 ]
 
-# the following arrays are one-based, remember to subtract 1 before indexing
-
 codetag = [
- 'execute', 'execute', 'define', 'compile',
- 'compile', 'compile', 'compilemacro', 'execute',
- 'text', 'textcapitalized', 'textallcaps', 'variable',
+ '', 'execute', 'execute', 'define',
+ 'compile', 'compile', 'compile', 'compilemacro',
+ 'execute', 'text', 'textcapitalized', 'textallcaps',
+ 'variable', '', '', '',
+ '', '', 'executehex', '',
+ '', 'compilehex', 'compilehex', '',
+ 'executehex', '', '', '',
  '', '', '', '',
- '', 'executehex', '', '',
- 'compilehex', 'compilehex', '', 'executehex',
- '', '', '', '',
- '', '', '',
 ]
 
 colortags = [
- 'brightyellow', 'brightyellow', 'brightred', 'brightgreen',  # 1-4
- 'brightgreen', 'brightgreen', 'brightcyan', 'brightyellow', # 5-8
- 'brightwhite', 'brightwhite', 'brightwhite', 'brightmagenta', # 9-0xc
- 'normal', 'normal', 'normal', 'normal', # 0xd-0x10
- 'normal', 'yellow', 'normal', 'normal', # 0x11-0x14
- 'green', 'green', 'normal', 'yellow', # 0x15-0x18
- 'normal', 'normal', 'normal', 'normal', # 0x19-0x1c
- 'normal', 'normal', 'normal', # 0x1d-0x1f
+ 'normal', 'brightyellow', 'brightyellow', 'brightred',
+ 'brightgreen', 'brightgreen', 'brightgreen', 'brightcyan',
+ 'brightyellow', 'brightwhite', 'brightwhite', 'brightwhite',
+ 'brightmagenta', 'normal', 'normal', 'normal',
+ 'normal', 'normal', 'yellow', 'normal',
+ 'normal', 'green', 'green', 'normal',
+ 'yellow', 'normal', 'normal', 'normal',
+ 'normal', 'normal', 'normal', 'normal',
 ]
 
 highbit =  0x80000000L
@@ -194,7 +192,7 @@ def print_color(number):
   prefix = '\n'
  if dump['state'] != 'mark end of block':
   suffix = '%s[%d;%dm' % (ESC, 0, 30 + colors.index('normal')) + ' '
-  color = colortags[fulltag(number) - 1]
+  color = colortags[fulltag(number)]
   bright = 0
   if color[0:6] == 'bright':
    bright, color = 1, color[6:]
@@ -263,9 +261,12 @@ def print_tags(number):
    tag(dump['blockdata'][dump['index']]) == function.index('extension'):
    suffix = ''
   if not dump['original'] or tag(number) != function.index('extension'):
-   prefix = '<code class=%s>' % codetag[tagbits - 1]
+   prefix = '<code class=%s>' % codetag[tagbits]
    if dump['original']: prefix += ' '
-  return eval(function[tag(number)])(prefix, number, suffix)
+  try:
+   return eval(function[tag(number)])(prefix, number, suffix)
+  except:
+   return text(prefix, number, suffix)
  else:
   return prefix
 
