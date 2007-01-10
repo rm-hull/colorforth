@@ -101,21 +101,23 @@ def variable(prefix, number, suffix):
     unlike the others, this always has a 32-bit value following it, and
     since that might have the low 4 bits zero, a variable name cannot have
     'extensions', that is, it must pack into 28 bits."""
- return prefix + unpack(number) + suffix + \
-  print_format(function.index('compilelong'))
+ dumptext = prefix + unpack(number) + suffix
+ if dump['index'] < len(dump['blockdata']):
+  dumptext += print_format(function.index('compilelong'))
+ return dumptext
 
 def text(prefix, number, suffix):
  string = unpack(number)
  while dump['index'] < len(dump['blockdata']):
   number = dump['blockdata'][dump['index']]
   if (not dump['original'] and number == 0) or (number & 0xf != 0):
-   debug('0x%x (%s) not an extension' % (number, unpack(number)))
+   #debug('0x%x (%s) not an extension' % (number, unpack(number)))
    break
   else:
-   debug('found an extension')
+   #debug('found an extension')
    string += unpack(number)
    dump['index'] += 1
- debug('final string: %s' % string)
+ #debug('final string: %s' % string)
  return prefix + string + suffix
 
 def textcapitalized(prefix, number, suffix):
@@ -271,18 +273,18 @@ def dump_tags(number):
 def print_tags(number):
  if not dump['original']:
   return new_print_tags(number)
- prefix, suffix = '', '</code>'
+ prefix, suffix = '', ''
+ if dump['debugging']: prefix = '[%x]' % number
  tagbits = fulltag(number)
  if dump['printing']:
   if tagbits == function.index('define'): prefix = '<br>'
- if number == 0:
-  suffix = ''
- if number:
-  dump['printing'] = True
+ dump['printing'] = True
  if dump['state'] != 'mark end of block':
   if tag(number) != function.index('extension'):
-   prefix += '<code class=%s>' % codetag[tagbits]
+   prefix, suffix = prefix + '<code class=%s>' % codetag[tagbits], '</code>'
    if tagbits != function.index('define'): prefix += ' '
+  else:
+   suffix = '</code>'
   try:
    return eval(function[tag(number)])(prefix, number, suffix)
   except:
@@ -306,10 +308,10 @@ def hexadecimal(number):
 def print_format(number):
  index = formats.index(dump['format'])
  if dump['state'].startswith('dump '):
-  debug('returning %s(0x%x)' % (repr(dump['dump_formats'][index]), number))
+  #debug('returning %s(0x%x)' % (repr(dump['dump_formats'][index]), number))
   return dump['dump_formats'][index](number)
  else:
-  debug('returning %s(0x%x)' % (repr(dump['print_formats'][index]), number))
+  #debug('returning %s(0x%x)' % (repr(dump['print_formats'][index]), number))
   return dump['print_formats'][index](number)
 
 def print_hex(integer):
@@ -358,7 +360,7 @@ def dump_block():
    break
   integer = dump['blockdata'][dump['index']]
   dump['index'] += 1
-  debug('[0x%x]' % integer)
+  #debug('[0x%x]' % integer)
   output.write(print_format(integer))
  if not dump['original']:
   dump['state'] = 'mark end of block'
