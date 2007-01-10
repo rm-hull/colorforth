@@ -108,7 +108,7 @@ def text(prefix, number, suffix):
  string = unpack(number)
  while dump['index'] < len(dump['blockdata']):
   number = dump['blockdata'][dump['index']]
-  if number == 0 or number & 0xf != 0:
+  if (not dump['original'] and number == 0) or (number & 0xf != 0):
    debug('0x%x (%s) not an extension' % (number, unpack(number)))
    break
   else:
@@ -269,24 +269,26 @@ def dump_tags(number):
  pass
 
 def print_tags(number):
+ if not dump['original']:
+  return new_print_tags(number)
  prefix, suffix = '', '</code>'
  tagbits = fulltag(number)
  if dump['printing']:
   if tagbits == function.index('define'): prefix = '<br>'
- elif number == 0:
+ if number == 0:
   suffix = ''
  if number:
   dump['printing'] = True
  if dump['state'] != 'mark end of block':
-  if not dump['original'] or tag(number) != function.index('extension'):
+  if tag(number) != function.index('extension'):
    prefix += '<code class=%s>' % codetag[tagbits]
-   if dump['original'] and tagbits != function.index('define'): prefix += ' '
+   if tagbits != function.index('define'): prefix += ' '
   try:
    return eval(function[tag(number)])(prefix, number, suffix)
   except:
    return text(prefix, number, suffix)
  else:
-  return prefix
+  return '</code>'
 
 def tag(number):
  return number & 0xf
