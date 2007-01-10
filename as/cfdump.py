@@ -87,10 +87,8 @@ dump = {  # set up globals as dictionary to avoid declaring globals everywhere
 }
 
 def extension(prefix, number, suffix):
- debug('extension(0x%x): should never be reached' % number)
- return text(prefix, number, suffix)
-
-def define(prefix, number, suffix):
+ if not dump['original']:
+  debug('extension(0x%x): should never be reached' % number)
  return text(prefix, number, suffix)
 
 def undefined(prefix, number, suffix):
@@ -99,17 +97,14 @@ def undefined(prefix, number, suffix):
  else:
   return prefix + print_hex(number) + suffix
 
-def execute(prefix, number, suffix):
- return text(prefix, number, suffix)
-
-def compileword(prefix, number, suffix):
- return text(prefix, number, suffix)
-
-def compilemacro(prefix, number, suffix):
- return text(prefix, number, suffix)
-
 def variable(prefix, number, suffix):
- return text(prefix, number, suffix)
+ """this is significantly different from other word names.
+
+    unlike the others, this always has a 32-bit value following it, and
+    since that might have the low 4 bits zero, a variable name cannot have
+    'extensions', that is, it must pack into 28 bits."""
+ return prefix + unpack(number) + suffix + \
+  print_format(function.index('compilelong'))
 
 def text(prefix, number, suffix):
  string = unpack(number)
@@ -182,34 +177,35 @@ def dump_color(number):
  suffix = '%s[%d;%dm' % (ESC, 0, 30 + colors.index('normal'))
  if dump['state'].startswith('dump as binary'):
   if ' ' not in unpack(number):
-   prefix = '%s[%d;%dm' % (ESC, 1, 30 + colors.index('red'))
-   output.write(text(prefix, number, suffix + ' '))
+   prefix = '%s[%d;%dm' % (ESC, 1, 30 + colors.index('blue'))
+   return text(prefix, number, suffix + ' ')
   else:
    prefix = '%s[%d;%dm' % (ESC, 0, 30 + colors.index('red'))
-   output.write(prefix + print_hex(number) + suffix + ' ')
+   return prefix + print_hex(number) + suffix + ' '
  else:  # dump as character map
   prefix = '%s[%d;%dm' % (ESC, 0, 30 + colors.index('blue'))
-  dump_charmap(prefix, number, suffix)
+  return dump_charmap(prefix, number, suffix)
 
 def print_color(number):
- if not dump['printing'] and number == 0:
-  return
- else:
-  dump['printing'] = True
- prefix, suffix = '', ''
- if dump['printing'] and tag(number) == function.index('define'):
+ if not dump['printing'] and number == 0: return ''
+ else: dump['printing'] = True
+ prefix, suffix, wordtype = '', '', function[tag(number)]
+ if dump['printing'] and wordtype == 'define':
   prefix = '\n'
  if dump['state'] != 'mark end of block':
-  if not re.compile('(extension|long)$').search(function[tag(number)]):
-   suffix = '%s[%d;%dm' % (ESC, 0, 30 + colors.index('normal')) + ' '
+  suffix = '%s[%d;%dm' % (ESC, 0, 30 + colors.index('normal')) + ' '
   color = colortags[fulltag(number) - 1]
   bright = 0
   if color[0:6] == 'bright':
-   bright = 1
-   color = color[6:]
+   bright, color = 1, color[6:]
   if function[tag(number)] != 'extension':
    prefix += '%s[%d;%dm' % (ESC, bright, 30 + colors.index(color))
-  output.write(eval(function[tag(number)])(prefix, number, suffix))
+  try:
+   return eval(function[tag(number)])(prefix, number, suffix)
+  except:
+   return text(prefix, number, suffix)
+ else:
+  return '\n'
 
 def dump_charmap(prefix, number, suffix):
  """dump two lines (32 bits) of a 16x24-pixel character map
@@ -217,16 +213,17 @@ def dump_charmap(prefix, number, suffix):
     the idea is to dump it in such as way that an assembly language
     (GNU as) macro can be written to undump the fonts.
     the low 16-bit word holds the upper line, and the bits are inverted"""
- output.write(prefix)
+ dumptext = prefix
  for word in [0x8000L, 0x80000000L]:
   for bit in [word / 0x100L, word]:
    done = bit / 0x100L
    while bit != done:
-    if number & bit: output.write('#')
-    else: output.write(' ')
+    if number & bit: dumptext += '#'
+    else: dumptext += ' '
     bit >>= 1
-  if word == 0x8000L: output.write('%s\n%s' % (suffix, prefix))
-  else: output.write('%s\n' % suffix)
+  if word == 0x8000L: dumptext += '%s\n%s' % (suffix, prefix)
+  else: dumptext += '%s\n' % suffix
+ return dumptext
 
 def unpack(coded):
  #debug('coded: %08x' % coded)
@@ -259,6 +256,8 @@ def print_tags(number):
  if dump['printing']:
   if tag(number) == function.index('define'): prefix = '<br>'
   else: suffix += ' '
+ if number:
+  dump['printing'] = True
  if dump['state'] != 'mark end of block':
   if dump['original'] and dump['index'] < len(dump['blockdata']) and \
    tag(dump['blockdata'][dump['index']]) == function.index('extension'):
@@ -266,9 +265,9 @@ def print_tags(number):
   if not dump['original'] or tag(number) != function.index('extension'):
    prefix = '<code class=%s>' % codetag[tagbits - 1]
    if dump['original']: prefix += ' '
-  output.write(eval(function[tag(number)])(prefix, number, suffix))
- if number:
-  dump['printing'] = True
+  return eval(function[tag(number)])(prefix, number, suffix)
+ else:
+  return prefix
 
 def tag(number):
  return number & 0xf
@@ -286,9 +285,11 @@ def hexadecimal(number):
 def print_format(number):
  index = formats.index(dump['format'])
  if dump['state'].startswith('dump '):
-  dump['dump_formats'][index](number)
+  debug('returning %s(0x%x)' % (repr(dump['dump_formats'][index]), number))
+  return dump['dump_formats'][index](number)
  else:
-  dump['print_formats'][index](number)
+  debug('returning %s(0x%x)' % (repr(dump['print_formats'][index]), number))
+  return dump['print_formats'][index](number)
 
 def print_hex(integer):
  return '%x' % integer
@@ -302,13 +303,16 @@ def dump_plain(number):
  pass
 
 def print_plain(number):
+ prefix, suffix = '', ''
  if dump['printing'] and tag(number) == function.index('define'):
-  output.write('\n')
+  prefix += '\n'
  if dump['state'] != 'mark end of block':
   if dump['printing'] and tag(number) != function.index('define'):
-   output.write(' ')
+   prefix += ' '
   output.write('%s ' % function[fulltag(number)].upper())
-  eval(function[tag(number)])(number)
+  return eval(function[tag(number)])(prefix, number, suffix)
+ else:
+  return prefix
 
 def print_code(chunk):
  """dump as raw hex so it can be undumped"""
@@ -334,12 +338,10 @@ def dump_block():
   integer = dump['blockdata'][dump['index']]
   dump['index'] += 1
   debug('[0x%x]' % integer)
-  print_format(integer)
-  if tag(integer) == function.index('variable'):
-   print_format(function.index('executelong'))
+  output.write(print_format(integer))
  if not dump['original']:
   dump['state'] = 'mark end of block'
-  print_format(0)
+  output.write(print_format(0))
  if dump['printing'] and not dump['original']:
   output.write('\n')
 
@@ -359,7 +361,6 @@ def cfdump(filename):
  else: file = open(filename)
  data = file.read()
  file.close()
- #debug('dumping %d bytes' % len(data))
  if dump['format'] == 'html':
   output.write('<html>\n')
   output.write('<link rel=stylesheet type="text/css" href="colorforth.css">\n')
