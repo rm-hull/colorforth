@@ -135,10 +135,15 @@ def debug(*args):
   sys.stderr.write('%s\n' % repr(args))
 
 def executeshort(prefix, number, suffix):
+ dumptext = ''
  if hexadecimal(number):
-  return prefix + print_hex(asr(number, 5)) + suffix
+  dumptext = prefix + print_hex(asr(number, 5))
  else:
-  return prefix + print_decimal(asr(number, 5)) + suffix
+  dumptext = prefix + print_decimal(asr(number, 5))
+ if dump['original']:
+  return text(dumptext, 0, suffix)
+ else:
+  return dumptext + suffix
 
 def asr(number, shift):
  "arithmetic shift right"
@@ -154,6 +159,7 @@ def executelong(prefix, number, suffix):
  """print 32-bit integer with specified prefix and suffix
 
     prepare for possible extension to 59-bit numbers"""
+ dumptext = ''
  if not dump['original']:
   long = (number & 0xffffffe0) << (32 - 5)
  else:
@@ -161,9 +167,13 @@ def executelong(prefix, number, suffix):
  long |= dump['blockdata'][dump['index']]
  dump['index'] += 1
  if hexadecimal(number):
-  return prefix + print_hex(long) + suffix
+  dumptext = prefix + print_hex(long)
  else:
-  return prefix + print_decimal(long) + suffix
+  dumptext = prefix + print_decimal(long)
+ if dump['original']:
+  return text(dumptext, 0, suffix)
+ else:
+  return dumptext + suffix
 
 def compileshort(prefix, number, suffix):
  return executeshort(prefix, number, suffix)
@@ -263,6 +273,8 @@ def print_tags(number):
  tagbits = fulltag(number)
  if dump['printing']:
   if tagbits == function.index('define'): prefix = '<br>'
+ elif number == 0:
+  suffix = ''
  if number:
   dump['printing'] = True
  if dump['state'] != 'mark end of block':
