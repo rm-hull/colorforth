@@ -19,3 +19,12 @@ you can't enter "20 load" using this extended keyboard because it treats the
 
 The screen refresh takes up so much time in the Bochs emulator, you will get
 very slow recognition of keyhits. Take your time and try not to curse.
+
+Dumping the character map tells a different story than that on CM's chars.html
+page. He says there are 48 + 26 + 12 characters; in fact there are 48 * 2
+characters, with the upper set mirroring the lower with 2 exceptions. Those
+are: the upper set has the cursor in place of the space, and a block character
+(all pixels filled) instead of the question mark. Past the block character
+are still more characters, but not 16x24. They might be 32x24 or 32x48.
+It should also be noted that the upper 48 are all different than the lower;
+even the numbers and punctuation are slightly different from the lower set.

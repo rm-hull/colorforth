@@ -184,7 +184,13 @@ def compilelong(prefix, number, suffix):
  return executelong(prefix, number, suffix)
 
 def dump_normal(number):
- pass
+ if dump['state'].startswith('dump as binary'):
+  if ' ' not in unpack(number):
+   return text('', number, ' ')
+  else:
+   return print_hex(number) + ' '
+ else:  # dump as character map
+  return dump_charmap('', number, '')
 
 def print_normal(number):
  if dump['printing'] and tag(number) == function.index('define'):
@@ -192,6 +198,12 @@ def print_normal(number):
  if dump['state'] != 'mark end of block':
   if dump['printing'] and tag(number) != function.index('define'):
    output.write(' ')
+  try:
+   return eval(function[tag(number)])('', number, ' ')
+  except:
+   return text('', number, ' ')
+ else:
+  return '\n'
 
 def dump_color(number):
  suffix = '%s[%d;%dm' % (ESC, 0, 30 + colors.index('normal'))
