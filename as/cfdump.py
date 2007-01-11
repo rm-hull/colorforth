@@ -193,15 +193,16 @@ def dump_normal(number):
   return dump_charmap('', number, '')
 
 def print_normal(number):
+ prefix, suffix = '', ' '
  if dump['printing'] and tag(number) == function.index('define'):
-  output.write('\n')
+  prefix += '\n'
  if dump['state'] != 'mark end of block':
   if dump['printing'] and tag(number) != function.index('define'):
-   output.write(' ')
+   prefix += ' '
   try:
-   return eval(function[tag(number)])('', number, ' ')
+   return eval(function[tag(number)])(prefix, number, suffix)
   except:
-   return text('', number, ' ')
+   return text(prefix, number, suffix)
  else:
   return '\n'
 
@@ -335,17 +336,26 @@ def print_decimal(integer):
  return '%d' % integer
 
 def dump_plain(number):
- pass
+ if dump['state'].startswith('dump as binary'):
+  if ' ' not in unpack(number):
+   return text('PACKWORD ', number, ' ')
+  else:
+   return print_hex(number) + ' '
+ else:  # dump as character map
+  return dump_charmap('', number, '')
 
 def print_plain(number):
- prefix, suffix = '', ''
+ prefix, suffix = '', ' '
  if dump['printing'] and tag(number) == function.index('define'):
   prefix += '\n'
  if dump['state'] != 'mark end of block':
   if dump['printing'] and tag(number) != function.index('define'):
    prefix += ' '
-  output.write('%s ' % function[fulltag(number)].upper())
-  return eval(function[tag(number)])(prefix, number, suffix)
+  prefix += '%s ' % function[tag(number)].upper()
+  try:
+   return eval(function[tag(number)])(prefix, number, suffix)
+  except:
+   return text(prefix, number, suffix)
  else:
   return prefix
 
