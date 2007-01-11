@@ -245,7 +245,9 @@ def dump_charmap(prefix, number, suffix):
 
     the idea is to dump it in such as way that an assembly language
     (GNU as) macro can be written to undump the fonts.
-    the low 16-bit word holds the upper line, and the bits are inverted"""
+    the pixels are stored a byte at a time, with the MSBs to the left,
+    for example 0xfc 0x07 would be "######       ###", and
+                0xf8 0x01 would be "#####          #" """
  dumptext = prefix
  for word in [0x8000L, 0x80000000L]:
   for bit in [word / 0x100L, word]:
