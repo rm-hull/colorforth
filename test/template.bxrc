@@ -8,7 +8,7 @@ floppyb: 1_44=$OTHERFLOPPY, status=inserted
 boot: floppy
 info: action=report
 debug: action=report
-log: $BXRC.txt
+log: $TEMP/$BXRC.txt
 mouse: enabled=0
 vga_update_interval: 150000
-debugger_log: $BXRC.debug.txt
+debugger_log: $TEMP/$BXRC.debug.txt

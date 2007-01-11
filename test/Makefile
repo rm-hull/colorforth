@@ -3,6 +3,7 @@ BOCHS_SRC := /usr/src/bochs
 CF_SRC := ~/src
 VMWARE := /cygdrive/c/Program\ Files/VMWare/VMware\ Player
 BXSHARE := $(shell cygpath -w $(BOCHS))
+TEMP ?= /tmp
 oldcf := a.img
 newcf := b.img
 export
@@ -20,11 +21,11 @@ oldbx%: template.bxrc a.img b.img
 	else \
 	 $(BOCHS)/bochs -f $< -q; \
 	fi
-	touch $@.txt $@.debug.txt
-	sed -i 's/\r//' $@.txt $@.debug.txt
-	$(MAKE) $@.uniq.txt
-	$(MAKE) $@.debug.uniq.txt
-	less $@.uniq.txt
+	touch $(TEMP)/$@.txt $(TEMP)/$@.debug.txt
+	sed -i 's/\r//' $(TEMP)/$@.txt $(TEMP)/$@.debug.txt
+	$(MAKE) $(TEMP)/$@.uniq.txt
+	$(MAKE) $(TEMP)/$@.debug.uniq.txt
+	less $(TEMP)/$@.uniq.txt
 newbx%: template.bxrc a.img b.img
 	-export BXRC=$@ && \
 	export BOOTFLOPPY=$($*) && \
@@ -34,11 +35,11 @@ newbx%: template.bxrc a.img b.img
 	else \
 	 $(BOCHS_SRC)/bochs -f $< -q; \
 	fi
-	touch $@.txt $@.debug.txt
-	sed -i 's/\r//' $@.txt $@.debug.txt
-	$(MAKE) $@.uniq.txt
-	$(MAKE) $@.debug.uniq.txt
-	less $@.uniq.txt
+	touch $(TEMP)/$@.txt $(TEMP)/$@.debug.txt
+	sed -i 's/\r//' $(TEMP)/$@.txt $(TEMP)/$@.debug.txt
+	$(MAKE) $(TEMP)/$@.uniq.txt
+	$(MAKE) $(TEMP)/$@.debug.uniq.txt
+	less $(TEMP)/$@.uniq.txt
 a.img:	$(CF_SRC)/colorforth/color.com
 	dd if=/dev/zero of=$@ bs=1024 count=1440
 	dd if=$< of=$@ conv=notrunc
