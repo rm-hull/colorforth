@@ -381,7 +381,8 @@ def set_default_state(state):
 def dump_block():
  set_default_state('')
  while dump['index'] < len(dump['blockdata']):
-  if allzero(dump['blockdata'][dump['index']:]):
+  if dump['state'] != 'dump character map' and \
+   allzero(dump['blockdata'][dump['index']:]):
    break
   integer = dump['blockdata'][dump['index']]
   dump['index'] += 1
