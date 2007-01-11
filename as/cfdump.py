@@ -190,7 +190,7 @@ def dump_normal(number):
   else:
    return print_hex(number) + ' '
  else:  # dump as character map
-  return dump_charmap('', number, '')
+  return dump_charmap('"', number, '"')
 
 def print_normal(number):
  prefix, suffix = '', ' '
@@ -216,8 +216,8 @@ def dump_color(number):
    prefix = '%s[%d;%dm' % (ESC, 0, 30 + colors.index('red'))
    return prefix + print_hex(number) + suffix + ' '
  else:  # dump as character map
-  prefix = '%s[%d;%dm' % (ESC, 0, 30 + colors.index('blue'))
-  return dump_charmap(prefix, number, suffix)
+  prefix = '%s[%d;%dm"' % (ESC, 0, 30 + colors.index('blue'))
+  return dump_charmap(prefix, number, '"' + suffix)
 
 def print_color(number):
  if not dump['printing'] and number == 0: return ''
@@ -342,7 +342,7 @@ def dump_plain(number):
   else:
    return print_hex(number) + ' '
  else:  # dump as character map
-  return dump_charmap('', number, '')
+  return dump_charmap('CHR16X24 "', number, '"')
 
 def print_plain(number):
  prefix, suffix = '', ' '
