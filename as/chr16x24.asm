@@ -1,5 +1,5 @@
 ;# compile character map from data stored as "######.......###"
-;# the above should compile to the two bytes 0xfc 0x03
+;# the above should compile to the two bytes 0xfc 0x07
 .macro CHR16X24 row
  .equ packed, 0
  .irpc pixel, "\row"

@@ -158,7 +158,7 @@ htmldiff: /tmp/color_pydump.html /tmp/color.html
 	/usr/src/howerd/cf2html $< > $@
 /usr/src/howerd/cf2html: /usr/src/howerd/cf2html.c
 	gcc -o $@ $<
-chars.asm: chr16x24.asm
-	cp -f $< $@
+chars.asm: chr16x24.asm chr32x32.asm
+	cat $+ > $@
 	./cf2text color.com | sed -n '/{block 12}/,/{block 18}/p' | \
 	 grep -v '{block [0-9]\+}' >> $@
