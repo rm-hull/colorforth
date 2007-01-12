@@ -53,7 +53,7 @@ help:
 	@echo To build the closest thing to CM\'s 2001 color.com: make cm2001
 	@echo Read Makefile for other options.
 %.dat:	%.asm
-	$(GAS) -ahlns=$*.lst --listing-cont-lines=10 -o $*.o $<
+	$(GAS) -ahlmns=$*.lst --listing-cont-lines=10 -o $*.o $<
 	objcopy $*.o -O binary $@
 color.com: $(sources) secondpass
 	$(GAS) $(foreach definition,$(DEFINES),\

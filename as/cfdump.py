@@ -70,6 +70,12 @@ highbit =  0x80000000L
 mask =     0xffffffffL
 
 formats = ['', 'html', 'color', 'plaintext']
+newlines = ['\n', '<BR>\n', '\n', '\n']
+
+charmap = {  # macro names, by character width
+ 16: 'CHR16X24',
+ 32: 'CHR32X32',
+}
 
 dump = {  # set up globals as dictionary to avoid declaring globals everywhere
  'printing': False,  # boolean to indicate we've started dumping the block
@@ -363,7 +369,7 @@ def dump_plain(number):
   else:
    return print_hex(number) + ' '
  else:  # dump as character map
-  return dump_charmap('CHR16X24 "', number, '"')
+  return dump_charmap('%s "' % charmap[dump['character_width']], number, '"')
 
 def print_plain(number):
  prefix, suffix = '', ' '
