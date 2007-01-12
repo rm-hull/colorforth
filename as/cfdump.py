@@ -82,6 +82,10 @@ dump = {  # set up globals as dictionary to avoid declaring globals everywhere
  'index': 0,  # index into block, to match cf2html.c bug
  'state': 'print according to tag',  # globally-manipulable state machine
  'default_state': 'print according to tag',
+ 'character_count': 0,  # so we know when to switch to 32x32
+ 'character_line': 0,  # count pixel lines so we know when to insert newline
+ 'character_width': 16,  # pixel width of characters, changes to 32 later
+ 'character_height': 24,  # pixel height of characters, changes to 32 later
 }
 
 def extension(prefix, number, suffix):
@@ -241,14 +245,18 @@ def print_color(number):
   return '\n'
 
 def dump_charmap(prefix, number, suffix):
- """dump two lines (32 bits) of a 16x24-pixel character map
+ """dump 2 lines (32 bits) of a 16x24-pixel character map
 
+    or one line of a 32x32-pixel character map
     the idea is to dump it in such as way that an assembly language
     (GNU as) macro can be written to undump the fonts.
     the pixels are stored a byte at a time, with the MSBs to the left,
     for example 0xfc 0x07 would be "######.......###", and
                 0xf8 0x01 would be "#####..........#" 
-    (cannot use spaces due to bug in .irpc directive in gas)"""
+    (cannot use spaces due to bug in .irpc directive in gas)
+    after the 16x24 character maps (48 x 2 = 96 characters) there are
+    12 32x32 characters, probably archaic.
+ """
  dumptext = prefix
  for word in [0x8000L, 0x80000000L]:
   for bit in [word / 0x100L, word]:
@@ -257,8 +265,18 @@ def dump_charmap(prefix, number, suffix):
     if number & bit: dumptext += '#'
     else: dumptext += '.'
     bit >>= 1
-  if word == 0x8000L: dumptext += '%s\n%s' % (suffix, prefix)
-  else: dumptext += '%s\n' % suffix
+  if word == 0x8000L and dump['character_width'] == 16:
+   dumptext += '%s\n%s' % (suffix, prefix)
+   dump['character_line'] += 1
+  elif word == 0x80000000L:
+   dumptext += '%s\n' % suffix
+ dump['character_line'] += 1
+ if dump['character_line'] == dump['character_height']:
+  dump['character_count'] += 1
+  dump['character_line'] = 0
+  dumptext += '\n'
+ if dump['character_count'] == 96:
+  dump['character_width'], dump['character_height'] = 32, 32
  return dumptext
 
 def unpack(coded):
