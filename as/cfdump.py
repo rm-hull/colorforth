@@ -374,6 +374,16 @@ def dump_plain(number):
  else:  # dump as character map
   return dump_charmap('%s "' % charmap[dump['character_width']], number, '"')
 
+def dump_functions(*args):
+ "for use in gas macro"
+ line = ' .irp function '
+ for word in function:
+  if len(line) >= 64:
+   print '%s \\' % line
+   line = '  '
+  line += '[%s] ' % word.upper()
+ print line
+
 def print_plain(number):
  prefix, suffix = '', ' '
  if dump['printing'] and tag(number) == function.index('define'):

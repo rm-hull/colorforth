@@ -53,7 +53,9 @@ help:
 	@echo To build the closest thing to CM\'s 2001 color.com: make cm2001
 	@echo Read Makefile for other options.
 %.dat:	%.asm
-	$(GAS) -ahlmns=$*.lst --listing-cont-lines=10 -o $*.o $<
+	$(GAS) $(foreach definition,$(DEFINES),\
+	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
+	 -ahlmns=$*.lst --listing-cont-lines=10 -o $*.o $<
 	objcopy $*.o -O binary $@
 color.com: $(sources) secondpass
 	$(GAS) $(foreach definition,$(DEFINES),\
@@ -158,11 +160,19 @@ htmldiff: /tmp/color_pydump.html /tmp/color.html
 	/usr/src/howerd/cf2html $< > $@
 /usr/src/howerd/cf2html: /usr/src/howerd/cf2html.c
 	gcc -o $@ $<
-chars.asm: chr16x24.asm chr32x32.asm
-	cat $+ > $@
-	./cf2text color.com | sed -n '/{block 12}/,/{block 18}/p' | \
+chars.asm: charmap.asm Makefile
+	cat $< > $@
+	./cf2text ../color.com | sed -n '/{block 12}/,/{block 18}/p' | \
 	 grep -v '{block [0-9]\+}' >> $@
-newcode.asm: forth.asm
-	cat $+ > $@
-	./cf2text color.com | sed -n '/{block 18}/,$$p' | \
-	 grep -v '{block [0-9]\+}' >> $@
+newcode.asm: forth.asm Makefile
+	cat $< > $@
+	./cf2text ../color.com | sed -n '/{block 18}/,$$p' | \
+	 sed \
+	 -e 's/\(.*\)/\L\1/' \
+	 -e 's/\(\[\w*\]\)/\U\1/g' \
+	 -e 's/{\(block [0-9]\+\)}/\U\1/' \
+	 -e '/^\[/ s/\(\S\+\)/"\1",/g' \
+	 -e 's/^"\[DEFINE\]",/FORTH/' \
+	 -e 's/^"\[/FORTH \"[/' \
+	 -e 's/,\s*$$//' \
+	 >> $@
