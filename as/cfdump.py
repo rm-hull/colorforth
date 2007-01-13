@@ -194,6 +194,7 @@ def compilelong(prefix, number, suffix):
  return executelong(prefix, number, suffix)
 
 def dump_normal(number):
+ dump['printing'] = True
  if dump['state'].startswith('dump as binary'):
   if ' ' not in unpack(number):
    return text('', number, ' ')
@@ -209,6 +210,8 @@ def print_normal(number):
  if dump['state'] != 'mark end of block':
   if dump['printing'] and tag(number) != function.index('define'):
    prefix += ' '
+  if number:
+   dump['printing'] = True
   try:
    return eval(function[tag(number)])(prefix, number, suffix)
   except:
@@ -378,7 +381,9 @@ def print_plain(number):
  if dump['state'] != 'mark end of block':
   if dump['printing'] and tag(number) != function.index('define'):
    prefix += ' '
-  prefix += '%s ' % function[tag(number)].upper()
+  if number:
+   dump['printing'] = True
+  prefix += '[%s] ' % function[tag(number)].upper()
   try:
    return eval(function[tag(number)])(prefix, number, suffix)
   except:

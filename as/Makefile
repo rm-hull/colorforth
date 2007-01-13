@@ -162,3 +162,7 @@ chars.asm: chr16x24.asm chr32x32.asm
 	cat $+ > $@
 	./cf2text color.com | sed -n '/{block 12}/,/{block 18}/p' | \
 	 grep -v '{block [0-9]\+}' >> $@
+newcode.asm: forth.asm
+	cat $+ > $@
+	./cf2text color.com | sed -n '/{block 18}/,$$p' | \
+	 grep -v '{block [0-9]\+}' >> $@
