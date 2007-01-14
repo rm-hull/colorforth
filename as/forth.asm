@@ -48,7 +48,7 @@
  SETTYPE \word
  .ifeq type - 13  ;# means the SETTYPE macro didn't find a match
   FORTHWORD \word
- .elseif type - 1 == 1
+ .elseif wordcount - 1 == 0
   .equ typetag, default_typetag
  .endif
  .equ wordcount, wordcount + 1
