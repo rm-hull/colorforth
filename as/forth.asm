@@ -51,6 +51,7 @@
  .ifeq type - 13  ;# means the SETTYPE macro didn't find a match
   FORTHWORD \word
  .endif
+ .equ wordcount, wordcount + 1
  .endr
 .endm
 
@@ -82,13 +83,13 @@
    .endif
   .endr
   .ifne packed & 0xf ;# low 4 bits cannot be occupied with packed stuff
-   .equ packed, savepacked
-   .long packed | typetag
-   .equ compiled, 1
+   .equ packed, huffcode << (32 - bitshift)
+   .long savepacked | typetag
+   .equ bitcount, 32 - bitshift
    .equ typetag, 0
   .endif
  .endr
- .ifeq compiled
+ .ifne packed
   .long packed | typetag
  .endif
 .endm
