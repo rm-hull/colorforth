@@ -411,9 +411,9 @@ def set_default_state(state):
  dump['state'] = 'print according to tag'
  if state:
   dump['state'] = state
- elif (dump['block'] / 1024) < high_level_block and not dump['original']:
+ elif dump['block'] < high_level_block and not dump['original']:
   dump['state'] = 'dump as binary unless packed word'
-  if (dump['block'] / 1024) >= icon_start_block:
+  if dump['block'] >= icon_start_block:
    dump['state'] = 'dump character map'
  dump['default_state'] = dump['state']
  dump['printing'] = False
@@ -453,10 +453,10 @@ def cfdump(filename):
  if dump['format'] == 'html':
   output.write('<html>\n')
   output.write('<link rel=stylesheet type="text/css" href="colorforth.css">\n')
- for dump['block'] in range(0, len(data), 1024):
-  chunk = data[dump['block']:dump['block'] + 1024]
+ for dump['block'] in range(len(data) / 1024):
+  chunk = data[dump['block'] * 1024:(dump['block'] * 1024) + 1024]
   dump['blockdata'] = struct.unpack('<256L', chunk)
-  output.write('{block %d}\n' % (dump['block'] / 1024))
+  output.write('{block %d}\n' % dump['block'])
   if dump['format'] == 'html': output.write('<div class=code>\n')
   dump['index'] = 0
   if not allzero(dump['blockdata']): dump_block()
