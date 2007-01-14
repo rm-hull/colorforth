@@ -38,7 +38,7 @@
 
 .macro NEXTTYPE word, function
  .ifdef DEBUG_FORTH
-  .print "comparing \"\word\" with \"\function\""
+  ;#.print "comparing \"\word\" with \"\function\""
  .endif
  .ifeqs "\word", "\function"
   .equ default_typetag, type
@@ -56,7 +56,7 @@
  .else
   .equ typetag, default_typetag
  .endif
- SETTYPE \word
+ SETTYPE "\word"
  .ifeq type - 25  ;# means the SETTYPE macro didn't find a match
   .if typetag == 2 || typetag == 5
    .long typetag, \word
@@ -67,7 +67,7 @@
   .elseif typetag == (6 + 16) || typetag == (8 + 16)
    .long typetag | (0x\word << 5)
   .else
-   FORTHWORD \word
+   FORTHWORD "\word"
   .endif
  .endif
  .equ wordcount, wordcount + 1
@@ -83,7 +83,9 @@
   .equ huffindex, 0
   .equ huffcode, 0
   PACKCHAR "\letter"
-  .ifne packed & 0xf ;# low 4 bits cannot be occupied with packed stuff
+  ;# low 4 bits cannot be occupied with packed stuff, and
+  ;# we can't shift more than 32 bits
+  .if packed & 0xf > 0 || bitcount < 0
    .equ packed, huffcode << (32 - bitshift)
    .long savepacked | typetag
    .equ bitcount, 32 - bitshift
