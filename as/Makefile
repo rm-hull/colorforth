@@ -55,7 +55,9 @@ help:
 %.dat:	%.asm
 	$(GAS) $(foreach definition,$(DEFINES),\
 	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
-	 -ahlmns=$*.lst --listing-cont-lines=10 -o $*.o $<
+	 -ahlmns=$*.lst --listing-cont-lines=10 \
+	 --reduce-memory-overheads \
+	 -o $*.o $<
 	objcopy $*.o -O binary $@
 color.com: $(sources) secondpass
 	$(GAS) $(foreach definition,$(DEFINES),\

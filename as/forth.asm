@@ -1,8 +1,12 @@
 ;# pad to block boundary
 .macro BLOCK number
- .equ blocknumber, \number
+ .ifb \number
+  .equ blocknumber, blocknumber + 1
+ .else
+  .equ blocknumber, \number
+ .endif
  .ifdef ABSOLUTE_BLOCKNUMBER
-  .org \number * 1024
+  .org blocknumber * 1024
  .else
   .align 1024, 0
  .endif
@@ -17,21 +21,21 @@
  .equ type, 0
  .irp function [EXTENSION], [EXECUTE], [EXECUTELONG], [DEFINE], [COMPILEWORD]
   .ifeqs "\word", "\function"
-   .equ typetag, type
+   .equ default_typetag, type
   .else
    .equ type, type + 1
   .endif
  .endr
  .irp function [COMPILELONG], [COMPILESHORT], [COMPILEMACRO], [EXECUTESHORT]
   .ifeqs "\word", "\function"
-   .equ typetag, type
+   .equ default_typetag, type
   .else
    .equ type, type + 1
   .endif
  .endr
  .irp function [TEXT], [TEXTCAPITALIZED], [TEXTALLCAPS], [VARIABLE]
   .ifeqs "\word", "\function"
-   .equ typetag, type
+   .equ default_typetag, type
   .else
    .equ type, type + 1
   .endif
@@ -44,12 +48,12 @@
  .irp word, \words
  .ifeq wordcount
   .equ typetag, 3  ;# first word is almost always definition
+ .else
+  .equ typetag, default_typetag
  .endif
  SETTYPE \word
  .ifeq type - 13  ;# means the SETTYPE macro didn't find a match
   FORTHWORD \word
- .elseif wordcount - 1 == 0
-  .equ typetag, default_typetag
  .endif
  .equ wordcount, wordcount + 1
  .endr
@@ -104,3 +108,14 @@
   .equ huffcode, 0b01100000
  .endif
 .endm
+.ifdef DEBUG_FORTH
+BLOCK 18
+FORTH "[TEXT]", "colorforth",  "[TEXTCAPITALIZED]", "jul31",  "[TEXTCAPITALIZED]", "chuck",  "[TEXTCAPITALIZED]", "moore",  "[TEXTCAPITALIZED]", "public",  "[TEXTCAPITALIZED]", "domain",  "[EXECUTESHORT]", "24",  "[EXECUTE]", "load",  "[EXECUTESHORT]", "26",  "[EXECUTE]", "load",  "[EXECUTESHORT]", "28",  "[EXECUTE]", "load",  "[EXECUTESHORT]", "30",  "[EXECUTE]", "load"
+FORTH "dump",  "[COMPILESHORT]", "32",  "[COMPILEWORD]", "load",  "[COMPILEWORD]", ";"
+FORTH "icons",  "[COMPILESHORT]", "34",  "[COMPILEWORD]", "load",  "[COMPILEWORD]", ";"
+FORTH "print",  "[COMPILESHORT]", "38",  "[COMPILEWORD]", "load",  "[COMPILEWORD]", ";"
+FORTH "file",  "[COMPILESHORT]", "44",  "[COMPILEWORD]", "load",  "[COMPILEWORD]", ";"
+FORTH "north",  "[COMPILESHORT]", "46",  "[COMPILEWORD]", "load",  "[COMPILEWORD]", ";"
+FORTH "colors",  "[COMPILESHORT]", "56",  "[COMPILEWORD]", "load",  "[COMPILEWORD]", ";",  "[EXECUTE]", "mark",  "[EXECUTE]", "empty"
+BLOCK
+.endif
