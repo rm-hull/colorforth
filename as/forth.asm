@@ -53,7 +53,13 @@
  .endif
  SETTYPE \word
  .ifeq type - 13  ;# means the SETTYPE macro didn't find a match
-  FORTHWORD \word
+  .if typetag == 2 || typetag == 5
+   .long typetag, \word
+  .elseif typetag == 6 || typetag == 8
+   .long typetag | (\word << 5)
+  .else
+   FORTHWORD \word
+  .endif
  .endif
  .equ wordcount, wordcount + 1
  .endr
