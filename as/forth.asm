@@ -15,7 +15,7 @@
 
 .macro SETTYPE word
  .equ type, 0
- .irp function [EXTENSION], [EXECUTE], [EXECUTELONG], [DEFINE], [COMPILEWORD] 
+ .irp function [EXTENSION], [EXECUTE], [EXECUTELONG], [DEFINE], [COMPILEWORD]
   .ifeqs "\word", "\function"
    .equ typetag, type
   .else
@@ -63,25 +63,7 @@
   .equ savepacked, packed
   .equ huffindex, 0
   .equ huffcode, 0
-  .irpc huffman, " rtoeanismcylgfwdvpbhxuq0123456789j-k.z/;:!+@*,?"
-   .ifeqs "\letter", "\huffman"
-    .equ bitshift, 4 + (huffindex / 8)
-    .ifge bitshift - 6
-     .equ bitshift, 7
-    .endif
-    .equ packed, packed | (huffcode << (bitcount - bitshift))
-    .equ bitcount, bitcount - bitshift
-   .else
-    .equ huffindex, huffindex + 1
-    .equ huffcode, huffcode + 1
-    .ifeq huffcode - 0b00001000 ;# going from 4-bit to 5-bit code
-     .equ huffcode, 0b00010000
-    .endif
-    .ifeq huffcode - 0b00011000 ;# going from 5-bit to 7-bit code
-     .equ huffcode, 0b01100000
-    .endif
-   .endif
-  .endr
+  PACKCHAR "\letter"
   .ifne packed & 0xf ;# low 4 bits cannot be occupied with packed stuff
    .equ packed, huffcode << (32 - bitshift)
    .long savepacked | typetag
@@ -94,3 +76,30 @@
  .endif
 .endm
 
+.macro PACKCHAR letter
+ .nolist  ;# don't pollute listing with all these byte comparisons
+ .irpc huffman, " rtoeanismcylgfwdvpbhxuq0123456789j-k.z/;:!+@*,?"
+  .ifeqs "\letter", "\huffman"
+   .equ bitshift, 4 + (huffindex / 8)
+   .ifge bitshift - 6
+    .equ bitshift, 7
+   .endif
+   .equ packed, packed | (huffcode << (bitcount - bitshift))
+   .equ bitcount, bitcount - bitshift
+  .else
+   NEXTCODE
+  .endif
+ .endr
+ .list  ;# go ahead and generate listing if enabled
+.endm
+
+.macro NEXTCODE
+ .equ huffindex, huffindex + 1
+ .equ huffcode, huffcode + 1
+ .ifeq huffcode - 0b00001000 ;# going from 4-bit to 5-bit code
+  .equ huffcode, 0b00010000
+ .endif
+ .ifeq huffcode - 0b00011000 ;# going from 5-bit to 7-bit code
+  .equ huffcode, 0b01100000
+ .endif
+.endm
