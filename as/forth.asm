@@ -86,6 +86,7 @@
    .endif
    .equ packed, packed | (huffcode << (bitcount - bitshift))
    .equ bitcount, bitcount - bitshift
+   .exitm
   .else
    NEXTCODE
   .endif
