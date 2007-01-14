@@ -393,7 +393,8 @@ def print_plain(number):
    prefix += ' '
   if number:
    dump['printing'] = True
-  prefix += '[%s] ' % function[tag(number)].upper()
+  prefix += '[%s%s] ' % (function[tag(number)].upper(),
+   'HEX' * (tag(number) != fulltag(number)))
   try:
    return eval(function[tag(number)])(prefix, number, suffix)
   except:

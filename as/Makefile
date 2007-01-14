@@ -178,3 +178,4 @@ newcode.asm: forth.asm Makefile
 	 -e 's/^"\[/FORTH \"[/' \
 	 -e 's/,\s*$$//' \
 	 >> $@
+	echo BLOCK >> $@

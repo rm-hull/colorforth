@@ -20,26 +20,31 @@
 .macro SETTYPE word
  .equ type, 0
  .irp function [EXTENSION], [EXECUTE], [EXECUTELONG], [DEFINE], [COMPILEWORD]
-  .ifeqs "\word", "\function"
-   .equ default_typetag, type
-  .else
-   .equ type, type + 1
-  .endif
+  NEXTTYPE "\word", "\function"
  .endr
  .irp function [COMPILELONG], [COMPILESHORT], [COMPILEMACRO], [EXECUTESHORT]
-  .ifeqs "\word", "\function"
-   .equ default_typetag, type
-  .else
-   .equ type, type + 1
-  .endif
+  NEXTTYPE "\word", "\function"
  .endr
  .irp function [TEXT], [TEXTCAPITALIZED], [TEXTALLCAPS], [VARIABLE]
-  .ifeqs "\word", "\function"
-   .equ default_typetag, type
-  .else
-   .equ type, type + 1
-  .endif
+  NEXTTYPE "\word", "\function"
  .endr
+ .irp function [], [], [], [], [], [EXECUTELONGHEX], [], [], [COMPILELONGHEX]
+  NEXTTYPE "\word", "\function"
+ .endr
+ .irp function [COMPILESHORTHEX], [], [EXECUTESHORTHEX]
+  NEXTTYPE "\word", "\function"
+ .endr
+.endm
+
+.macro NEXTTYPE word, function
+ .ifdef DEBUG_FORTH
+  .print "comparing \"\word\" with \"\function\""
+ .endif
+ .ifeqs "\word", "\function"
+  .equ default_typetag, type
+ .else
+  .equ type, type + 1
+ .endif
 .endm
 
 ;# compile Forth words with Huffman coding
@@ -52,11 +57,15 @@
   .equ typetag, default_typetag
  .endif
  SETTYPE \word
- .ifeq type - 13  ;# means the SETTYPE macro didn't find a match
+ .ifeq type - 25  ;# means the SETTYPE macro didn't find a match
   .if typetag == 2 || typetag == 5
    .long typetag, \word
+  .elseif typetag == (2 + 16) || typetag == (5 + 16)
+   .long typetag, 0x\word
   .elseif typetag == 6 || typetag == 8
    .long typetag | (\word << 5)
+  .elseif typetag == (6 + 16) || typetag == (8 + 16)
+   .long typetag | (0x\word << 5)
   .else
    FORTHWORD \word
   .endif
