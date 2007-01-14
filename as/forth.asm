@@ -44,12 +44,12 @@
  .irp word, \words
  .ifeq wordcount
   .equ typetag, 3  ;# first word is almost always definition
- .else
-  .equ typetag, default_typetag
  .endif
  SETTYPE \word
  .ifeq type - 13  ;# means the SETTYPE macro didn't find a match
   FORTHWORD \word
+ .elseif type - 1 == 1
+  .equ typetag, default_typetag
  .endif
  .equ wordcount, wordcount + 1
  .endr
