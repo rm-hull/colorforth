@@ -29,3 +29,5 @@
   .endif
  .endr
 .endm
+
+.org 0x3000  ;# block 12 through block 17

@@ -1658,6 +1658,15 @@ pad: pop  edx
     call edx
     jmp  0b
 
+.ifdef OBSOLETE_CM2001
 .org (0x1200-1)*4
     .long 0
+.else
+.include "chars.asm"
+.endif
+.ifdef CM2001
+.incbin "color.dat"
+.else
+.incbin "newcode.dat"
+.endif
 .end start

@@ -1,3 +1,5 @@
+.equ blockstart, .
+
 ;# pad to block boundary
 .macro BLOCK number
  .ifb \number
@@ -8,8 +10,13 @@
  .ifdef ABSOLUTE_BLOCKNUMBER
   .org blocknumber * 1024
  .else
-  .align 1024, 0
+  .org blockstart
+  .equ blockstart, blockstart + 1024
  .endif
+ SET_DEFAULT_TYPETAG
+.endm
+
+.macro SET_DEFAULT_TYPETAG
  .if blocknumber % 2  ;# even screens are code, odd are documentation
   .equ default_typetag, 9  ;# type 9 is plain text
  .else
@@ -31,7 +38,7 @@
  .irp function [], [], [], [], [], [EXECUTELONGHEX], [], [], [COMPILELONGHEX]
   NEXTTYPE "\word", "\function"
  .endr
- .irp function [COMPILESHORTHEX], [], [EXECUTESHORTHEX]
+ .irp function [COMPILESHORTHEX], [], [EXECUTESHORTHEX], [SKIP], [BINARY]
   NEXTTYPE "\word", "\function"
  .endr
 .endm
@@ -57,7 +64,14 @@
   .equ typetag, default_typetag
  .endif
  SETTYPE "\word"
- .ifeq type - 25  ;# means the SETTYPE macro didn't find a match
+ COMPILETYPE "\word"
+ .equ wordcount, wordcount + 1
+ .endr
+.endm
+
+.macro COMPILETYPE word
+ .ifeq type - 27  ;# means the SETTYPE macro didn't find a match
+  SET_DEFAULT_TYPETAG
   .if typetag == 2 || typetag == 5
    .long typetag, \word
   .elseif typetag == (2 + 16) || typetag == (5 + 16)
@@ -66,12 +80,14 @@
    .long typetag | (\word << 5)
   .elseif typetag == (6 + 16) || typetag == (8 + 16)
    .long typetag | (0x\word << 5)
+  .elseif typetag == 25  ;# SKIP
+   .fill \word, 4, 0
+  .elseif typetag == 26  ;# BINARY
+   .long 0x\word
   .else
    FORTHWORD "\word"
   .endif
  .endif
- .equ wordcount, wordcount + 1
- .endr
 .endm
 
 .macro FORTHWORD word
@@ -125,14 +141,3 @@
   .equ huffcode, 0b01100000
  .endif
 .endm
-.ifdef DEBUG_FORTH
-BLOCK 18
-FORTH "[TEXT]", "colorforth",  "[TEXTCAPITALIZED]", "jul31",  "[TEXTCAPITALIZED]", "chuck",  "[TEXTCAPITALIZED]", "moore",  "[TEXTCAPITALIZED]", "public",  "[TEXTCAPITALIZED]", "domain",  "[EXECUTESHORT]", "24",  "[EXECUTE]", "load",  "[EXECUTESHORT]", "26",  "[EXECUTE]", "load",  "[EXECUTESHORT]", "28",  "[EXECUTE]", "load",  "[EXECUTESHORT]", "30",  "[EXECUTE]", "load"
-FORTH "dump",  "[COMPILESHORT]", "32",  "[COMPILEWORD]", "load",  "[COMPILEWORD]", ";"
-FORTH "icons",  "[COMPILESHORT]", "34",  "[COMPILEWORD]", "load",  "[COMPILEWORD]", ";"
-FORTH "print",  "[COMPILESHORT]", "38",  "[COMPILEWORD]", "load",  "[COMPILEWORD]", ";"
-FORTH "file",  "[COMPILESHORT]", "44",  "[COMPILEWORD]", "load",  "[COMPILEWORD]", ";"
-FORTH "north",  "[COMPILESHORT]", "46",  "[COMPILEWORD]", "load",  "[COMPILEWORD]", ";"
-FORTH "colors",  "[COMPILESHORT]", "56",  "[COMPILEWORD]", "load",  "[COMPILEWORD]", ";",  "[EXECUTE]", "mark",  "[EXECUTE]", "empty"
-BLOCK
-.endif

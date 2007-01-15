@@ -59,15 +59,11 @@ help:
 	 --reduce-memory-overheads \
 	 -o $*.o $<
 	objcopy $*.o -O binary $@
-color.com: $(sources) secondpass
+color.com: $(sources) secondpass chars.asm newcode.dat color.dat
 	$(GAS) $(foreach definition,$(DEFINES),\
 	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
 	 -ahlns=color.lst --listing-cont-lines=10 -o color.o color.asm
-	objcopy color.o -O binary color.bin
-	# now get original color.com for its data blocks starting at 0x3000
-	cp -f ../color.com .
-	dd if=/dev/zero of=color.com bs=1024 count=12 conv=notrunc
-	dd if=color.bin of=color.com bs=1024 count=12 conv=notrunc
+	objcopy color.o -O binary $@
 new:	color.asm
 	touch $<
 	$(MAKE) color.com
@@ -105,6 +101,8 @@ asmdiff: /tmp/color.dsm /tmp/gas_color.dsm
 	diff $+
 set:
 	set
+%.txt:	%.com cf2text
+	cf2text $< > $@
 diff:	sources.txt original.txt
 	-diff -W180 -y $+
 sources.txt: $(sources)
@@ -156,6 +154,8 @@ htmldiff: /tmp/color_pydump.html /tmp/color.html
 	rm -f $+
 	$(MAKE) $+
 	diff -y -W180 $+
+textdiff: ../color.txt color.txt
+	diff -y -W180 $+
 /tmp/color_pydump.html: ../color.com
 	TIM_NEITZ=1 ./cf2html $< > $@
 /tmp/color.html: ../color.com /usr/src/howerd/cf2html
@@ -173,9 +173,10 @@ newcode.asm: forth.asm Makefile
 	 -e 's/\(.*\)/\L\1/' \
 	 -e 's/\(\[\w*\]\)/\U\1/g' \
 	 -e 's/{\(block [0-9]\+\)}/\U\1/' \
-	 -e '/^\[/ s/\(\S\+\)/"\1",/g' \
-	 -e 's/^"\[DEFINE\]",/FORTH/' \
-	 -e 's/^"\[/FORTH \"[/' \
+	 -e '/^[^B]/ s/\(\S\+\)/"\1",/g' \
+	 -e 's/^\([^B]\)/FORTH \1/' \
 	 -e 's/,\s*$$//' \
 	 >> $@
 	echo BLOCK >> $@
+color.dat: ../color.com
+	dd if=$< of=$@ bs=1024 skip=18

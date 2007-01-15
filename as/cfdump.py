@@ -92,12 +92,16 @@ dump = {  # set up globals as dictionary to avoid declaring globals everywhere
  'character_line': 0,  # count pixel lines so we know when to insert newline
  'character_width': 16,  # pixel width of characters, changes to 32 later
  'character_height': 24,  # pixel height of characters, changes to 32 later
+ 'default_tag': 'define',  # will be set during decompilation
 }
 
 def extension(prefix, number, suffix):
- if not dump['original']:
-  debug('extension(0x%x): should never be reached' % number)
- return text(prefix, number, suffix)
+ """since extensions are handled in print_text, this is really for
+    random binary data"""
+ if dump['format'] == 'plaintext':
+  return prefix + '[BINARY] ' + print_hex(number) + suffix
+ else:
+  return text(prefix, number, suffix)
 
 def undefined(prefix, number, suffix):
  if dump['original']:
@@ -113,7 +117,12 @@ def variable(prefix, number, suffix):
     'extensions', that is, it must pack into 28 bits."""
  dumptext = prefix + unpack(number) + suffix
  if dump['index'] < len(dump['blockdata']):
-  dumptext += print_format(function.index('compilelong'))
+  if dump['format'] == 'plaintext':
+   dumptext += '[BINARY] ' + \
+    print_hex(dump['blockdata'][dump['index']]) + suffix
+   dump['index'] += 1
+  else:
+   dumptext += print_format(function.index('compilelong'))
  return dumptext
 
 def text(prefix, number, suffix):
@@ -392,16 +401,29 @@ def print_plain(number):
   if dump['printing'] and tag(number) != function.index('define'):
    prefix += ' '
   if number:
+   if dump['skip']:
+    prefix += '[SKIP] %d ' % dump['skip']
+    dump['skip'] = 0
    dump['printing'] = True
-  prefix += '[%s%s] ' % (function[tag(number)].upper(),
-   'HEX' * (tag(number) != fulltag(number)))
-  try:
-   return eval(function[tag(number)])(prefix, number, suffix)
-  except:
-   return text(prefix, number, suffix)
- else:
-  return prefix
+  else:
+   dump['skip'] += 1
+   return ''
+  if tag(number) != function.index('define'):
+   if tag(number) != function.index(dump['default_tag']):
+    prefix += '[%s%s] ' % (function[tag(number)].upper(),
+     'HEX' * (tag(number) != fulltag(number)))
+  else: set_default_tag()
+  try: return eval(function[tag(number)])(prefix, number, suffix)
+  except: return text(prefix, number, suffix)
+ else: return prefix
 
+def set_default_tag(*args):
+ "compileword in code block, and text in shadow block"
+ if dump['block'] % 2:  # shadow block
+  dump['default_tag'] = 'text'
+ else:
+  dump['default_tag'] = 'compileword'
+ 
 def print_code(chunk):
  """dump as raw hex so it can be undumped"""
  output.write('%02x' * len(chunk) % tuple(map(ord, chunk)))
@@ -417,6 +439,7 @@ def set_default_state(state):
    dump['state'] = 'dump character map'
  dump['default_state'] = dump['state']
  dump['printing'] = False
+ dump['skip'] = 0
 
 def dump_block():
  set_default_state('')
