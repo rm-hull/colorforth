@@ -394,7 +394,8 @@ def dump_functions(*args):
  print line
 
 def print_plain(number):
- prefix, suffix = '', ' '
+ prefix, suffix, default_tag = '', ' ', dump['default_tag']
+ if dump['index'] == 1: default_tag = 'define'
  if dump['printing'] and tag(number) == function.index('define'):
   prefix += '\n'
  if dump['state'] != 'mark end of block':
@@ -402,14 +403,12 @@ def print_plain(number):
    prefix += ' '
   if number:
    if dump['skip']:
-    prefix += '[SKIP] %d ' % dump['skip']
-    dump['skip'] = 0
+    prefix += '[SKIP] %d ' % dump['skip']; dump['skip'] = 0
    dump['printing'] = True
   else:
-   dump['skip'] += 1
-   return ''
+   dump['skip'] += 1; return ''
   if tag(number) != function.index('define'):
-   if tag(number) != function.index(dump['default_tag']):
+   if tag(number) != function.index(default_tag):
     prefix += '[%s%s] ' % (function[tag(number)].upper(),
      'HEX' * (tag(number) != fulltag(number)))
   else: set_default_tag()
