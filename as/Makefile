@@ -70,6 +70,9 @@ endif
 new:	color.asm
 	touch $<
 	$(MAKE) color.com
+newcode: color.asm newcode.dat
+	touch $<
+	$(MAKE) I_HAVE_AT_LEAST_1GB_RAM=1 color.com
 kbd:	color.asm
 	touch $<
 	$(MAKE) SMALLSCREEN=1 DEBUG_KBD=1 color.com
@@ -183,3 +186,5 @@ newcode.asm: forth.asm Makefile
 	echo BLOCK >> $@
 color.dat: ../color.com
 	dd if=$< of=$@ bs=1024 skip=18
+%.ans:	%.com
+	cf2ansi $< > $@

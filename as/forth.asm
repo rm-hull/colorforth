@@ -91,21 +91,18 @@
 .endm
 
 .macro FORTHWORD word
- .equ packed, 0
- .equ bitcount, 32
- .equ compiled, 0
+ .equ packed, 0; .equ bitcount, 32; .equ compiled, 0; .equ overshifted, 0
  .irpc letter, "\word"
-  .equ savepacked, packed
-  .equ huffindex, 0
-  .equ huffcode, 0
+  .equ savepacked, packed; .equ huffindex, 0; .equ huffcode, 0
   PACKCHAR "\letter"
+  .if bitcount < 0; .equ overshifted, 1; .endif
   ;# low 4 bits cannot be occupied with packed stuff, and
-  ;# we can't shift more than 32 bits
-  .if packed & 0xf > 0 || bitcount < 0
+  ;# we can't shift more than once past 32 bits
+  .if (packed & 0xf > 0) || overshifted
    .equ packed, huffcode << (32 - bitshift)
    .long savepacked | typetag
-   .equ bitcount, 32 - bitshift
-   .equ typetag, 0
+   .equ bitcount, 32 - bitshift; .equ overshifted, 0
+   .equ typetag, 0  ;# anything further will be an extension of this word
   .endif
  .endr
  .ifne packed

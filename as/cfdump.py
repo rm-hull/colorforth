@@ -407,6 +407,8 @@ def print_plain(number):
    dump['printing'] = True
   else:
    dump['skip'] += 1; return ''
+  debug('"%s": %s, default: %s', (unpack(number), function[tag(number)],
+   default_tag))
   if tag(number) != function.index('define'):
    if tag(number) != function.index(default_tag):
     prefix += '[%s%s] ' % (function[tag(number)].upper(),
@@ -439,6 +441,7 @@ def set_default_state(state):
  dump['default_state'] = dump['state']
  dump['printing'] = False
  dump['skip'] = 0
+ set_default_tag()
 
 def dump_block():
  set_default_state('')
