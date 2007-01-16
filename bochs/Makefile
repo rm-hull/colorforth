@@ -86,3 +86,7 @@ nolinks:
 	done
 cf.patch:
 	-cd $(BOCHS) && cvs diff -u > $(CF_BOCHS)/$@
+cvsupdate:
+	$(MAKE) nolinks
+	-cd $(BOCHS) && cvs up
+	$(MAKE) links
