@@ -1664,9 +1664,9 @@ pad: pop  edx
 .else
 .include "chars.asm"
 .endif
-.ifdef CM2001
-.incbin "color.dat"
-.else
+.ifdef I_HAVE_AT_LEAST_1GB_RAM
 .incbin "newcode.dat"
+.else
+.incbin "color.dat"
 .endif
 .end start

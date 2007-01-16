@@ -59,7 +59,10 @@ help:
 	 --reduce-memory-overheads \
 	 -o $*.o $<
 	objcopy $*.o -O binary $@
-color.com: $(sources) secondpass chars.asm newcode.dat color.dat
+color.com: $(sources) secondpass chars.asm color.dat
+ifdef I_HAVE_AT_LEAST_1GB_RAM
+	$(MAKE) newcode.dat
+endif
 	$(GAS) $(foreach definition,$(DEFINES),\
 	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
 	 -ahlns=color.lst --listing-cont-lines=10 -o color.o color.asm
