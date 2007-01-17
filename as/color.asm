@@ -973,49 +973,58 @@ accept1: mov  board, edi
     mov  edx, shift
     jmp  dword ptr [edx+eax*4]
 
-bits:
+bits: ;# number of bits available in word for packing more Huffman codes
 .ifdef CM2001
    .byte 7 ;# matches CM2001 color.com binary
 .else
    .byte 28
 .endif
-0:  add  eax, 0120
-    mov  cl, 7
-    jmp  0f
-pack: cmp  al, 020
-    jnc  0b
-    mov  cl, 4
-    test al, 010
-    jz   0f
-    inc  ecx
-    xor  al, 030
-0:  mov  edx, eax
-    mov  ch, cl
-0:  cmp  bits, cl
-    jnc  0f
-    shr  al, 1
-    jc   full
-    dec  cl
-    jmp  0b
-0:  shl  dword ptr [esi], cl
-    xor  [esi], eax
-    sub  bits, cl
+/* for reference, Huffman codes are in groups of 8, the prefixes being:
+  0xxx, 10xxx, 1100xxx, 1101xxx, 1110xxx, 1111xxx
+  "pack" packs one letter (character code at a time, 
+  into a Huffman-coded word at [ESI] (stack item) */
+0:  add  eax, 0b01010000 ;# make 0b00010000 into 0b01100000, high 2 bits set
+    mov  cl, 7 ;# this is a 7-bit Huffman code
+    jmp  0f ;# continue below
+pack: cmp  al, 0b00010000 ;# character code greater than 16?
+    jnc  0b ;# if so, it's a 7-bitter, see above
+    mov  cl, 4 ;# otherwise assume it's a 4-bit code
+    test al, 0b00001000 ;# character code more than 7?
+    jz   0f ;# if so, it's a 5-bit Huffman code
+    inc  ecx ;# make the 4 into a 5
+    xor  al, 0b00011000 ;# and change prefix to 10xxx
+;# common entry point for 4, 5, and 7-bit Huffman codes
+0:  mov  edx, eax ;# copy Huffman code into EDX
+    mov  ch, cl ;# copy Huffman-code bitcount into 8-bit CH register
+0:  cmp  bits, cl ;# do we have enough bits left in the word?
+    jnc  0f  ;# if so, continue on
+    shr  al, 1 ;# low bit of character code set?
+    jc   full ;# if so, word is full, need to start an extension word instead
+    dec  cl  ;# subtract one from bitcount
+    jmp  0b ;# keep going; as long as we don't find any set bits, it'll fit
+0:  shl  dword ptr [esi], cl ;# shift over just the amount of bits necessary
+    xor  [esi], eax ;# 'or' or 'add' would have worked as well (and clearer?)
+    sub  bits, cl ;# reduce remaining bitcount by what we just used
     ret
 
-lj0: mov  cl, bits
-    add  cl, 4
-    shl  dword ptr [esi], cl
+;# left-justification routine packs Huffman codes into the MSBs of the word
+lj0: mov  cl, bits ;# bits remaining into CL register
+    add  cl, 4 ;# add to that the 4 reserved bits for type tag
+    shl  dword ptr [esi], cl ;# shift packed word into MSBs
     ret
 
+;# this is just the high-level entry point to the above routine
 lj: call lj0
     drop
     ret
 
-full: call lj0
-    inc dword ptr  words
-    mov byte ptr bits, 28
-    sub  bits, ch
-    mov  eax, edx
+;# the packed word is full, so finish processing
+full: call lj0 ;# left-justify the packed word
+    inc dword ptr words ;# bump the count
+    mov byte ptr bits, 32-4 ;# reset bit count, still saving 4 bits for tag
+;# we were processing a character when we found the word full, so add it in
+    sub  bits, ch ;# subtract saved bitcount of this Huffman code
+    mov  eax, edx ;# restore top-of-stack with partial packed word
     dup_
     ret
 
