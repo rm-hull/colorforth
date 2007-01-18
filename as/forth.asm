@@ -93,35 +93,38 @@
 .endm
 
 .macro FORTHWORD word
- .equ packed, 0; .equ savepacked, 0; .equ bitcount, 32; .equ compiled, 0
+ .equ packed, 0; .equ bits, 28
+ ;# only 28 bits are used for a word, the low 4 bits are for the type tag
  .irpc letter, "\word"
-  .equ huffindex, 0; .equ huffcode, 0
   GETCODE "\letter"
-  ;#.long packed, huffcode, bitcount, bitshift ;# debugging
-  .equ savepacked, packed
-  .equ packed, packed | (huffcode << (bitcount - bitshift))
-  .equ bitcount, bitcount - bitshift
-  ;# low 4 bits reserved for word type tag
-  .if (packed & 0xf > 0) || bitcount < 0
-   .long savepacked | typetag; .equ packed, huffcode << (32 - bitshift)
-   .equ bitcount, 32 - bitshift; .equ typetag, 0  ;# word "extension"
-  .elseif bitcount < bitshift  ;# we can't shift more than once past 32 bits
-   .long packed | typetag; .equ packed, 0; .equ bitcount, 32
-   .equ typetag, 0  ;# any more letters form word "extension"
+  .equ maskbits, (1 << bits) - 1
+  .equ testcode, (huffcode >> (shift - bits) & maskbits) << (shift - bits)
+  .if bits - shift >= 0
+   .equ packed, (packed << shift) | huffcode
+   .equ bits, bits - shift
+  ;# otherwise will the prefix plus all set bits fit in remaining space?
+  .elseif testcode == huffcode
+   .equ packed, (packed << bits) | (huffcode >> (shift - bits))
+   .equ bits, 0
+  .else
+   .long (packed << (bits + 4)) | typetag
+   .equ packed, huffcode; .equ bits, 28 - shift; .equ typetag, 0
   .endif
  .endr
  .ifne packed
-  .long packed | typetag
+  .long (packed << (bits + 4)) | typetag
  .endif
 .endm
 
 .macro GETCODE letter
+;# see more documentation on this under 'pack' in color.asm source
  .nolist  ;# don't pollute listing with all these byte comparisons
+ .equ huffindex, 0; .equ huffcode, 0
  .irpc huffman, " rtoeanismcylgfwdvpbhxuq0123456789j-k.z/;:!+@*,?"
   .ifeqs "\letter", "\huffman"
-   .equ bitshift, 4 + (huffindex / 8)
-   .ifge bitshift - 6
-    .equ bitshift, 7
+   .equ shift, 4 + (huffindex / 8)
+   .ifge shift - 6
+    .equ shift, 7
    .endif
    .exitm
   .else
@@ -141,3 +144,9 @@
   .equ huffcode, 0b01100000
  .endif
 .endm
+
+/* test cases for common problems
+BLOCK 19
+FORTH "jul31", "colored", "keypad", "number"
+BLOCK
+*/
