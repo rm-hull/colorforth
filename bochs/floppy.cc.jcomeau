@@ -492,7 +492,8 @@ Bit32u bx_floppy_ctrl_c::read(Bit32u address, unsigned io_len)
       if (non_dma() &&
         (BX_FD_THIS s.pending_command & 0x4f) == 0x46) {
         // don't enter idle phase until we've given CPU last data byte
-        if (FD_MS_DATA_READY) dma_write(&value); 
+        if ((BX_FD_THIS s.main_status_reg &
+          FD_MS_DATA_READY) == FD_MS_DATA_READY) dma_write(&value); 
         if (BX_FD_THIS s.TC) enter_idle_phase();
       } else {
         if (BX_FD_THIS s.result_size == 0) {

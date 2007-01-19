@@ -56,8 +56,8 @@ distclean:
 test:
 	cd ../test && $(MAKE)
 %.link:
-	cd $(BOCHS)/iodev && ln -sf floppy.cc.$* floppy.cc
-	cd $(BOCHS)/iodev && ln -sf floppy.h.$* floppy.h
+	ln -sf floppy.cc.$* floppy.cc
+	ln -sf floppy.h.$* floppy.h
 links:	*.cc *.h
 	for file in $+; do \
 	 declare original=$$(find $(BOCHS) -maxdepth 2 -name $$file); \
