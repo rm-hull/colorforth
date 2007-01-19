@@ -91,6 +91,3 @@ cvsupdate:
 	$(MAKE) nolinks
 	-cd $(BOCHS) && cvs up
 	$(MAKE) links
-newbochs:
-	rm -f $(BOCHS)/bochs.exe
-	$(MAKE) all
