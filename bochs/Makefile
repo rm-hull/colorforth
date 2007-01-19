@@ -1,3 +1,4 @@
+SOURCES := $(wildcard *.cc *.h)
 BOCHS := /usr/src/bochs
 CF_BOCHS := $(PWD)
 BOCHS_LOGIN :=  cvs \
@@ -5,12 +6,14 @@ BOCHS_LOGIN :=  cvs \
 BOCHS_CHECKOUT :=  cvs -z3 \
  -d:pserver:anonymous@bochs.cvs.sourceforge.net:/cvsroot/bochs co -P bochs
 export
+all:	$(BOCHS)/bochs.exe
 # make bochsdbg.exe first because it builds as bochs.exe!
-all:	$(BOCHS)/bochsdbg.exe $(BOCHS)/bochs.exe
 force:
 	$(MAKE) distclean
-	touch Makefile
-	$(MAKE) all
+	$(MAKE) debug_config
+	$(MAKE) $(BOCHS)/bochsdbg.exe
+	$(MAKE) config
+	$(MAKE) $(BOCHS)/bochs.exe
 set:
 	set
 %.wdiff:
@@ -21,7 +24,7 @@ checkin:
 	cd .. && cvs commit
 cvsdiff:
 	cd .. && cvs diff
-configure: Makefile
+configure:
 	cd $(BOCHS) && ./configure \
 	 --enable-vbe \
 	 --enable-cirrus \
@@ -42,14 +45,11 @@ configure: Makefile
 	 --enable-readline \
 	 $(DEBUG_CONFIG)
 	touch $@
-debug_config: Makefile
-	rm -f configure
+debug_config:
 	$(MAKE) DEBUG_CONFIG="--enable-debugger --enable-disasm" configure
-	rm -f configure
-	touch $@
-$(BOCHS)/bochs.exe: configure
+$(BOCHS)/bochs.exe: $(SOURCES)
 	cd $(BOCHS) && $(MAKE)
-$(BOCHS)/bochsdbg.exe: debug_config
+$(BOCHS)/bochsdbg.exe: $(SOURCES)
 	cd $(BOCHS) && $(MAKE) && mv bochs.exe bochsdbg.exe
 distclean:
 	rm -f $(BOCHS)/bochs{,dbg}.exe
@@ -58,6 +58,7 @@ test:
 %.link:
 	ln -sf floppy.cc.$* floppy.cc
 	ln -sf floppy.h.$* floppy.h
+	touch floppy.cc floppy.h
 links:	*.cc *.h
 	for file in $+; do \
 	 declare original=$$(find $(BOCHS) -maxdepth 2 -name $$file); \
@@ -90,3 +91,6 @@ cvsupdate:
 	$(MAKE) nolinks
 	-cd $(BOCHS) && cvs up
 	$(MAKE) links
+newbochs:
+	rm -f $(BOCHS)/bochs.exe
+	$(MAKE) all
