@@ -488,9 +488,8 @@ Bit32u bx_floppy_ctrl_c::read(Bit32u address, unsigned io_len)
 
     case 0x3F5: /* diskette controller data */
       if ((BX_FD_THIS s.main_status_reg & FD_MS_NDMA) &&
-        ((BX_FD_THIS s.pending_command & 0x4f) == 0x46)) {
-        if ((BX_FD_THIS s.main_status_reg & (FD_MS_MRQ | FD_MS_DIO)) == FD_MS_DATA_READY)
-          dma_write(&value); 
+	((BX_FD_THIS s.pending_command & 0x4f) == 0x46)) {
+        dma_write(&value);
         // don't enter idle phase until we've given CPU last data byte
         if (BX_FD_THIS s.TC) enter_idle_phase();
       } else if (BX_FD_THIS s.result_size == 0) {
@@ -1983,30 +1982,22 @@ bx_bool bx_floppy_ctrl_c::get_tc(void)
 {
   Bit8u drive;
   bool terminal_count;
-  if (non_dma()) {
+  if (BX_FD_THIS s.main_status_reg & FD_MS_NDMA) {
     drive = BX_FD_THIS s.DOR & 0x03;
-    /* figure out if we've sent all the data, in non-DMA mode
+    /* figure out if we've sent all the data, in non-DMA mode...
     /* the drive stays on the same cylinder for a read or write, so that's
     /* not going to be an issue. EOT stands for the last sector to be I/Od.
     /* it does all the head 0 sectors first, then the second if any.
-    /* now, regarding reaching the end of the sector...
+    /* now, regarding reaching the end of the sector:
     /*  == 512 would make it more precise, allowing one to spot bugs...
     /*  >= 512 makes it more robust, but allows for sloppy code...
     /*  pick your poison?
-    /* note: byte and head are 0-based; eot, sector, and heads are 1-based. /*
-    // comment out the verbose debugging when it works
-    /*
-    BX_DEBUG(("get_tc(): eot=%d, sector=%d, byte=%d head=%d, heads=%d",
-     BX_FD_THIS s.eot[drive], BX_FD_THIS s.sector[drive],
-     BX_FD_THIS s.floppy_buffer_index, BX_FD_THIS s.head[drive],
-     BX_FD_THIS s.media[drive].heads));
-    */
+    /* note: byte and head are 0-based; eot, sector, and heads are 1-based. */
     terminal_count = (BX_FD_THIS s.floppy_buffer_index == 512 &&
      BX_FD_THIS s.sector[drive] == BX_FD_THIS s.eot[drive]) &&
      BX_FD_THIS s.head[drive] == BX_FD_THIS s.media[drive].heads - 1;
   } else {
     terminal_count = DEV_dma_get_tc();
   }
-  //if (terminal_count) BX_DEBUG(("get_tc(): terminal count reached"));
   return terminal_count;
 }
