@@ -355,12 +355,11 @@ void bx_floppy_ctrl_c::reset(unsigned type)
   BX_FD_THIS s.pending_irq = 0;
   BX_FD_THIS s.reset_sensei = 0; /* no reset result present */
 
-  BX_FD_THIS s.main_status_reg = FD_RESET;
-  // status regs 0-3 are accessed through the data register via command 0x04
-  BX_FD_THIS s.status_reg0 = FD_RESET;
-  BX_FD_THIS s.status_reg1 = FD_RESET;
-  BX_FD_THIS s.status_reg2 = FD_RESET;
-  BX_FD_THIS s.status_reg3 = FD_RESET;
+  BX_FD_THIS s.main_status_reg = 0;
+  BX_FD_THIS s.status_reg0 = 0;
+  BX_FD_THIS s.status_reg1 = 0;
+  BX_FD_THIS s.status_reg2 = 0;
+  BX_FD_THIS s.status_reg3 = 0;
 
   // software reset (via DOR port 0x3f2 bit 2) does not change DOR
   if (type == BX_RESET_HARDWARE) {
@@ -478,7 +477,7 @@ Bit32u bx_floppy_ctrl_c::read(Bit32u address, unsigned io_len)
 
   switch (address) {
 #if BX_DMA_FLOPPY_IO
-    case 0x3F2: // diskette controller digital output register (DOR)
+    case 0x3F2: // diskette controller digital output register
       value = BX_FD_THIS s.DOR;
       break;
 
@@ -494,7 +493,7 @@ Bit32u bx_floppy_ctrl_c::read(Bit32u address, unsigned io_len)
         if (BX_FD_THIS s.TC) enter_idle_phase();
       } else if (BX_FD_THIS s.result_size == 0) {
           BX_ERROR(("port 0x3f5: no results to read"));
-          reset_status();
+          BX_FD_THIS s.main_status_reg &= FD_MS_NDMA;
           value = BX_FD_THIS s.result[0];
       } else {
           value = BX_FD_THIS s.result[BX_FD_THIS s.result_index++];
@@ -616,7 +615,7 @@ void bx_floppy_ctrl_c::write(Bit32u address, Bit32u value, unsigned io_len)
         BX_DEBUG(("write(): timer activated for floppy transition to normal"));
       } else if (prev_normal_operation && normal_operation==0) {
         // transition from NORMAL to RESET
-        reset_status();
+        BX_FD_THIS s.main_status_reg &= FD_MS_NDMA;
         BX_FD_THIS s.pending_command = 0xfe; // RESET pending
       }
       BX_DEBUG(("io_write: digital output register"));
@@ -655,7 +654,7 @@ void bx_floppy_ctrl_c::write(Bit32u address, Bit32u value, unsigned io_len)
         BX_FD_THIS s.command[0] = value;
         BX_FD_THIS s.command_complete = 0;
         BX_FD_THIS s.command_index = 1;
-        reset_status(); // clear drive status
+        BX_FD_THIS s.main_status_reg &= ~FD_MS_DIO; // leave drive status untouched
         BX_FD_THIS s.main_status_reg |= FD_MS_MRQ | FD_MS_BUSY;
         switch (value) {
           case 0x03: /* specify */
@@ -1854,7 +1853,7 @@ void bx_floppy_ctrl_c::enter_result_phase(void)
 
   /* these are always the same */
   BX_FD_THIS s.result_index = 0;
-  reset_status();
+  // not necessary to clear any status bits, we're about to set them all
   BX_FD_THIS s.main_status_reg |= FD_MS_MRQ | FD_MS_DIO | FD_MS_BUSY;
 
   /* invalid command */

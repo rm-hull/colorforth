@@ -1807,6 +1807,7 @@ void bx_floppy_ctrl_c::enter_result_phase(void)
 
   /* these are always the same */
   BX_FD_THIS s.result_index = 0;
+  // not necessary to clear any status bits, we're about to set them all
   BX_FD_THIS s.main_status_reg |= FD_MS_MRQ | FD_MS_DIO | FD_MS_BUSY;
 
   /* invalid command */
