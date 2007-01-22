@@ -477,6 +477,7 @@ Bit32u bx_floppy_ctrl_c::read(Bit32u address, unsigned io_len)
       if ((BX_FD_THIS s.main_status_reg & FD_MS_NDMA) &&
 	((BX_FD_THIS s.pending_command & 0x4f) == 0x46)) {
         dma_write(&value);
+        lower_interrupt();
         // don't enter idle phase until we've given CPU last data byte
         if (BX_FD_THIS s.TC) enter_idle_phase();
       } else if (BX_FD_THIS s.result_size == 0) {
@@ -633,7 +634,12 @@ void bx_floppy_ctrl_c::write(Bit32u address, Bit32u value, unsigned io_len)
 
     case 0x3F5: /* diskette controller data */
       BX_DEBUG(("command = %02x", (unsigned) value));
-      if (BX_FD_THIS s.command_complete) {
+      if ((BX_FD_THIS s.main_status_reg & FD_MS_NDMA) && (BX_FD_THIS s.pending_command & 0x4f == 0x45)) {
+        BX_FD_THIS dma_read((Bit8u *) &value);
+        BX_FD_THIS lower_interrupt();
+        // don't enter idle phase until we've given FDC last data byte
+        if (BX_FD_THIS s.TC) enter_idle_phase();
+      } else if (BX_FD_THIS s.command_complete) {
         if (BX_FD_THIS s.pending_command != 0)
           BX_PANIC(("write 0x03f5: receiving new command 0x%02x, old one (0x%02x) pending",
             value, BX_FD_THIS s.pending_command));
@@ -1047,22 +1053,22 @@ void bx_floppy_ctrl_c::floppy_command(void)
       BX_FD_THIS s.sector[drive]   = sector;
       BX_FD_THIS s.eot[drive]      = eot;
 
-      /* use s.pending_command rather than s.command[0] for non-DMA to work */
-      if ((BX_FD_THIS s.pending_command & 0x4f) == 0x46) { // read
+      if ((BX_FD_THIS s.command[0] & 0x4f) == 0x46) { // read
         floppy_xfer(drive, logical_sector*512, BX_FD_THIS s.floppy_buffer,
                     512, FROM_FLOPPY);
-        /* data reg not ready, controller busy */
+        /* controller busy; if DMA mode, data reg not ready */
         BX_FD_THIS s.main_status_reg &= FD_MS_NDMA;
         BX_FD_THIS s.main_status_reg |= FD_MS_BUSY;
+        if (BX_FD_THIS s.main_status_reg & FD_MS_NDMA) BX_FD_THIS s.main_status_reg |= (FD_MS_MRQ | FD_MS_DIO);
         // time to read one sector at 300 rpm
         sector_time = 200000 / BX_FD_THIS s.media[drive].sectors_per_track;
         bx_pc_system.activate_timer(BX_FD_THIS s.floppy_timer_index,
                                     sector_time , 0);
       } else if ((BX_FD_THIS s.command[0] & 0x7f) == 0x45) { // write
-        /* data reg not ready, controller busy */
+        /* controller busy; if DMA mode, data reg not ready */
         BX_FD_THIS s.main_status_reg &= FD_MS_NDMA;
         BX_FD_THIS s.main_status_reg |= FD_MS_BUSY;
-        if (BX_FD_THIS s.main_status_reg & FD_MS_NDMA) BX_DEBUG(("non-DMA write unimplemented"));
+        if (BX_FD_THIS s.main_status_reg & FD_MS_NDMA) BX_FD_THIS s.main_status_reg |= FD_MS_MRQ;
         else DEV_dma_set_drq(FLOPPY_DMA_CHAN, 1);
       } else {
         BX_PANIC(("floppy_command(): unknown read/write command"));
@@ -1293,7 +1299,9 @@ void bx_floppy_ctrl_c::dma_write(Bit8u *data_byte)
   // We need to return the next data byte from the floppy buffer
   // to be transfered via the DMA to memory. (read block from floppy)
 
-  Bit8u drive = BX_FD_THIS s.DOR & 0x03;
+  Bit8u drive;
+
+  drive = BX_FD_THIS s.DOR & 0x03;
   *data_byte = BX_FD_THIS s.floppy_buffer[BX_FD_THIS s.floppy_buffer_index++];
 
   BX_FD_THIS s.TC = get_tc();
@@ -1322,7 +1330,7 @@ void bx_floppy_ctrl_c::dma_write(Bit8u *data_byte)
     } else { // more data to transfer
       Bit32u logical_sector, sector_time;
 
-      // remember that not all floppies have two sides
+      // remember that not all floppies have two sides, multiply by s.head[drive]
       logical_sector = (BX_FD_THIS s.cylinder[drive] * BX_FD_THIS s.media[drive].heads *
                         BX_FD_THIS s.media[drive].sectors_per_track) +
                        (BX_FD_THIS s.head[drive] *
@@ -1833,7 +1841,7 @@ void bx_floppy_ctrl_c::enter_result_phase(void)
         BX_FD_THIS s.result[i] = BX_FD_THIS s.cylinder[i];
       }
       BX_FD_THIS s.result[4] = (BX_FD_THIS s.SRT << 4) | BX_FD_THIS s.HUT;
-      BX_FD_THIS s.result[5] = (BX_FD_THIS s.HLT << 1) | (BX_FD_THIS s.main_status_reg & FD_MS_NDMA > 0)? 1 : 0;
+      BX_FD_THIS s.result[5] = (BX_FD_THIS s.HLT << 1) | ((BX_FD_THIS s.main_status_reg & FD_MS_NDMA) ? 1 : 0);
       BX_FD_THIS s.result[6] = BX_FD_THIS s.eot[drive];
       BX_FD_THIS s.result[7] = (BX_FD_THIS s.lock << 7) | (BX_FD_THIS s.perp_mode & 0x7f);
       BX_FD_THIS s.result[8] = BX_FD_THIS s.config;
