@@ -24,7 +24,7 @@ checkin:
 	cd .. && cvs commit
 cvsdiff:
 	cd .. && cvs diff
-configure:
+config:
 	cd $(BOCHS) && ./configure \
 	 --enable-vbe \
 	 --enable-cirrus \
@@ -44,9 +44,8 @@ configure:
 	 --enable-cpu-level=6 \
 	 --enable-readline \
 	 $(DEBUG_CONFIG)
-	touch $@
 debug_config:
-	$(MAKE) DEBUG_CONFIG="--enable-debugger --enable-disasm" configure
+	$(MAKE) DEBUG_CONFIG="--enable-debugger --enable-disasm" config
 $(BOCHS)/bochs.exe: $(SOURCES)
 	cd $(BOCHS) && $(MAKE)
 $(BOCHS)/bochsdbg.exe: $(SOURCES)
@@ -55,6 +54,8 @@ distclean:
 	rm -f $(BOCHS)/bochs{,dbg}.exe
 test:
 	cd ../test && $(MAKE)
+debug:
+	cd ../test && $(MAKE) BXDEBUG=1
 %.link:
 	ln -sf floppy.cc.$* floppy.cc
 	ln -sf floppy.h.$* floppy.h
@@ -85,7 +86,7 @@ nolinks:
 	  echo No such file "$$(basename $$file .orig)"; \
 	 fi; \
 	done
-cf.patch:
+cf.patch: $(BOCHS)/bochs.exe
 	-cd $(BOCHS) && cvs diff -u > $(CF_BOCHS)/$@
 cvsupdate:
 	$(MAKE) nolinks
