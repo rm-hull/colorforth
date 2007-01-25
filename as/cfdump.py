@@ -93,6 +93,7 @@ dump = {  # set up globals as dictionary to avoid declaring globals everywhere
  'character_width': 16,  # pixel width of characters, changes to 32 later
  'character_height': 24,  # pixel height of characters, changes to 32 later
  'default_tag': 'define',  # will be set during decompilation
+ 'highlevel': False,  # treat all blocks as high-level code
 }
 
 def extension(prefix, number, suffix):
@@ -434,10 +435,11 @@ def set_default_state(state):
  dump['state'] = 'print according to tag'
  if state:
   dump['state'] = state
- elif dump['block'] < high_level_block and not dump['original']:
-  dump['state'] = 'dump as binary unless packed word'
-  if dump['block'] >= icon_start_block:
-   dump['state'] = 'dump character map'
+ elif not dump['highlevel']:
+  if dump['block'] < high_level_block and not dump['original']:
+   dump['state'] = 'dump as binary unless packed word'
+   if dump['block'] >= icon_start_block:
+    dump['state'] = 'dump character map'
  dump['default_state'] = dump['state']
  dump['printing'] = False
  dump['skip'] = 0
@@ -504,6 +506,9 @@ if __name__ == '__main__':
  os.path.split
  command = os.path.splitext(os.path.split(sys.argv[0])[1])[0]
  sys.argv += ['']  # make sure there's at least 1 arg
+ if sys.argv[1] == '-h' or sys.argv[1] == '--highlevel':
+  sys.argv.pop(0)
+  dump['highlevel'] = True
  (eval(command))(sys.argv[1])
 else:
  pass

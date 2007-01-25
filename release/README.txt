@@ -2,8 +2,7 @@ This is a demo of colorForth running under a patched Bochs emulator. You will
 need to download the latest version of Bochs from bochs.sourceforge.net for
 the necessary BIOS files. This has been tested with Bochs-2.3 only.
 
-The emulation is incomplete. Currently you will not be able to write to the
-floppy image, and keystroke recognition is slow, so be patient. You might
+Keystroke recognition is slow, so be patient. You might
 try changing the IPS (emulated instructions per second) in the bochsrc.bxrc
 file, but I haven't had any luck with it higher or lower than its current
 setting.
