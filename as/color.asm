@@ -261,7 +261,7 @@ abort: mov  curs, edi
     shr  edi, 10-2
     mov  blk, edi
 abort1: mov  esp, gods ;# reset return stack pointer
-    mov  dword ptr  spaces+3*4, offset forthd
+    mov  dword ptr  spaces+3*4, offset forthd ;# reset adefine
     mov  dword ptr  spaces+4*4, offset qcompile
     mov  dword ptr  spaces+5*4, offset cnum
     mov  dword ptr  spaces+6*4, offset cshort
@@ -479,23 +479,23 @@ jump: pop  edx
     drop
     jmp  edx
 
-load: shl  eax, 10-2
-    push edi
+load: shl  eax, 10-2 ;# multiply by 256 longwords, same as 1024 bytes
+    push edi ;# save EDI register, we need it for the inner interpreter loop
     mov  edi, eax
-    drop
-inter: mov  edx, [edi*4]
-    inc  edi
-    and  edx, 017 ;# get only low 4 bits
-    call spaces[edx*4]
-    jmp  inter
+    drop ;# block number from data stack
+inter: mov  edx, [edi*4] ;# get next longword from block
+    inc  edi ;# then point to the following one
+    and  edx, 017 ;# get only low 4 bits, the type tag
+    call spaces[edx*4] ;# call the routine appropriate to this type
+    jmp  inter ;# loop till "nul" reached, which ends the loop
 
 .align 4
 spaces: .long qignore, execute, num
-adefine:
+adefine: ;# where definitions go, either in macrod (dictionary) or forthd
 .ifdef CM2001
     .long forthd ;# as found in CM2001 color.com binary
 .else
-    .long 5+macro_ ;# macrod ?
+    .long macrod ;# default, the macro dictionary
 .endif
     .long qcompile, cnum, cshort, compile
     .long short_, nul, nul, nul
@@ -543,6 +543,9 @@ forth0:
     packword emit, digit, 2emit, ., h., h.n, cr, space, down, edit
     packword e, lm, rm, graphic, text, keyboard, debug, at, +at, xy
     packword fov, fifo, box, line, color, octant, sp, last, unpack
+.ifdef MANDELBROT
+    packword vframe
+.endif
 forth1:
 .ifdef CM2001
 ;# now we are at address 0xacc
@@ -577,6 +580,9 @@ forth2:
     .long emit, edig, emit2, dot10, hdot, hdotn, cr, space, down, edit
     .long e, lms, rms, graphic, text1, keyboard, debug, at, pat, xy_
     .long fov_, fifof, box, line, color, octant, sps, last_, unpack
+.ifdef MANDELBROT
+    .long vframe
+.endif
 0:
 .ifdef CM2001
 ;# in the CM2001 color.com object file, there are 45 entries, starting
@@ -610,18 +616,19 @@ erase:
     drop
     ret
 
-copy: cmp  eax, 12
-    jc   abort1
-    mov  edi, eax
-    shl  edi, 2+8
-    push esi
-    mov  esi, blk
-    shl  esi, 2+8
-    mov  ecx, 256
-    rep movsd
-    pop  esi
-    mov  blk, eax
-    drop
+;# copy block from blk to block number at top-of-stack (in EAX)
+copy: cmp  eax, 12 ;# can't overwrite machine-code blocks...
+    jc   abort1 ;# so if we're asked to, abort the operation
+    mov  edi, eax ;# get block number into EDI
+    shl  edi, 2+8 ;# multiply by 1024 to get physical (byte) address
+    push esi  ;# save data stack pointer so we can use it for block move
+    mov  esi, blk ;# get current block number from blk
+    shl  esi, 2+8 ;# multiply by 1024 to get address
+    mov  ecx, 256 ;# 256 longwords = 1024 bytes
+    rep movsd ;# move the block from source (ESI) to destination (EDI)
+    pop  esi  ;# restore data stack pointer
+    mov  blk, eax ;# destination block becomes new current block (blk)
+    drop ;# no longer need the block number
     ret
 
 debug: mov dword ptr  xy,  offset (3*0x10000+(vc-2)*ih+3)
@@ -1668,14 +1675,17 @@ pad: pop  edx
     jmp  0b
 
 .ifdef OBSOLETE_CM2001
-.org (0x1200-1)*4
+ .org (0x1200-1)*4
     .long 0
 .else
-.include "chars.asm"
+ .include "chars.asm"
 .endif
 .ifdef I_HAVE_AT_LEAST_1GB_RAM
-.incbin "newcode.dat"
+ .incbin "newcode.dat"
 .else
-.incbin "color.dat"
+ .incbin "color.dat"
+.endif
+.ifdef MANDELBROT
+ .incbin "new_mandelbrot.blk"
 .endif
 .end start

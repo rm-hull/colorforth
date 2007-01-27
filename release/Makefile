@@ -3,6 +3,7 @@ BOCHS_SRC := /usr/src/bochs
 CF_SRC := ~/src
 BXSHARE := $(shell cygpath -w $(BOCHS))
 CFIMAGE := a.img
+TIMESTAMP := $(shell date +%Y%m%d%H%M)
 export
 cfbochs.zip: bochs.exe bochsdbg.exe a.img bochsrc.bxrc cfbochs.bat README.txt
 	cp -f $+ cfBochs
@@ -18,3 +19,5 @@ clean:
 	rm -f *.exe a.img *.zip cfBochs/*
 %.exe:
 	ln -sf $(BOCHS_SRC)/$@ .
+upload: cfbochs.zip
+	ncftpput -C upload.sourceforge.net $< incoming/cfbochs-$(TIMESTAMP).zip

@@ -63,6 +63,9 @@ color.com: $(sources) secondpass chars.asm color.dat
 ifdef I_HAVE_AT_LEAST_1GB_RAM
 	$(MAKE) newcode.dat
 endif
+ifdef MANDELBROT
+	$(MAKE) new_mandelbrot.blk
+endif
 	$(GAS) $(foreach definition,$(DEFINES),\
 	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
 	 -ahlns=color.lst --listing-cont-lines=10 -o color.o color.asm
@@ -184,7 +187,35 @@ newcode.asm: forth.asm Makefile
 	 -e 's/,\s*$$//' \
 	 >> $@
 	echo BLOCK >> $@
-color.dat: ../color.com
+	echo BLOCK >> $@  # pad out one more block for even number
+color.dat: ../color.com empty_block.dat
 	dd if=$< of=$@ bs=1024 skip=18
+	if [ "$$(expr $$(du $@ | awk '{print $$1}') % 2)" = "0" ]; then \
+	 cat $(word 2, $+) >> $@; \
+	fi
 %.ans:	%.com
 	cf2ansi $< > $@
+mandelbrot.blk: /usr/src/howerd/MarkSlicker/accept.blk
+	dd if=$< of=$@ bs=1024 skip=64 count=4
+%.dsm:	%.blk forth.asm
+	cat $(word 2, $+) > $@
+	./cf2text -h $< | sed \
+	 -e 's/\(.*\)/\L\1/' \
+	 -e 's/\(\[\w*\]\)/\U\1/g' \
+	 -e 's/{\(block [0-9]\+\)}/\U\1/' \
+	 -e '/^[^B]/ s/\(\S\+\)/"\1",/g' \
+	 -e 's/^\([^B]\)/FORTH \1/' \
+	 -e 's/,\s*$$//' \
+	 >> $@
+	echo BLOCK >> $@
+new_%.blk: %.dsm
+	$(GAS) $(foreach definition,$(DEFINES),\
+	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
+	 -ahlmns=$*.lst --listing-cont-lines=10 \
+	 --reduce-memory-overheads \
+	 -o $*.o $<
+	objcopy $*.o -O binary $@
+empty_block.dat: Makefile
+	dd if=/dev/zero of=$@ bs=1024 count=1
+%.rblk: %.lst  # reverse masm listing into binary
+	sed -n 's/^..........\([0-9A-F]\+\).*/\1/p' "$<" | xxd -r -p > "$@"

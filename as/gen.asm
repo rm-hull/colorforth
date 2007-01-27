@@ -220,3 +220,9 @@ box: ;# draw a box and fill with foreground color
 no: drop
     drop
     ret
+.ifdef MANDELBROT
+vframe:
+    mov eax, frame
+    dup_
+    ret
+.endif

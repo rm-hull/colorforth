@@ -20,7 +20,7 @@ addresses = symbol_table.keys()
 profile = dict(map(None, addresses, [0] * len(addresses)))
 addresses.sort()
 #print repr(addresses)
-debugdatafile = open('../test/newbxnewcf.debug.txt')
+debugdatafile = open(os.path.join(os.getenv('TMP'), 'newbxnewcf.debug.txt'))
 debugdata = debugdatafile.readlines()
 debugdatafile.close()
 for line in debugdata:
