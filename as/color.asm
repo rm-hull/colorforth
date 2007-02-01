@@ -2,6 +2,17 @@
 
 ;#.486p
 
+.ifdef CM2001 ;# Chuck Moore's 2001 code includes AGP-specific video...
+ .equ QUESTIONABLE, 1 ;# ...and other weird stuff found in color.com binary
+ .equ AGP, 1  ;# hard-coded for ATI video
+ .equ E1_STROBE, 1  ;# see 'debugout' macro below
+ .equ AUTO_REFRESH, 1 ;# screen refresh constantly runs
+.endif
+
+.ifdef DMA ;# Terry Loveall/Jeff Fox modifications for floppy DMA
+ .equ E1_STROBE, 1
+.endif
+
 .macro debugout
 /* CM referred to this as "Terry Loveall's e1 strobe" in some online docs, but
 /* I can't find anything regarding port 0xe1 anywhere else, and the data
@@ -11,9 +22,10 @@
 /* milliseconds should be calulated, with a single loop, using the
 /* pc clock chip, like bogoMIPS. or, better yet, the clock should be used for
 /* timing rather than busy-wait loops.
-/* jc is also using this for debugging, with a modified keyboard.cc,
-/* under Bochs. */
+/* */
+.ifdef E1_STROBE
     out 0xe1, al
+.endif
 .endm
 
 ;# can't use loopnz in 32-bit mode
@@ -73,12 +85,6 @@
  .long packed
  .endr
 .endm
-
-.ifdef CM2001 ;# Chuck Moore's 2001 code includes AGP-specific video...
- .equ QUESTIONABLE, 1 ;# ...and other weird stuff found in color.com binary
- .equ AGP, 1
- .equ AUTO_REFRESH, 1 ;# screen refresh constantly runs
-.endif
 
 .ifndef SMALLSCREEN
  .equ hp, 1024 ;# 1024 or 800
@@ -916,9 +922,6 @@ key: ;# loop forever, returning keyhits when available
     test al, 1       ;# see if there is a byte waiting
     jz   0b          ;# if not, loop
     in   al, 0x60    ;# fetch the scancode
-.ifdef DEBUG_KBD
-    debugout
-.endif
     test al, 0xf0    ;# top row of keyboard generates scancodes < 0x10
     jz   0b          ;# we don't use that row (the numbers row), so ignore it
     cmp  al, 58      ;# 57, right shift, is the highest scancode we use

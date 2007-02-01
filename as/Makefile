@@ -208,7 +208,7 @@ mandelbrot.blk: /usr/src/howerd/MarkSlicker/accept.blk
 	 -e 's/,\s*$$//' \
 	 >> $@
 	echo BLOCK >> $@
-new_%.blk: %.dsm
+new_%.blk: new_%.dsm
 	$(GAS) $(foreach definition,$(DEFINES),\
 	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
 	 -ahlmns=$*.lst --listing-cont-lines=10 \

@@ -1,6 +1,7 @@
 .intel_syntax ;# floppy boot segment
 .ifdef DMA
 ;# Floppy boot segment. Modified 7/17/01 for Asus P2B-D Floppy I/O Terry Loveall
+;# Modified again by, or at least used by, Jeff Fox in his 2005 binaries
 .endif
 
 .org 0 ;# actually 7c00
@@ -34,6 +35,7 @@ cylinder:
     .byte 1 ;# 1 in compiled color.com from CM website
 ;# causes load to skip from cylinder 0 directly to cylinder 2,
 ;# missing bytes 0x4800 to 0x9000 in color.com image
+;# same problem in Jeff Fox's 2005 code
 .else
     .byte 0
 .endif
@@ -63,7 +65,7 @@ gdt0: .word 0, 0, 0, 0
     .word 0x0ffff, 0, 0x9200, 0x0cf ;# data
 
 ;# code is compiled in protected 32-bit mode.
-;# hence;#  .org .-2  to fix 16-bit words
+;# hence (original code uses) .org .-2  to fix 16-bit words
 ;# and 4 hand-assembled instructions.
 ;# and eax and ax exchanged
 ;# this code is in real 16-bit mode
@@ -147,10 +149,13 @@ a20:
     cmp  dword ptr [esi], 0x44444444 ;# boot?
     jnz  cold
 .else
-    cmp  si, 0x7c00+0x200 ;# boot?
-    jz   cold
+    mov  eax, 512*18*2-1 ;# DMA channel 2 (0x47ff)
+    call dma
     shl  ebx, 4
     add  esi, ebx
+;# if we just copied the bootsector to 0, ESI will point to 0x7c00+200
+    cmp  si, 0x7e00 ;# boot?
+    jz   cold
 .endif
     mov  cx, 63*0x100-0x80 ;# nope
     rep movsd
@@ -163,10 +168,6 @@ cold:
     jns  cold
 .endif
     mov  esi, offset godd ;# 0x9f448, 3000 bytes below 0xa0000 (gods)
-.ifdef DMA
-    call spin
-    call dma
-.endif
     xor  edi, edi ;# cylinder 0 on top of address 0
 .ifdef DMA
     call read
@@ -185,7 +186,7 @@ cold:
     loop 0b
 .ifndef DMA
 start2: call stop
-    jmp  start1
+    jmp  start1 ;# start1 is outside of bootsector
 .endif
 .equ us, 1000/6
 .equ ms, 1000*us
@@ -218,9 +219,7 @@ cmdi: call sense_
 ready: ;#call delay
     mov  dx, 0x3f4
 0:  in   al, dx
-.ifdef CM2001
     debugout
-.endif
     shl  al, 1
     jnc  0b
     lea  edx, [edx+1] ;# doesn't affect flags as INC would
@@ -241,9 +240,7 @@ cmd1:
     jmp  cmd1
 0:  lodsb
     out  dx, al
-.ifdef CM2001
     debugout
-.endif
     loop cmd1
     pop  esi
     ret
@@ -267,13 +264,6 @@ cmd1:
     loop 0b
     pop  esi
     ret
-transfer:
-    mov  cl, 9
-    call cmd
-    inc  byte ptr cylinder
-0:  call ready
-    jns  0b
-    ret
 .endif
 sense_: mov  al, 8
     mov  ecx, 1
@@ -285,9 +275,7 @@ sense_: mov  al, 8
     call ready
 .endif
     in   al, dx
-.ifdef CM2001
     debugout
-.endif
     and  al, al
 ;#  cmp  al, 0x80
     ret
@@ -312,8 +300,8 @@ stop:
 .ifndef DMA
     mov  cl, 0x0c ;# motor off
 .else
+    mov  dword ptr trash, buffer*4 ;# 0x97000 in CM2001, used for DMA?
     mov  al, 0x0c
-    mov  dword ptr trash, buffer*4
 .endif
 onoff:
 .ifndef DMA
@@ -321,12 +309,16 @@ onoff:
     mov  al, cl
 .endif
     mov  dx, 0x3f2
-    out  dx, al
-.ifdef CM2001
-    debugout
+.ifdef DMA
+    mov  ah, 0xf  ;# for timing in JF2005 DMA version
 .endif
+    out  dx, al
+0:  debugout
 .ifndef DMA
     drop
+.else
+    dec  ah
+    jnz  0b
 .endif
     ret
 
@@ -344,23 +336,30 @@ dma:
     mov  dword ptr command, ecx ;# 0
     ret
 .else
+    out  5, al ;# set DMA ch.2 base and current count to 0x47ff
+    mov  al, ah
+    out  5, al
+    mov  eax, buffer*4 ;# 0x97000 in CM2001
+    out  4, al ;# set DMA-1 base and current address to "trash" buffer
+    mov  al, ah
+    out  4, al
+    shr  eax, 16 ;# load page register value into al (9)
+    out  0x81, al ;# set DMA-1 page register 2 = 09
+    mov  al, 0xb
+    out  0xf, al ;# write all mask bits, address = 0xb, value = 16
     mov  word ptr command+1, 0x2a1 ;# 2 6 16 ms (e 2)
     mov  al, 3 ;# timing
     mov  cl, 3
     call cmd
     mov  word ptr command+1, 0
-    mov  eax, buffer*4 ;# 0x7000 in CM2001
-    out  4, al ;# set DMA-1 base and current address to 0x7000
-    mov  al, ah
-    out  4, al
-    shr  eax, 16 ;# load page register value into al (9)
-    out  0x81, al ;# set DMA-1 page register 2 = 09
-    mov  eax, 512*18*2-1 ;# DMA channel 2
-    out  5, al ;# set DMA-1 base and current count to 0x47ff
-    mov  al, ah
-    out  5, al
-    mov  al, 0xb
-    out  0xf, al ;# write all mask bits, address = 0xb, value = 16
+    ret
+
+transfer:
+    mov  cl, 9
+    call cmd
+    inc  byte ptr cylinder
+0:  call ready
+    jns  0b
     ret
 .endif
 read:
@@ -384,9 +383,7 @@ read:
     mov  cx, 18*2*512 ;# two heads, 18 sectors/track, 512 bytes/sector
 0:  call ready
     in   al, dx
-.ifdef CM2001
     debugout
-.endif
     stosb
     next 0b
 .endif
@@ -417,9 +414,7 @@ write:
 0:  call ready
     lodsb
     out  dx, al
-.ifdef CM2001
     debugout
-.endif
     next 0b
     ret
 .endif
@@ -447,9 +442,7 @@ flop:
     dup_
     mov  dx, 0x3f2
     in   al, dx
-.ifdef CM2001
     debugout
-.endif
     test al, 0x10
     jnz  0f
     jmp  spin
