@@ -99,6 +99,7 @@ start0:
     mov  di, ax
     mov  bx, cs
     mov  ds, bx
+    mov  es, ax ;# not necessary at boot but perhaps from comfile
 .endif
 .code16
     call loc ;# where are we? ip+4*cs
@@ -108,18 +109,18 @@ loc: pop  si
 ;# compile as 32-bit code here so it moves longwords and not words
 .code32
     rep movsw
-;#  jmp  0:relocate
+;#    jmp  0:relocate
     .byte 0x0ea
     .word relocate-start, 0
 
 relocate: ;# this code is executed from an offset of 0, not 0x7c00
     mov  ds, ax
-;#  lgdt fword ptr gdt
+;#    lgdt qword ptr gdt
     .byte 0x0f, 1, 0x16
     .word gdt-start
     mov  al, 1
     mov  cr0, eax
-;#  jmp  8:protected
+;#    jmp  8:protected
     .byte 0x0ea
     .word protected-start, 8
 
@@ -142,23 +143,22 @@ a20:
     jnz  0b
     mov  al, 0x4b
     out  0x60, al ;# to keyboard, enable A20
-.ifndef DMA
-    call dma ;# set up for non-dma floppy access
-    shl  ebx, 4
-    add  esi, ebx
-    cmp  dword ptr [esi], 0x44444444 ;# boot?
-    jnz  cold
-.else
+.ifdef DMA
     mov  eax, 512*18*2-1 ;# DMA channel 2 (0x47ff)
+.endif
     call dma
     shl  ebx, 4
     add  esi, ebx
+.ifdef QUESTIONABLE
+    cmp  dword ptr [esi], 0x44444444 ;# boot?
+    jnz  cold
+.else
 ;# if we just copied the bootsector to 0, ESI will point to 0x7c00+200
     cmp  si, 0x7e00 ;# boot?
     jz   cold
 .endif
     mov  cx, 63*0x100-0x80 ;# nope
-    rep movsd
+    rep  movsd
     mov  esi, offset godd ;# 0x9f448, 3000 bytes below 0xa0000 (gods)
     jmp  start2
 
@@ -184,10 +184,9 @@ cold:
 .endif
     pop  ecx
     loop 0b
-.ifndef DMA
-start2: call stop
+start2:
+    call stop
     jmp  start1 ;# start1 is outside of bootsector
-.endif
 .equ us, 1000/6
 .equ ms, 1000*us
 spin:
@@ -196,7 +195,7 @@ spin:
     call onoff
     mov  ecx, 400*ms ;# what processor speed was this set for?
 0:  loop 0b  ;# damn but I hate busy-waits (jc)
-    mov  cylinder, cl ;# calibrate
+;#    mov  cylinder, cl ;# calibrate
     mov  al, 7 ;# recalibrate command
     mov  cl, 2
     jmp  cmdi
@@ -246,27 +245,33 @@ cmd1:
     ret
 .else
 cmd:
+    lea  edx, command
+    mov  [edx], al
     push esi
-    lea  esi, command
-    mov  [esi], al
+    mov  esi, edx
 0:  call ready
     jns  cmd0
     in   al, dx
+    debugout
     jmp  0b
 cmd0:
     lodsb
+    mov  ah, 0x1e  ;# delay loop in JF2005 code
     out  dx, al
-    push ecx
-    mov  ecx,0x1e
-cmd1:
-    loop cmd1
-    pop  ecx
+1:
+    debugout
+    dec  ah
+    jne  1b
     loop 0b
     pop  esi
     ret
 .endif
 sense_: mov  al, 8
+.ifdef CM2001
     mov  ecx, 1
+.else
+    mov  cl, 1
+.endif
     call cmd
 .ifndef DMA
 0:  call ready
@@ -336,17 +341,17 @@ dma:
     mov  dword ptr command, ecx ;# 0
     ret
 .else
-    out  5, al ;# set DMA ch.2 base and current count to 0x47ff
+    out  5, al ;# set DMA-1 ch.2 base and current count to 0x47ff
     mov  al, ah
     out  5, al
     mov  eax, buffer*4 ;# 0x97000 in CM2001
-    out  4, al ;# set DMA-1 base and current address to "trash" buffer
+    out  4, al ;# set DMA-1 ch.2 base and current address to "trash" buffer
     mov  al, ah
     out  4, al
     shr  eax, 16 ;# load page register value into al (9)
     out  0x81, al ;# set DMA-1 page register 2 = 09
     mov  al, 0xb
-    out  0xf, al ;# write all mask bits, address = 0xb, value = 16
+    out  0xf, al ;# write all mask bits, address = 0xf, value = 0xb
     mov  word ptr command+1, 0x2a1 ;# 2 6 16 ms (e 2)
     mov  al, 3 ;# timing
     mov  cl, 3
@@ -391,9 +396,9 @@ read:
 
 ;# don't need 'write' till after bootup
 .ifndef CM2001
-.org 0x1fe ;# mark boot sector
-    .word 0x0aa55
-;# end of boot sector
+    .org 0x1fe
+    .word 0x0aa55 ;# mark boot sector
+    ;# end of boot sector
     .long 0x44444444 ;# mark color.com
 .endif
 
@@ -420,9 +425,9 @@ write:
 .endif
 
 .ifdef CM2001
-.org 0x1fe ;# mark boot sector
-    .word 0x0aa55
-;# end of boot sector
+    .org 0x1fe
+    .word 0x0aa55 ;# mark boot sector
+    ;# end of boot sector
     .long 0x44444444 ;# mark color.com
 .endif
 

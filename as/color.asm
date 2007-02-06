@@ -9,10 +9,6 @@
  .equ AUTO_REFRESH, 1 ;# screen refresh constantly runs
 .endif
 
-.ifdef DMA ;# Terry Loveall/Jeff Fox modifications for floppy DMA
- .equ E1_STROBE, 1
-.endif
-
 .macro debugout
 /* CM referred to this as "Terry Loveall's e1 strobe" in some online docs, but
 /* I can't find anything regarding port 0xe1 anywhere else, and the data
@@ -89,8 +85,10 @@
 .ifndef SMALLSCREEN
  .equ hp, 1024 ;# 1024 or 800
  .equ vp, 768 ;# 768 or 600
-.ifdef CM2001
+.if CM2001 - 1 == 0
  .equ vesa, 0x0117 ;# 1024x768 mode
+.elseif DMA - 1 == 0
+ .equ vesa, 0x4118
 .else
  .equ vesa, 0x4117 ;# bit 12 sets linear address mode in 0x117 or 0x114
 .endif ;# CM2001

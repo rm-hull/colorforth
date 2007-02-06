@@ -44,7 +44,7 @@ recipes += octal hex macro includes directives unused
 recipes += byte word dword here equ labels dup ascii
 recipes += offset orgminus use16 use32
 sed := sed $(foreach regex, $(recipes), $($(regex)))
-GAS := as -R
+GAS := as -R -Z
 DEFINES := $(shell cat *.asm | grep '\.ifn\?def' | \
  awk '{print $$2}' | sort | uniq)
 export
@@ -85,6 +85,8 @@ small:	color.asm
 cm2001: color.asm
 	touch $<
 	$(MAKE) CM2001=1 color.com
+jf2005: color.asm
+	$(MAKE) DMA=1 AGP=1 E1_STROBE=1 QUESTIONABLE=1 color.com
 $(sources): $(original)
 	for file in $+; do \
 	 $(sed) $$file | sed $(code16) | \
@@ -219,3 +221,12 @@ empty_block.dat: Makefile
 	dd if=/dev/zero of=$@ bs=1024 count=1
 %.rblk: %.lst  # reverse masm listing into binary
 	sed -n 's/^..........\([0-9A-F]\+\).*/\1/p' "$<" | xxd -r -p > "$@"
+boot.blk: color.com
+	dd if=$< of=$@ bs=512 count=1
+boot.dsm: boot.blk
+	objdump --target binary \
+	 --architecture i386 \
+	 --disassemble-all \
+	 --no-show-raw-insn \
+	 --disassembler-options=intel \
+	 $< > $@

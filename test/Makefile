@@ -12,12 +12,12 @@ default: newbxnewcf
 	uniq -f 4 -c $< > $@
 %cf.uniq.txt: %cf.txt
 	uniq -f 1 -c $< > $@
-oldbx%: template.bxrc a.img b.img
+oldbx%: logging.bxrc a.img b.img
 	-export BXRC=$@ && \
 	export BOOTFLOPPY=$($*) && \
 	export OTHERFLOPPY=$(filter-out $< $($*),$+) && \
 	if [ "$(BXDEBUG)" ]; then \
-	 $(BOCHS)/bochsdbg -f template.bxrc -q; \
+	 $(BOCHS)/bochsdbg -f logging.bxrc -q; \
 	else \
 	 $(BOCHS)/bochs -f $< -q; \
 	fi
@@ -26,7 +26,7 @@ oldbx%: template.bxrc a.img b.img
 	$(MAKE) $(TEMP)/$@.uniq.txt
 	$(MAKE) $(TEMP)/$@.debug.uniq.txt
 	less $(TEMP)/$@.uniq.txt
-newbx%: template.bxrc a.img b.img
+newbx%: logging.bxrc a.img b.img
 	-export BXRC=$@ && \
 	export BOOTFLOPPY=$($*) && \
 	export OTHERFLOPPY=$(filter-out $< $($*),$+) && \
@@ -40,13 +40,17 @@ newbx%: template.bxrc a.img b.img
 	$(MAKE) $(TEMP)/$@.uniq.txt
 	$(MAKE) $(TEMP)/$@.debug.uniq.txt
 	less $(TEMP)/$@.uniq.txt
+%:	b.img %.bxrc
+	-export BXRC=$* && \
+	 export BOOTFLOPPY=$< && \
+	 $(BOCHS_SRC)/bochs -f $*.bxrc -q;
 a.img:	$(CF_SRC)/colorforth/color.com
 	dd if=/dev/zero of=$@ bs=1024 count=1440
 	dd if=$< of=$@ conv=notrunc
 b.img:	$(CF_SRC)/colorforth/as/color.com
 	dd if=/dev/zero of=$@ bs=1024 count=1440
 	dd if=$< of=$@ conv=notrunc
-vmware: cf.vmx a.img
+vmware: cf.vmx b.img
 	$(VMWARE)/vmplayer.exe cf.vmx
 clean:
 	rm -f new*.txt old*.txt cf.{vmem,vmss,vmsd} *.img *.log *.vmem \
