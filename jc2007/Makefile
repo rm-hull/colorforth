@@ -48,18 +48,7 @@ GAS := as -R -Z
 DEFINES := $(shell cat *.asm | grep '\.ifn\?def' | \
  awk '{print $$2}' | sort | uniq)
 export
-help:
-	@echo To build the most universally usable color.com: make new
-	@echo To build the closest thing to CM\'s 2001 color.com: make cm2001
-	@echo Read Makefile for other options.
-%.dat:	%.asm
-	$(GAS) $(foreach definition,$(DEFINES),\
-	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
-	 -ahlmns=$*.lst --listing-cont-lines=10 \
-	 --reduce-memory-overheads \
-	 -o $*.o $<
-	objcopy $*.o -O binary $@
-color.com: $(sources) secondpass chars.asm color.dat
+color.com: $(sources) chars.asm color.dat
 ifdef I_HAVE_AT_LEAST_1GB_RAM
 	$(MAKE) newcode.dat
 endif
@@ -70,9 +59,13 @@ endif
 	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
 	 -ahlns=color.lst --listing-cont-lines=10 -o color.o color.asm
 	objcopy color.o -O binary $@
-new:	color.asm
-	touch $<
-	$(MAKE) color.com
+%.dat:	%.asm
+	$(GAS) $(foreach definition,$(DEFINES),\
+	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
+	 -ahlmns=$*.lst --listing-cont-lines=10 \
+	 --reduce-memory-overheads \
+	 -o $*.o $<
+	objcopy $*.o -O binary $@
 newcode: color.asm newcode.dat
 	touch $<
 	$(MAKE) I_HAVE_AT_LEAST_1GB_RAM=1 color.com
@@ -128,12 +121,6 @@ download: $(original) # in case we accidentally overwrote them (shit happens)
 	 wget -O $$file http://ftp.ultratechnology.com/$$fetch \
 	 ;done
 	sed -i 's/\r//' $+ # get rid of embedded CRs from DOS
-firstpass: color.asm instruction_fixup.sh
-	$(GAS) $< 2>&1 | ./instruction_fixup.sh
-	touch $@
-secondpass: color.asm firstpass
-	$(GAS) $< 2>&1 | ./instruction_fixup.sh 2
-	touch $@
 regex:
 	@echo Use as follows: 'make REGEX="directives offset" regex'
 	@echo Full list of recipes: $(recipes)
