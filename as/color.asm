@@ -87,7 +87,7 @@
  .equ vp, 768 ;# 768 or 600
 .if CM2001 - 1 == 0
  .equ vesa, 0x0117 ;# 1024x768 mode
-.elseif DMA - 1 == 0
+.elseif JF2005 - 1 == 0
  .equ vesa, 0x4118
 .else
  .equ vesa, 0x4117 ;# bit 12 sets linear address mode in 0x117 or 0x114

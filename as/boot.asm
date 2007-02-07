@@ -60,9 +60,9 @@ gdt: .word 0x17
      cs mov eax, eax
 .endif
 .align 8 ;# more garbage possibly in disassembly here, ignore it
-gdt0: .word 0, 0, 0, 0
-    .word 0x0ffff, 0, 0x9a00, 0x0cf ;# code
-    .word 0x0ffff, 0, 0x9200, 0x0cf ;# data
+gdt0: .word 0, 0, 0, 0 ;# null descriptor, not used
+    .word 0x0ffff, 0, 0x9a00, 0x0cf ;# code, linear addressing from 0
+    .word 0x0ffff, 0, 0x9200, 0x0cf ;# data, linear addressing from 0
 
 ;# code is compiled in protected 32-bit mode.
 ;# hence (original code uses) .org .-2  to fix 16-bit words
@@ -120,12 +120,12 @@ relocate: ;# this code is executed from an offset of 0, not 0x7c00
     .word gdt-start
     mov  al, 1
     mov  cr0, eax
-;#    jmp  8:protected
+;#    jmp  8:protected ;# code selector is offset 8
     .byte 0x0ea
     .word protected-start, 8
 
 protected: ;# now in protected 32-bit mode
-    mov  al, 0x10
+    mov  al, 0x10 ;# linear data selector (offset into GDT)
     mov  ds, eax
     mov  es, eax
     mov  ss, eax

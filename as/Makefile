@@ -86,7 +86,7 @@ cm2001: color.asm
 	touch $<
 	$(MAKE) CM2001=1 color.com
 jf2005: color.asm
-	$(MAKE) DMA=1 AGP=1 E1_STROBE=1 QUESTIONABLE=1 color.com
+	$(MAKE) DMA=1 JF2005=1 AGP=1 E1_STROBE=1 QUESTIONABLE=1 color.com
 $(sources): $(original)
 	for file in $+; do \
 	 $(sed) $$file | sed $(code16) | \
