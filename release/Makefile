@@ -4,6 +4,7 @@ CF_SRC := ~/src
 BXSHARE := $(shell cygpath -w $(BOCHS))
 CFIMAGE := a.img
 TIMESTAMP := $(shell date +%Y%m%d%H%M)
+NSIS := /cygdrive/c/Program\ Files/NSIS/makensis.exe
 export
 cfbochs.zip: bochs.exe bochsdbg.exe a.img bochsrc.bxrc cfbochs.bat README.txt
 	cp -f $+ cfBochs
@@ -18,6 +19,10 @@ test:	cfbochs.zip
 clean:
 	rm -f *.exe a.img *.zip cfBochs/*
 %.exe:
-	ln -sf $(BOCHS_SRC)/$@ .
+	cp -f $(BOCHS_SRC)/$@ .
 upload: cfbochs.zip
 	ncftpput -C upload.sourceforge.net $< incoming/cfbochs-$(TIMESTAMP).zip
+cfbochs.exe: cfbochs.nsi LICENSE.txt cfbochs.zip
+	$(NSIS) $<
+LICENSE.txt: NOLICENSE.txt /usr/src/bochs/COPYING
+	cat $+ > $@
