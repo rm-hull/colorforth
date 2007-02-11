@@ -26,3 +26,7 @@ cfbochs.exe: cfbochs.nsi LICENSE.txt cfbochs.zip
 	$(NSIS) $<
 LICENSE.txt: NOLICENSE.txt /usr/src/bochs/COPYING
 	cat $+ > $@
+nsiscommands:
+	$(NSIS) /CMDHELP
+nsishelp:
+	$(NSIS) /?

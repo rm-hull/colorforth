@@ -27,7 +27,7 @@ BGGradient 000000 800000 FFFFFF
 InstallColors FF8080 000030
 XPStyle on
 
-InstallDir "$PROGRAMFILES\net\sourceforge\colorforth"
+InstallDir "$APPDATA\net\sourceforge\colorforth"
 InstallDirRegKey HKLM "Software\net\sourceforge\colorforth" ""
 
 CheckBitmap "${NSISDIR}\Contrib\Graphics\Checks\classic-cross.bmp"
@@ -60,6 +60,10 @@ ShowInstDetails show
 
 Section "" ; empty string makes it hidden, so would starting with -
 
+  IfFileExists $PROGRAMFILES\Bochs-2.3\BIOS-bochs-latest continue 0
+   MessageBox MB_OK "You need Bochs-2.3 to be installed in order to run cfBochs. Install it from http://sourceforge.net/projects/bochs/, then re-run this installer."
+   Quit
+  continue:
   ; write registry string
   WriteRegStr HKLM SOFTWARE\net\sourceforge\colorforth "Install_Dir" "$INSTDIR"
 
@@ -78,7 +82,7 @@ Section "Copy Files"
   SectionIn 1
 
   SetOutPath $INSTDIR
-  File /a "bochs.exe"
+  File /a "bochs.exe" "bochsrc.bxrc" "cfbochs.bat" "a.img"
 
 SectionEnd
 
@@ -87,9 +91,9 @@ Section "Create Shortcuts"
   SectionIn 1
   CreateDirectory "$SMPROGRAMS\cfBochs"
   SetOutPath $INSTDIR ; for working directory
-  CreateShortCut "$SMPROGRAMS\cfBochs\cfBochs.lnk" "$INSTDIR\bochs.exe" "-q" "" 0
+  CreateShortCut "$SMPROGRAMS\cfBochs\cfBochs.lnk" "$INSTDIR\cfbochs.bat" "" "$INSTDIR\bochs.exe" 0
   CreateShortCut "$SMPROGRAMS\cfBochs\Uninstall cfBochs.lnk" "$INSTDIR\unwise.exe" ; use defaults for parameters, icon, etc.
-  CreateShortCut "$DESKTOP\cfBochs.lnk" "$INSTDIR\bochs.exe" "" ""
+  CreateShortCut "$DESKTOP\cfBochs.lnk" "$INSTDIR\cfbochs.bat" "" "$INSTDIR\bochs.exe" 0
 
 SectionEnd
 
@@ -105,8 +109,13 @@ Section "Uninstall"
   DeleteRegKey HKLM "SOFTWARE\net\sourceforge\colorforth"
   Delete "$INSTDIR\unwise.exe"
   Delete "$INSTDIR\bochs.exe"
+  Delete "$INSTDIR\cfbochs.bat"
+  Delete "$INSTDIR\bochsrc.bxrc"
+  Delete "$INSTDIR\a.img"
+  Delete "$INSTDIR\cfBochs.log"
   Delete "$DESKTOP\cfBochs.lnk"
   Delete "$SMPROGRAMS\cfBochs\Uninstall cfBochs.lnk"
+  Delete "$SMPROGRAMS\cfBochs\cfBochs.lnk"
   RMDir "$SMPROGRAMS\cfBochs"
   RMDir "$INSTDIR"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\cfBochs"
