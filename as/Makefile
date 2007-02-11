@@ -59,7 +59,7 @@ help:
 	 --reduce-memory-overheads \
 	 -o $*.o $<
 	objcopy $*.o -O binary $@
-color.com: $(sources) secondpass chars.asm color.dat
+color.com: $(sources) chars.asm color.dat
 ifdef I_HAVE_AT_LEAST_1GB_RAM
 	$(MAKE) newcode.dat
 endif
