@@ -117,8 +117,6 @@ loc: pop  si
 relocate: ;# this code is executed from an offset of 0, not 0x7c00
     mov  ds, ax
     lgdt [gdt]
-;#    .byte 0x0f, 1, 0x16
-;#    .word gdt-start
     mov  al, 1
     mov  cr0, eax
 ;#    jmp  8:protected ;# code selector is offset 8
