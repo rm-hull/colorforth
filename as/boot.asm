@@ -110,18 +110,14 @@ loc: pop  si
 .code32
     rep movsw
 .code16
-;#    jmp  0:relocate
-    .byte 0x0ea
-    .word relocate-start, 0
+    jmp 0:offset relocate
 
 relocate: ;# this code is executed from an offset of 0, not 0x7c00
     mov  ds, ax
     lgdt [gdt]
     mov  al, 1
     mov  cr0, eax
-;#    jmp  8:protected ;# code selector is offset 8
-    .byte 0x0ea
-    .word protected-start, 8
+    jmp  8:offset protected ;# code selector is offset 8
 .code32
 protected: ;# now in protected 32-bit mode
     mov  al, 0x10 ;# linear data selector (offset into GDT)
