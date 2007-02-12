@@ -82,7 +82,7 @@ Section "Copy Files"
   SectionIn 1
 
   SetOutPath $INSTDIR
-  File /a "bochs.exe" "bochsrc.bxrc" "cfbochs.bat" "a.img"
+  File /a "bochs.exe" "bochsrc.bxrc" "cfbochs.bat" "a.img" "LICENSE.rtf" "README.rtf"
 
 SectionEnd
 
@@ -93,6 +93,8 @@ Section "Create Shortcuts"
   SetOutPath $INSTDIR ; for working directory
   CreateShortCut "$SMPROGRAMS\cfBochs\cfBochs.lnk" "$INSTDIR\cfbochs.bat" "" "$INSTDIR\bochs.exe" 0
   CreateShortCut "$SMPROGRAMS\cfBochs\Uninstall cfBochs.lnk" "$INSTDIR\unwise.exe" ; use defaults for parameters, icon, etc.
+  CreateShortCut "$SMPROGRAMS\cfBochs\License.lnk" "$INSTDIR\LICENSE.rtf" "" "" 
+  CreateShortCut "$SMPROGRAMS\cfBochs\Readme.lnk" "$INSTDIR\README.rtf" "" "" 
   CreateShortCut "$DESKTOP\cfBochs.lnk" "$INSTDIR\cfbochs.bat" "" "$INSTDIR\bochs.exe" 0
 
 SectionEnd
@@ -112,10 +114,14 @@ Section "Uninstall"
   Delete "$INSTDIR\cfbochs.bat"
   Delete "$INSTDIR\bochsrc.bxrc"
   Delete "$INSTDIR\a.img"
+  Delete "$INSTDIR\README.rtf"
+  Delete "$INSTDIR\LICENSE.rtf"
   Delete "$INSTDIR\cfBochs.log"
   Delete "$DESKTOP\cfBochs.lnk"
   Delete "$SMPROGRAMS\cfBochs\Uninstall cfBochs.lnk"
   Delete "$SMPROGRAMS\cfBochs\cfBochs.lnk"
+  Delete "$SMPROGRAMS\cfBochs\License.lnk"
+  Delete "$SMPROGRAMS\cfBochs\Readme.lnk"
   RMDir "$SMPROGRAMS\cfBochs"
   RMDir "$INSTDIR"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\cfBochs"

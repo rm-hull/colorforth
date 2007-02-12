@@ -17,12 +17,12 @@ set:
 test:	cfbochs.zip
 	cp $< /cygdrive/c/WINDOWS/Temp/
 clean:
-	rm -f *.exe a.img *.zip cfBochs/*
+	rm -f *.exe a.img *.zip *.rtf cfBochs/* LICENSE.txt
 %.exe:
 	cp -f $(BOCHS_SRC)/$@ .
-upload: cfbochs.zip
-	ncftpput -C upload.sourceforge.net $< incoming/cfbochs-$(TIMESTAMP).zip
-cfbochs.exe: cfbochs.nsi LICENSE.txt cfbochs.zip
+upload: cfbochs.exe
+	ncftpput -C upload.sourceforge.net $< incoming/cfbochs-$(TIMESTAMP).exe
+cfbochs.exe: cfbochs.nsi LICENSE.rtf README.rtf cfbochs.zip
 	$(NSIS) $<
 LICENSE.txt: NOLICENSE.txt /usr/src/bochs/COPYING
 	cat $+ > $@
@@ -30,3 +30,5 @@ nsiscommands:
 	$(NSIS) /CMDHELP
 nsishelp:
 	$(NSIS) /?
+%.rtf: %.txt  # to force association to something other than Notepad
+	cp $< $@
