@@ -60,7 +60,7 @@ debug:
 	ln -sf floppy.cc.$* floppy.cc
 	ln -sf floppy.h.$* floppy.h
 	touch floppy.cc floppy.h
-links:	*.cc *.h
+links:	$(wildcard *.cc *.h)
 	for file in $+; do \
 	 declare original=$$(find $(BOCHS) -maxdepth 2 -name $$file); \
 	 if [ -f $$original.orig ]; then \
