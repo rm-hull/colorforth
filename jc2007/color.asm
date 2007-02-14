@@ -61,18 +61,18 @@
 .equ hp, 1024 ;# 1024 or 800
 .equ vp, 768 ;# 768 or 600
 .equ vesa, 0x4117 ;# bit 12 sets linear address mode in 0x117 or 0x114
-.equ buffer, 604*256
 .include "boot.asm" ;# boot boot0 hard
 
 ;#   100000 dictionary
 ;#    a0000 top of return stack
 ;#    9f800 top of data stack
 ;#    9d800 free
-;#    97000 floppy buffer
-;#     4800 source ;# block 18, first high-level source block (load screen)
-.equ icons, 12*256*4 ;# 3000, block 12 start of character maps
+;#     9400 source ;# block 18, first high-level source block (load screen)
+.equ icons, moveto + 12 * 256 * 4 ;# 3000, block 12 start of character maps
 ;#     7c00 bios boot sector
-;#        0 forth
+;#     4c00 forth bootcode
+;#      400 floppy buffer (0x4800 bytes)
+;#        0 BIOS interrupt table
 
 warm: dup_
 start1:
@@ -95,6 +95,7 @@ start1:
 .equ godd, gods-750*4 ;# 0x9f448, top of data stack
 .equ mains, godd-1500*4 ;# 0x9dcd8
 .equ maind, mains-750*4 ;# 0x9d120
+.equ buffer, maind-1500*4 ;# edit buffer, grows up not down
 .align 4
 ;# 'me' points to the save slot for the current task
 me: .long god
@@ -1256,7 +1257,7 @@ curs: .long 0
 cad: .long 0
 pcad: .long 0
 lcad: .long 0
-trash: .long buffer*4
+trash: .long buffer
 
 /* the editor keys and their actions */
 ekeys:
@@ -1382,7 +1383,7 @@ eout: pop  eax
 
 /* insert, or paste */
 destack: mov  edx, trash ;# grab what was left by last "cut" operation
-    cmp  edx, buffer*4 ;# anything in there?
+    cmp  edx, buffer ;# anything in there?
     jnz  0f ;# continue if so...
     ret  ;# otherwise, 'insert' is already the default action so nothing to do
 0:  sub  edx, 2*4

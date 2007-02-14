@@ -1,5 +1,8 @@
 .intel_syntax ;# floppy boot segment
-.equ moveto, 0x400 ;# relocate past BIOS interrupt table
+;# relocate past BIOS interrupt table (0x400 bytes) and floppy IO buffer
+.equ iobuffer, 0x400
+.equ buffersize, 0x4800
+.equ moveto, iobuffer + buffersize
 .org 0 ;# actually 7c00
 start: jmp  start0
     nop
@@ -92,8 +95,10 @@ sixteenbit:
     jmp  0:offset cold + moveto ;# far JMP puts us in unreal mode
 cold:
 .code16 ;# need 32-bit code prefix for 32-bit operations
+    sti  ;# reenable interrupts
     addr32 mov esi, offset godd ;# 0x9f448, 3000 bytes below 0xa0000 (gods)
-    xor  edi, edi ;# cylinder 0 on top of address 0
+    mov edi, moveto ;# cylinder 0 overwrites this relocated bootcode
+    ;# make sure we don't depend on any of the data we've modified since boot
     call read
     inc byte ptr cylinder
     mov  cl, byte ptr nc ;# number of cylinders used
@@ -155,7 +160,7 @@ cmdi:
     ret
 
 stop:
-    mov  dword ptr trash, buffer*4 ;# 0x97000 in CM2001, used for DMA?
+    mov  dword ptr trash, offset buffer ;# initialize edit buffer
     mov  al, 0x0c
 onoff:
     mov  dx, 0x3f2
@@ -176,19 +181,25 @@ dma:
     ret
 
 read:
-    mov  al, 0x16 ;# read DMA 2
-    call seek
-    mov  al, 0x0e6 ;# read normal data
-    call transfer
 ;# about to read 0x4800, or 18432 bytes
 ;# total of 165888 (0x28800) bytes in 9 cylinders, 1.44 MB in 80 cylinders
-;# note that the first call overwrites the cylinder number with 1 from
-;# CM's color.com image; that's why it skips from cylinder 0 to 2
-    push esi
-    mov  esi, buffer*4
+    mov  ebx, iobuffer
+    push ebx  ;# needs to be 32 bits for xchg with esi below
+    mov  ax, 2 << 8 + 18  ;# 18 sectors per head
+    mov  dx, 0x0000 ;# head 0, drive 0
+    xor  cx, cx
+    mov  cl, [moveto + cylinder]
+    shl  cx, 6  ;# put cylinder number into high 10 bits, sector = 0
+    push cx
+    int  0x13
+    mov  ax, 2 << 8 + 18  ;# 18 sectors per head
+    mov  dx, 0x0100 ;# head 1, drive 0
+    pop  cx
+    int  0x13
+    xchg esi, [esp]  ;# save ESI (parameter stack) register and load iobuffer
     mov  ecx, 512*18*2/4
-    rep  movsd
-    pop  esi  
+    rep  movsd ;# move to ES:EDI location preloaded by caller
+    pop  esi  ;# restore parameter stack pointer
     ret
 
 ;# don't need 'write' till after bootup
@@ -198,7 +209,7 @@ read:
     .long 0x44444444 ;# mark color.com
 
 write:
-    mov  edi, buffer*4
+    mov  edi, iobuffer
     mov  ecx, 512*18*2/4
     rep  movsd
     mov  al, 0x1a ;# write DMA 2
