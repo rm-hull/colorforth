@@ -34,9 +34,9 @@ nc: .long 9 ;# forth+icons+blocks 24-161 ;# number of cylinders, 9 (out of 80)
 gdt: .word 0x17
     .long gdt0
 .align 8 ;# more garbage possibly in disassembly here, ignore it
-gdt0: .word 0, 0, 0, 0
-    .word 0x0ffff, 0, 0x9a00, 0x0cf ;# code
-    .word 0x0ffff, 0, 0x9200, 0x0cf ;# data
+gdt0: .word 0, 0, 0, 0 ;# null descriptor, not used
+    .word 0x0ffff, 0, 0x9a00, 0x0cf ;# code, linear addressing from 0
+    .word 0x0ffff, 0, 0x9200, 0x0cf ;# data, linear addressing from 0
 
 .code16
 start0:
@@ -47,17 +47,26 @@ start0:
     mov  ax, 0x4f02 ;# set video mode
     mov  bx, cx ;# vesa mode
     int  0x10
-.code32
+    cli  ;# disable interrupts until we are set up to handle them (if ever)
+    xor  ax,ax  ;# move code to 0
+    mov  di, ax
+    mov  bx, cs
+    mov  ds, bx
+    mov  es, ax ;# not necessary at boot but perhaps from comfile
+    call loc ;# where are we? ip+4*cs
+loc: pop  si
+    sub  si, offset loc-offset start
+    mov  cx, 512/4 ;# only 256 bytes unless...
+;# compile as 32-bit code here so it moves longwords and not words
+    data32 rep movsw
+    jmp 0:offset relocate
+relocate: ;# this code is executed from an offset of 0, not 0x7c00
     mov  ds, ax
-;#    lgdt qword ptr gdt
-    .byte 0x0f, 1, 0x16
-    .word gdt-start
+    lgdt [gdt]
     mov  al, 1
     mov  cr0, eax
-;#    jmp  8:protected
-    .byte 0x0ea
-    .word protected-start, 8
-
+    jmp  8: offset protected
+.code32
 protected: ;# now in protected 32-bit mode
     mov  al, 0x10
     mov  ds, eax
@@ -66,7 +75,6 @@ protected: ;# now in protected 32-bit mode
     mov  esp, offset gods ;# assembles as a dword ptr without 'offset'
     push [ds:0x7e28] ;# physical memory pointer returned by VESA call
     xor  ecx, ecx
-
 a20:
     mov  al, 0x0d1
     out  0x64, al ;# to keyboard
@@ -79,7 +87,6 @@ a20:
     call dma
     shl  ebx, 4
     add  esi, ebx
-
 cold:
     mov  esi, offset godd ;# 0x9f448, 3000 bytes below 0xa0000 (gods)
     xor  edi, edi ;# cylinder 0 on top of address 0

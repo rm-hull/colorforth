@@ -84,12 +84,11 @@ start0:
     mov  bx, cx ;# vesa mode
 .endif
     int  0x10
-    cli
+    cli  ;# disable interrupts until we are set up to handle them (if ever)
 .code32
-    xor  ax, ax    ;# move code to 0
+    xor  ax, ax  ;# move code to 0
 .ifdef QUESTIONABLE  ;# some things in CM's source which can be left out?
     mov  bx, ax
-.code32
     mov  ebx, cs
     mov  ds, ebx
     mov  es, eax
@@ -107,9 +106,7 @@ loc: pop  si
     sub  si, offset loc-offset start
     mov  cx, 512/4 ;# only 256 bytes unless...
 ;# compile as 32-bit code here so it moves longwords and not words
-.code32
-    rep movsw
-.code16
+    data32 rep movsw
     jmp 0:offset relocate
 
 relocate: ;# this code is executed from an offset of 0, not 0x7c00
