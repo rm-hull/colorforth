@@ -1,5 +1,5 @@
 .intel_syntax ;# floppy boot segment
-
+.equ moveto, 0x400 ;# relocate past BIOS interrupt table
 .org 0 ;# actually 7c00
 start: jmp  start0
     nop
@@ -32,7 +32,7 @@ cylinder:
 .align 4
 nc: .long 9 ;# forth+icons+blocks 24-161 ;# number of cylinders, 9 (out of 80)
 gdt: .word start0 - gdt0 - 1
-    .long gdt0
+    .long gdt0 + moveto
 .align 8 ;# more garbage possibly in disassembly here, ignore it
 gdt0: .word 0, 0, 0, 0 ;# null descriptor, not used
     .word 0x0ffff, 0, 0x9a00, 0x0cf ;# code, linear addressing from 0 to 4gb
@@ -48,30 +48,31 @@ start0:
     mov  bx, cx ;# vesa mode
     int  0x10
     cli  ;# disable interrupts until we are set up to handle them (if ever)
-    xor  ax,ax  ;# move code to 0
+    mov  ax, moveto  ;# move code past real mode interrupt table
     mov  di, ax
     mov  bx, cs
     mov  ds, bx
-    mov  es, ax ;# not necessary at boot but perhaps from comfile
+    xor  bx, bx  ;# zero out ES segment register for move to ES:EDI
+    mov  es, bx  ;# not strictly necessary, BIOS zeroes it anyway
     call loc ;# where are we? ip+4*cs
 loc: pop  si
     sub  si, offset loc-offset start
     mov  cx, 512/4 ;# only 256 bytes unless...
 ;# compile as 32-bit code here so it moves longwords and not words
     data32 rep movsw
-    jmp 0:offset relocate
+    jmp 0:offset relocate + moveto
 relocate: ;# this code is executed from an offset of 0, not 0x7c00
-    mov  ds, ax
-    lgdt [gdt]
+    mov  ds, bx ;# offset from zero
+    lgdt [gdt + moveto]
     mov  al, 1
     mov  cr0, eax
-    jmp  8: offset protected
+    jmp  8: offset protected + moveto
 .code32
 protected: ;# now in protected 32-bit mode
-    mov  al, 0x10
-    mov  ds, eax
-    mov  es, eax
-    mov  ss, eax
+    mov  bl, 0x10 ;# ebx zeroed above
+    mov  ds, ebx
+    mov  es, ebx
+    mov  ss, ebx
     mov  esp, offset gods ;# assembles as a dword ptr without 'offset'
     push [ds:0x7e28] ;# physical memory pointer returned by VESA call
     xor  ecx, ecx
@@ -83,17 +84,13 @@ a20:
     jnz  0b
     mov  al, 0x4b
     out  0x60, al ;# to keyboard, enable A20
-    jmp  0x18:offset sixteenbit ;# back to 16-bit protected mode
+    jmp  0x18:offset sixteenbit + moveto ;# back to 16-bit protected mode
 sixteenbit:
     mov  eax, cr0
     and  al, 0xfe ;# zero the PE bit in CR0 register
     mov  cr0, eax
-    push cs ;# continue using code segment of 0 in real mode
-.code16
-    push offset cold
-    iret 
+    jmp  0:offset cold + moveto ;# far JMP puts us in unreal mode
 cold:
-.code32
     mov  esi, offset godd ;# 0x9f448, 3000 bytes below 0xa0000 (gods)
     xor  edi, edi ;# cylinder 0 on top of address 0
     call read
