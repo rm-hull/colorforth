@@ -52,7 +52,7 @@ cylinder:
 .endif
 .align 4
 nc: .long 9 ;# forth+icons+blocks 24-161 ;# number of cylinders, 9 (out of 80)
-gdt: .word 0x17
+gdt: .word start0 - gdt0 - 1
     .long gdt0
 ;# different assemblers use different NOP instructions to pad out alignment
 .ifdef CM2001

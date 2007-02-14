@@ -31,13 +31,13 @@ cylinder:
     .byte 0x0ff
 .align 4
 nc: .long 9 ;# forth+icons+blocks 24-161 ;# number of cylinders, 9 (out of 80)
-gdt: .word 0x17
+gdt: .word start0 - gdt0 - 1
     .long gdt0
 .align 8 ;# more garbage possibly in disassembly here, ignore it
 gdt0: .word 0, 0, 0, 0 ;# null descriptor, not used
-    .word 0x0ffff, 0, 0x9a00, 0x0cf ;# code, linear addressing from 0
-    .word 0x0ffff, 0, 0x9200, 0x0cf ;# data, linear addressing from 0
-
+    .word 0x0ffff, 0, 0x9a00, 0x0cf ;# code, linear addressing from 0 to 4gb
+    .word 0x0ffff, 0, 0x9200, 0x0cf ;# data, linear addressing from 0 to 4gb
+    .word 0x0ffff, 0, 0x9a00, 0x000 ;# code, byte-granular, 16-bit
 .code16
 start0:
     mov  ax, 0x4f01 ;# get video mode info
@@ -51,6 +51,7 @@ start0:
     xor  ax,ax  ;# move code to 0
     mov  di, ax
     mov  bx, cs
+    mov  bp, bx ;# save CS here for returning to (un)real mode
     mov  ds, bx
     mov  es, ax ;# not necessary at boot but perhaps from comfile
     call loc ;# where are we? ip+4*cs
@@ -83,11 +84,18 @@ a20:
     jnz  0b
     mov  al, 0x4b
     out  0x60, al ;# to keyboard, enable A20
-    mov  eax, 512*18*2-1 ;# DMA channel 2 (0x47ff)
-    call dma
-    shl  ebx, 4
-    add  esi, ebx
+    jmp  0x18:offset sixteenbit ;# back to 16-bit protected mode
+sixteenbit:
+    mov  eax, cr0
+    and  al, 0xfe ;# zero the PE bit in CR0 register
+    mov  cr0, eax
+    push ebp  ;# push 16-bit code segment saved earlier
+.code16
+    push offset cold
+    iret 
 cold:
+    hlt
+.code32
     mov  esi, offset godd ;# 0x9f448, 3000 bytes below 0xa0000 (gods)
     xor  edi, edi ;# cylinder 0 on top of address 0
     call read
