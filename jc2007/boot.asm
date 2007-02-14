@@ -51,7 +51,6 @@ start0:
     xor  ax,ax  ;# move code to 0
     mov  di, ax
     mov  bx, cs
-    mov  bp, bx ;# save CS here for returning to (un)real mode
     mov  ds, bx
     mov  es, ax ;# not necessary at boot but perhaps from comfile
     call loc ;# where are we? ip+4*cs
@@ -89,12 +88,11 @@ sixteenbit:
     mov  eax, cr0
     and  al, 0xfe ;# zero the PE bit in CR0 register
     mov  cr0, eax
-    push ebp  ;# push 16-bit code segment saved earlier
+    push cs ;# continue using code segment of 0 in real mode
 .code16
     push offset cold
     iret 
 cold:
-    hlt
 .code32
     mov  esi, offset godd ;# 0x9f448, 3000 bytes below 0xa0000 (gods)
     xor  edi, edi ;# cylinder 0 on top of address 0
@@ -128,32 +126,22 @@ ready: ;#call delay
     lea  edx, [edx+1] ;# doesn't affect flags as INC would
     ret
 
+transfer: mov  cl, 9
 cmd:
     lea  edx, command
     mov  [edx], al
+cmd0:
     push esi
     mov  esi, edx
-0:  call ready
-    jns  cmd0
-    in   al, dx
-    jmp  0b
-cmd0:
-    lodsb
-    mov  ah, 0x1e  ;# delay loop in JF2005 code
-    out  dx, al
-1:
-    dec  ah
-    jne  1b
-    loop 0b
-    pop  esi
-    ret
-sense_: mov  al, 8
-    mov  cl, 1
-    call cmd
+cmd1:
     call ready
+    jns  0f
     in   al, dx
-    and  al, al
-;#  cmp  al, 0x80
+    jmp  cmd1
+0:  lodsb
+    out  dx, al
+    loop cmd1
+    pop  esi
     ret
 
 seek:
@@ -177,30 +165,16 @@ onoff:
     ret
 
 dma:
-    out  5, al ;# set DMA-1 ch.2 base and current count to 0x47ff
-    mov  al, ah
-    out  5, al
-    mov  eax, buffer*4 ;# 0x97000 in CM2001
-    out  4, al ;# set DMA-1 ch.2 base and current address to "trash" buffer
-    mov  al, ah
-    out  4, al
-    shr  eax, 16 ;# load page register value into al (9)
-    out  0x81, al ;# set DMA-1 page register 2 = 09
-    mov  al, 0xb
-    out  0xf, al ;# write all mask bits, address = 0xf, value = 0xb
-    mov  word ptr command+1, 0x2a1 ;# 2 6 16 ms (e 2)
+    mov  word ptr command+1, 0x3a2 ;# l2 s6 u32 ms (e 2)
     mov  al, 3 ;# timing
     mov  cl, 3
     call cmd
-    mov  word ptr command+1, 0
-    ret
-
-transfer:
-    mov  cl, 9
+    mov  word ptr command+1, 0x7000 ;# +seek -fifo -poll
+    mov  al, 0x13 ;# configure
+    mov  cl, 4
     call cmd
-    inc  byte ptr cylinder
-0:  call ready
-    jns  0b
+;# the following instruction clears the cylinder number among other things
+    mov  dword ptr command, ecx ;# 0
     ret
 
 read:
@@ -246,33 +220,45 @@ flop:
     ret
 
 readf:
-    call flop
+    call flop ;# ac-ac
     push edi
-    mov  edi, eax
-0:  push ecx
+    mov  edi, [esi+4]
+    shl  edi, 2
     call read
-    pop  ecx
-    next 0b
     pop  edi
 readf1:
-    call stop
+    drop
+    inc  eax
+    add  dword ptr [esi], 0x1200
+    ret
+
+writef:
+    call flop ;# ac-ac
+    push esi
+    mov  esi, [esi+4]
+    shl  esi, 2
+    call write
+    pop  esi
+    jmp  readf1
+
+seekf:
+    call flop ;# c-c
+    call seek
+    mov  al, 0x0f
+    mov  cl, 3
+    call cmd
+    call cmdi
     drop
     ret
 
-save_:
-    dup_
-    xor  eax, eax 
-    dup_
-    dup_
-    mov  eax, nc
+cmdf: mov  ecx, eax ;# an
+    drop
+    lea  edx, [eax*4]
+    call cmd0
+    drop
+    ret
 
-writef:
-    call flop
-    push esi
-    mov  esi, eax
-0:  push ecx
-    call write
-    pop  ecx
-    next 0b
-    pop  ESI
-    jmp  readf1
+readyf: dup_
+    call ready
+    drop
+    ret
