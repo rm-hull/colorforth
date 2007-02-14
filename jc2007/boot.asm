@@ -91,7 +91,8 @@ sixteenbit:
     mov  cr0, eax
     jmp  0:offset cold + moveto ;# far JMP puts us in unreal mode
 cold:
-    mov  esi, offset godd ;# 0x9f448, 3000 bytes below 0xa0000 (gods)
+.code16 ;# need 32-bit code prefix for 32-bit operations
+    addr32 mov esi, offset godd ;# 0x9f448, 3000 bytes below 0xa0000 (gods)
     xor  edi, edi ;# cylinder 0 on top of address 0
     call read
     inc byte ptr cylinder
