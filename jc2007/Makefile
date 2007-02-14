@@ -144,9 +144,9 @@ bindiff: /tmp/color.xxd /tmp/gas_color.xxd
 	diff -y -W180 $+
 macdiff: /tmp/gas_color.xxd /tmp/gas_color.old.xxd # using new macro
 	diff -y -W180 $+
-test:
+test: ../test/b.img
 	cd ../test && $(MAKE)
-debug:
+debug: ../test/b.img
 	cd ../test && $(MAKE) BXDEBUG=1
 htmldiff: /tmp/color_pydump.html /tmp/color.html
 	rm -f $+
@@ -217,3 +217,6 @@ boot.dsm: boot.blk
 	 --no-show-raw-insn \
 	 --disassembler-options=intel \
 	 $< > $@
+../test/b.img: color.com
+	dd if=/dev/zero of=$@ bs=1024 count=1440
+	dd if=$< of=$@ conv=notrunc

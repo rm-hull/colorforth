@@ -1,29 +1,5 @@
 .intel_syntax ;#colorforth, 2001 jul 22, chuck moore, public domain
 
-;#.486p
-
-.ifdef CM2001 ;# Chuck Moore's 2001 code includes AGP-specific video...
- .equ QUESTIONABLE, 1 ;# ...and other weird stuff found in color.com binary
- .equ AGP, 1  ;# hard-coded for ATI video
- .equ E1_STROBE, 1  ;# see 'debugout' macro below
- .equ AUTO_REFRESH, 1 ;# screen refresh constantly runs
-.endif
-
-.macro debugout
-/* CM referred to this as "Terry Loveall's e1 strobe" in some online docs, but
-/* I can't find anything regarding port 0xe1 anywhere else, and the data
-/* sent doesn't make any sense anyway. The boot failure problems mentioned in
-/* that online document would more likely be due to the hardcoded millisecond
-/* calculations for busy-wait routines than any "strobe" effect.
-/* milliseconds should be calulated, with a single loop, using the
-/* pc clock chip, like bogoMIPS. or, better yet, the clock should be used for
-/* timing rather than busy-wait loops.
-/* */
-.ifdef E1_STROBE
-    out 0xe1, al
-.endif
-.endm
-
 ;# can't use loopnz in 32-bit mode
 .macro next adr
     dec  ecx
@@ -82,21 +58,9 @@
  .endr
 .endm
 
-.ifndef SMALLSCREEN
- .equ hp, 1024 ;# 1024 or 800
- .equ vp, 768 ;# 768 or 600
-.if CM2001 - 1 == 0
- .equ vesa, 0x0117 ;# 1024x768 mode
-.elseif DMA - 1 == 0
- .equ vesa, 0x4118
-.else
- .equ vesa, 0x4117 ;# bit 12 sets linear address mode in 0x117 or 0x114
-.endif ;# CM2001
-.else ;# SMALLSCREEN
- .equ hp, 800
- .equ vp, 600
- .equ vesa, 0x4114
-.endif ;# SMALLSCREEN
+.equ hp, 1024 ;# 1024 or 800
+.equ vp, 768 ;# 768 or 600
+.equ vesa, 0x4117 ;# bit 12 sets linear address mode in 0x117 or 0x114
 .equ buffer, 604*256
 .include "boot.asm" ;# boot boot0 hard
 
@@ -112,11 +76,7 @@
 
 warm: dup_
 start1:
-.ifdef AGP
-    call ati0  ;# access North Bridge chipset to get display RAM address
-.else
     pop [displ]  ;# use address determined by VBE2 call in boot.asm
-.endif
     call show0 ;# set up 'main' task to draw screen
     mov  dword ptr forths, offset ((forth1-forth0)/4) ;# number of Forth words
     mov  dword ptr macros, offset ((macro1-macro0)/4) ;# number of macros
@@ -139,11 +99,7 @@ start1:
 ;# 'me' points to the save slot for the current task
 me: .long god
 screen:
-.ifdef CM2001
-    .long 0x100f1f ;# matches cm2001 color.com binary
-.else
     .long 0 ;# logo
-.endif
 ;# When we switch tasks, we need to switch stacks as well.  We do this
 ;# by pushing eax (cached top-of-stack) onto the data stack, pushing
 ;# the data stack pointer onto the return stack, and then saving the
@@ -153,18 +109,10 @@ screen:
 ;# next task - the last one jumps 'round to the first.
 round: call unpause
 god:
-.ifdef CM2001
-    .long 0x9ffe8 ;# found in cm2001 color.com binary
-.else
     .long 0 ;# gods-2*4
-.endif
     call unpause
 main:
-.ifdef CM2001
-    .long 0x9dcd0
-.else
     .long 0 ;# mains-2*4
-.endif
     jmp  round
 
 pause: dup_ ;# save cached datum from top of data stack
@@ -496,25 +444,12 @@ inter: mov  edx, [edi*4] ;# get next longword from block
 .align 4
 spaces: .long qignore, execute, num
 adefine: ;# where definitions go, either in macrod (dictionary) or forthd
-.ifdef CM2001
-    .long forthd ;# as found in CM2001 color.com binary
-.else
     .long macrod ;# default, the macro dictionary
-.endif
     .long qcompile, cnum, cshort, compile
     .long short_, nul, nul, nul
     .long variable, nul, nul, nul
 
 lit: .long adup
-.ifdef CM2001
-mk: .long 0x2e, 0x5e, 0x101028
-h: .long 0x101137
-last: .long 0x59f
-class: .long 0
-list: .long 0x101132, 0x10111e
-macros: .long 0x2e
-forths: .long 0x67
-.else
 mk: .long 0, 0, 0
 h: .long 0x40000*4 ;# start compiling at 0x100000
 last: .long 0
@@ -522,23 +457,10 @@ class: .long 0
 list: .long 0, 0
 macros: .long 0
 forths: .long 0
-.endif
 
 macro0:
     packword ";", dup, ?dup, drop, then, begin
 macro1:
-.ifdef CM2001
-/* words are defined starting in block 24... their packed representations
-/* and longword pointers are stored in these tables */
-    packword swap, 0, if, -if, a, a!, 2*, "a," @, !
-    packword nip, +, or, binary, and, u+, ?, over, push, pop
-    packword -, for, *next, next, 0next, -next, i, *end, end, +!
-    packword nop, align, or!, *, */, /mod, /, mod, 2/, time
-    packword p@, p!
-    ;# following that is some nonsense:
-    .long 0xc9800000 ;# hd (a valid packed word but isn't defined anywhere)
-    .long 0x00005811 ;# which isn't a valid packed word
-.endif
     .rept 128 - ((.-macro1)/4) .long 0; .endr ;# room for new macros
 forth0:
     packword boot, warm, pause, macro, forth, c, stop, read, write, nc
@@ -547,35 +469,11 @@ forth0:
     packword emit, digit, 2emit, ., h., h.n, cr, space, down, edit
     packword e, lm, rm, graphic, text, keyboard, debug, at, +at, xy
     packword fov, fifo, box, line, color, octant, sp, last, unpack
-.ifdef MANDELBROT
-    packword vframe
-.endif
 forth1:
-.ifdef CM2001
-;# now we are at address 0xacc
-    packword @, !, +, */, *, /, 2/, dup, negate, min
-    packword abs, max, v+, writes, reads, oadf, save, block, white, red
-    packword green, blue, silver, black, screen, 5*, cf, logo, empty, dump
-    packword icons, print, file, north, colors, blks, w/c, buffer, size, set
-    packword cyls, put, get, .com, format
-;# this brings us to address 0x12cc
-.endif
     .rept 512 - ((.-forth1)/4) .long 0; .endr
 macro2:
     .long semi, cdup, qdup, cdrop, then, begin
 0:
-.ifdef CM2001
-;# slots filled starting with 0x1008d0 at 0x12e4, to 0x0552 at 0x138c.
-    .long 0x1008d0, 0x1008ee, 0x100902, 0x100916, 0x10092a
-    .long 0x10093e, 0x10096d, 0x10097c, 0x100985, 0x1009c0
-    .long 0x100a2b, 0x100a3a, 0x100a69, 0x100a73, 0x100a99
-    .long 0x100aa8, 0x100ad7, 0x100af0, 0x100b04, 0x100b18
-    .long 0x100b2c, 0x100b3b, 0x100b45, 0x100b4b, 0x100b55
-    .long 0x100b7a, 0x100b89, 0x100b9d, 0x100ba3, 0x100bc3
-    .long 0x100c2e, 0x100c3d, 0x100c57, 0x100c7c, 0x100c90
-    .long 0x100cb8, 0x100cdb, 0x100ce5, 0x100cef, 0x100cfe
-    .long 0x100758, 0x10076c, 0x000552
-.endif
     .rept 128 - ((.-0b)/4) .long 0; .endr
 forth2:
     .long boot, warm, pause, macro_, forth, c_, stop, readf, writef, nc_
@@ -584,23 +482,7 @@ forth2:
     .long emit, edig, emit2, dot10, hdot, hdotn, cr, space, down, edit
     .long e, lms, rms, graphic, text1, keyboard, debug, at, pat, xy_
     .long fov_, fifof, box, line, color, octant, sps, last_, unpack
-.ifdef MANDELBROT
-    .long vframe
-.endif
 0:
-.ifdef CM2001
-;# in the CM2001 color.com object file, there are 45 entries, starting
-;# 45 entries, from 0x100d12 at 0x15d0 to 0x1008c1 at 0x1680.
-    .long 0x100d12, 0x100d1a, 0x100d26, 0x100d2c, 0x100d37
-    .long 0x100d3e, 0x100d4d, 0x100d50, 0x100d56, 0x100d5e
-    .long 0x100d6f, 0x100d79, 0x100d88, 0x100d94, 0x100da6
-    .long 0x100db8, 0x100db8, 0x100ddc, 0x100ded, 0x100dfc
-    .long 0x100e0b, 0x100e1a, 0x100e29, 0x100e38, 0x100e47
-    .long 0x100e74, 0x100e8e, 0x100f1a, 0x100fc4, 0x100fce
-    .long 0x100fdd, 0x100fec, 0x100ffb, 0x10100a, 0x101019
-    .long 0x101028, 0x101039, 0x101044, 0x10104f, 0x10107d
-    .long 0x1010a5, 0x1010d3, 0x1010f5, 0x101119, 0x1008c1
-.endif
     .rept 512 - ((.-0b)/4) .long 0; .endr ;# room for new definitions
 
 boot: mov  al, 0x0fe ;# reset
@@ -654,23 +536,12 @@ debug: mov dword ptr  xy,  offset (3*0x10000+(vc-2)*ih+3)
 .equ ih, 24+6 ;# icon height, including padding
 .equ hc, hp/iw ;# 46 ;# number of horizontal characters on screen
 .equ vc, vp/ih ;# 25 ;# number of vertical characters
-;# MASM's 3-byte NOP for alignment is 2e8bc0, cs: mov eax,eax
-;# whereas gas's is 8d7600, lea esi,[esi].
-.ifdef CM2001
-     cs mov eax, eax
-xy: .long 0x033d02e5
-lm: .long 3
-rm: .long hc*iw
-xycr: .long 3*0x10000+3
-fov: .long 10*(2*vp+vp/2)
-.else
 .align 4 
 xy: .long 3*0x10000+3 ;# 3 pixels padding on each side of icons
 lm: .long 3
 rm: .long hc*iw ;# 1012
 xycr: .long 0
 fov: .long 10*(2*vp+vp/2)
-.endif
 
 nc_: dup_
     mov  eax, (offset nc-offset start)/4
@@ -715,11 +586,7 @@ green: dup_
     jmp  color
 
 history:
-.ifdef CM2001
-    .byte 0, 0, 0, 0, 0, 0, 0, 37, 10, 3, 9
-.else
     .rept 11 .byte 0; .endr
-.endif
 echo_: push esi
     mov  ecx, 11-1
     lea  edi, history
@@ -949,16 +816,6 @@ numb1: .long number0, xn, endn, number0
     .byte 025, 045,  0 , 0 ;# x .
 
 board: .long alpha-4
-.ifdef CM2001
-shift: .long alpha1
-base: .long 10
-current: .long decimal
-keyc: .long yellow
-chars: .long 5
-aword: .long ex1
-anumber: .long nul
-words: .long 0
-.else
 shift: .long alpha0
 base: .long 10
 current: .long decimal
@@ -967,7 +824,6 @@ chars: .long 1
 aword: .long ex1
 anumber: .long nul
 words: .long 1
-.endif
 
 nul0: drop
     jmp  0f
@@ -982,11 +838,7 @@ accept1: mov  board, edi
     jmp  dword ptr [edx+eax*4]
 
 bits: ;# number of bits available in word for packing more Huffman codes
-.ifdef CM2001
-   .byte 7 ;# matches CM2001 color.com binary
-.else
    .byte 28
-.endif
 /* for reference, Huffman codes are in groups of 8, the prefixes being:
   0xxx, 10xxx, 1100xxx, 1101xxx, 1110xxx, 1111xxx
   "pack" packs one letter (character code at a time, 
@@ -1400,19 +1252,11 @@ tens: .long 10, 100, 1000, 10000, 100000, 1000000
     .long 10000000, 100000000, 1000000000
 bas: .long dot10
 blk: .long 18
-.ifdef CM2001 ;# match CM2001 color.com binary
-curs: .long 2
-cad: .long 0x1204
-pcad: .long 0x1202
-lcad: .long 0x122c
-trash: .long buffer*4+12
-.else
 curs: .long 0
 cad: .long 0
 pcad: .long 0
 lcad: .long 0
 trash: .long buffer*4
-.endif
 
 /* the editor keys and their actions */
 ekeys:
@@ -1443,11 +1287,7 @@ actc:
     .long 0, 0, 0x0ffff, 0 ;# 7=cyan
     .long 0x0ffffff, 0x0ffffff, 0x0ffffff, 0x8080ff ;# 9-11=white, 12=magenta
 vector: .long 0
-.ifdef CM2001
-action: .byte 10 ;# matches CM2001 color.com binary
-.else
 action: .byte 1
-.endif
 
 act1: mov  al, 1 ;# word execute, yellow
     jmp  0f
@@ -1675,12 +1515,7 @@ pad: pop  edx
     call edx
     jmp  0b
 
-.ifdef OBSOLETE_CM2001
- .org (0x1200-1)*4
-    .long 0
-.else
  .include "chars.asm"
-.endif
 .ifdef I_HAVE_AT_LEAST_1GB_RAM
  .incbin "newcode.dat"
 .else

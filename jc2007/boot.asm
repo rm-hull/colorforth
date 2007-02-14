@@ -108,7 +108,6 @@ spin:
 ready: ;#call delay
     mov  dx, 0x3f4
 0:  in   al, dx
-    debugout
     shl  al, 1
     jnc  0b
     lea  edx, [edx+1] ;# doesn't affect flags as INC would
@@ -122,14 +121,12 @@ cmd:
 0:  call ready
     jns  cmd0
     in   al, dx
-    debugout
     jmp  0b
 cmd0:
     lodsb
     mov  ah, 0x1e  ;# delay loop in JF2005 code
     out  dx, al
 1:
-    debugout
     dec  ah
     jne  1b
     loop 0b
@@ -140,7 +137,6 @@ sense_: mov  al, 8
     call cmd
     call ready
     in   al, dx
-    debugout
     and  al, al
 ;#  cmp  al, 0x80
     ret
@@ -162,11 +158,7 @@ stop:
     mov  al, 0x0c
 onoff:
     mov  dx, 0x3f2
-    mov  ah, 0xf  ;# for timing in JF2005 DMA version
     out  dx, al
-0:  debugout
-    dec  ah
-    jnz  0b
     ret
 
 dma:

@@ -13,17 +13,10 @@
 ;# multiply vp (vertical pixels) by hp (horizontal pixels) by 2 bytes (16 bits)
 ;# to determine the location of the framebuffer
 frame: .long 0x2000000-hp*vp*2 ;# 32 m
-.ifdef AGP ;# match CM2001 color.com binary
-displ: .long 0x0f5000000
-fore:  .long 0x0f7c0 ;# foreground color, low-brightness yellow
-xc:    .long 0x0327
-yc:    .long 0x02e5
-.else
 displ: .long 0x0f0000000 ;# fujitsu (physical address of video memory)
 fore:  .long 0x0f7de ;# less-brightness white (silver) in 565 color mode
 xc:    .long 0
 yc:    .long 0
-.endif
 
 rgb: ;# change 8:8:8 bit format to 5:6:5
     ror  eax, 8 ;# rotate blue bits into upper word
@@ -40,44 +33,6 @@ color: call rgb ;# change to 5:6:5 bit format
     mov  fore, eax
     drop
     ret
-
-.ifdef AGP ;# from CM's 2001 version at colorforth.com
-north: mov  edx, 0x0cf8
-    out  dx, eax
-    add  edx, 4
-    in   eax, dx
-    ret
-
-dev: mov  eax, 0x80001008 ;# find display, start at device 2
-    mov  ecx, 31-1 ;# .end with agp: 10008, bus 1, dev 0
-0:  dup_
-    call north
-    and  eax, 0x0ff000000
-    cmp  eax, 0x3000000
-    drop
-    jz   0f
-    add  eax, 0x800
-    next 0b
-0:  ret
-
-ati0: call dev
-    or   dword ptr [eax-4], 2 ;# enable memory
-    add  al, 0x24-8 ;# look for prefetch
-    mov  cl, 5
-0:  dup_
-    call north
-    xor  al, 8
-    jz   0f
-    drop
-    sub  eax, 4
-    next 0b
-    dup_
-    call north
-    and  eax, 0x0fffffff0
-0:  mov  displ, eax
-    drop
-    ret
-.endif ;# AGP 
 
 fifof: drop
 graphic: ret
