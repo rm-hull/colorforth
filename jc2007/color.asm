@@ -68,7 +68,7 @@
 ;#    9f800 top of data stack
 ;#    9d800 free
 ;#     9400 source ;# block 18, first high-level source block (load screen)
-.equ icons, moveto + 12 * 256 * 4 ;# 3000, block 12 start of character maps
+.equ icons, start + 12 * 256 * 4 ;# 3000, block 12 start of character maps
 ;#     7c00 bios boot sector
 ;#     4c00 forth bootcode
 ;#      400 floppy buffer (0x4800 bytes)
