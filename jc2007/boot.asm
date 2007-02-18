@@ -51,11 +51,11 @@ cold:
     zero es
     call read
     inc  dword ptr cylinder + loadaddr
-    mov  cl, nc ;# number of cylinders used
-    dec  cl
-0:  push ecx
+    mov  cx, nc ;# number of cylinders used
+    dec  cx
+0:  push cx
     call read
-    pop  ecx
+    pop  cx
     loop 0b
     call loaded
     hlt
@@ -64,24 +64,23 @@ cold:
 read:
 ;# about to read 0x4800, or 18432 bytes
 ;# total of 165888 (0x28800) bytes in 9 cylinders, 1.44 MB in 80 cylinders
-    mov  ebx, iobuffer
-    push ebx
+    mov  bx, iobuffer
+    push bx
     mov  ax, (2 << 8) + 18  ;# 18 sectors per head
     mov  dx, 0x0000 ;# head 0, drive 0
     mov  cx, [cylinder + loadaddr]
     shl  cx, 6  ;# put cylinder number into high 10 bits, sector = 0
     inc  cx  ;# 1-base sector number
-    push cx
     int  0x13
     mov  ax, (2 << 8) + 18  ;# 18 sectors per head
-    mov  dx, 0x0100  ;# head 1, drive 0
-    pop  cx
+    mov  dh, 0x01  ;# head 1, drive 0
     add  bx, buffersize / 2  ;# second half of cylinder
     int  0x13
-    xchg esi, [esp]  ;# save SI (parameter stack) register and load iobuffer
-    mov  cx, 512*18*2/4
-    rep  movsd ;# move to ES:DI location preloaded by caller
-    pop  si  ;# restore parameter stack pointer
+    mov  bp, si  ;# temporarily store parameter stack pointer in BP
+    pop  si  ;# load iobuffer
+    mov  cx, 512*18
+    rep  movsw ;# move to ES:DI location preloaded by caller
+    mov  si, bp  ;# restore parameter stack pointer
     ret
 
 loading: ;# show "colorForth loading..."
