@@ -51,7 +51,7 @@ cold:
     zero es
     call read
     inc  dword ptr cylinder + loadaddr
-    mov  cx, nc ;# number of cylinders used
+    mov  cx, nc + loadaddr ;# number of cylinders used
     dec  cx
 0:  push cx
     call read
@@ -64,13 +64,14 @@ cold:
 read:
 ;# about to read 0x4800, or 18432 bytes
 ;# total of 165888 (0x28800) bytes in 9 cylinders, 1.44 MB in 80 cylinders
+;# note: old documentation shows cylinder number in high 10 bits of CX...
+;# this is wrong, cylinder number is in CH, sector number in CL
     mov  bx, iobuffer
     push bx
     mov  ax, (2 << 8) + 18  ;# 18 sectors per head
     mov  dx, 0x0000 ;# head 0, drive 0
-    mov  cx, [cylinder + loadaddr]
-    shl  cx, 6  ;# put cylinder number into high 10 bits, sector = 0
-    inc  cx  ;# 1-base sector number
+    mov  ch, [cylinder + loadaddr]
+    mov  cl, 1  ;# sector number is 1-based, and we always read from first
     int  0x13
     mov  ax, (2 << 8) + 18  ;# 18 sectors per head
     mov  dh, 0x01  ;# head 1, drive 0
