@@ -1,5 +1,8 @@
 .intel_syntax ;# floppy boot segment
-.equ iobuffer, 0x400
+;# 0x000-0x400 is BIOS interrupt table
+;# 0x400-0x500 is BIOS system information area
+;# we can use starting at 0x500
+.equ iobuffer, 0x500
 .equ buffersize, 0x4800
 .org 0 ;# actually 0x7c00, where the BIOS loads the bootsector
 .equ loadaddr, 0x7c00
@@ -36,6 +39,7 @@ cylinder: .long 0
 nc: .long 9 ;# forth+icons+blocks 24-161 ;# number of cylinders, 9 (out of 80)
 .code16
 start0:
+    mov  sp, loadaddr  ;# stack pointer starts just below this code
     mov  ax, 0x4f02 ;# set video mode
     mov  bx, 1 ;# CGA 40 x 25 text mode, closest to CM2001 graphic mode text
     int  0x10
@@ -54,13 +58,14 @@ cold:
     pop  ecx
     loop 0b
     call loaded
+    hlt
     jmp  start1 ;# start1 is outside of bootsector
 
 read:
 ;# about to read 0x4800, or 18432 bytes
 ;# total of 165888 (0x28800) bytes in 9 cylinders, 1.44 MB in 80 cylinders
-    mov  bx, iobuffer
-    push bx
+    mov  ebx, iobuffer
+    push ebx
     mov  ax, (2 << 8) + 18  ;# 18 sectors per head
     mov  dx, 0x0000 ;# head 0, drive 0
     mov  cx, [cylinder + loadaddr]
