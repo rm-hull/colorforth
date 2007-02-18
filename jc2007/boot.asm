@@ -11,6 +11,10 @@
   .ascii "\char"; .byte \color
  .endr
 .endm
+.macro zero register
+    push 0
+    pop \register
+.endm
 start: jmp  start0
     nop
     .ascii "cmcf 1.0"
@@ -36,11 +40,11 @@ start0:
     mov  bx, 1 ;# CGA 40 x 25 text mode, closest to CM2001 graphic mode text
     int  0x10
     call loading
-;# clear interrupts and relocate here if desired
-    mov  sp, loadaddr
+;# (clear interrupts and relocate)
     ;# fall through to cold-start routine
 cold:
-    mov  si, loadaddr
+    mov  di, loadaddr  ;# start by overwriting this code
+    zero es
     call read
     inc  dword ptr cylinder + loadaddr
     mov  cl, nc ;# number of cylinders used
