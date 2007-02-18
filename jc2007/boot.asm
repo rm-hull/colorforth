@@ -47,7 +47,7 @@ start0:
 ;# (clear interrupts and relocate)
     ;# fall through to cold-start routine
 cold:
-    mov  di, loadaddr  ;# start by overwriting this code
+    mov  edi, loadaddr  ;# start by overwriting this code
     zero es
     call read
     inc  dword ptr cylinder + loadaddr
@@ -66,8 +66,8 @@ read:
 ;# total of 165888 (0x28800) bytes in 9 cylinders, 1.44 MB in 80 cylinders
 ;# note: old documentation shows cylinder number in high 10 bits of CX...
 ;# this is wrong, cylinder number is in CH, sector number in CL
-    mov  bx, iobuffer
-    push bx
+    mov  ebx, iobuffer
+    push ebx
     mov  ax, (2 << 8) + 18  ;# 18 sectors per head
     mov  dx, 0x0000 ;# head 0, drive 0
     mov  ch, [cylinder + loadaddr]
@@ -77,11 +77,11 @@ read:
     mov  dh, 0x01  ;# head 1, drive 0
     add  bx, buffersize / 2  ;# second half of cylinder
     int  0x13
-    mov  bp, si  ;# temporarily store parameter stack pointer in BP
-    pop  si  ;# load iobuffer
-    mov  cx, 512*18
-    rep  movsw ;# move to ES:DI location preloaded by caller
-    mov  si, bp  ;# restore parameter stack pointer
+    mov  ebp, esi  ;# temporarily store parameter stack pointer in BP
+    pop  esi  ;# load iobuffer
+    mov  ecx, 512*18*2/4
+    rep  movsd ;# move to ES:EDI location preloaded by caller
+    mov  esi, ebp  ;# restore parameter stack pointer
     ret
 
 loading: ;# show "colorForth loading..."
@@ -118,8 +118,8 @@ loaded: ;# show a sign of life: "colorForth code loaded" to screen
 write:
     mov  di, iobuffer
     mov  bx, di
-    mov  cx, 512*18*2/4
-    rep  movsd
+    mov  cx, 512*18
+    rep  movsw
     mov  ax, 3 << 8 + 18  ;# 18 sectors per head
     mov  dx, 0x0000 ;# head 0, drive 0
     mov  cx, [cylinder]
