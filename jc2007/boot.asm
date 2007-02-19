@@ -83,19 +83,22 @@ read:
     rep  movsd ;# move to ES:EDI location preloaded by caller
     mov  esi, ebp  ;# restore parameter stack pointer
     ret
-
 loading: ;# show "colorForth loading..."
-    call 1f
+    call bootshow
+    .word (1f - 0f) / 2
 0:  display "color", green
     display "Forth", red
     display " loading...", white
-1:  pop  bp ;# pointer to string
+1:
+bootshow:
+    pop  bp ;# pointer to length of string
+    mov  cx, [bp]
+    add  bp, 2  ;# now point to string itself
     mov  ax, 0x1303 ;# move cursor, attributes in-line
     mov  bx, 0x0000
-    mov  cx, (1b - 0b) / 2
     mov  dx, 0x0000 ;# row, column
     int  0x10
-    ret
+    ret  ;# to caller of caller
 
 ;# don't need 'write' till after bootup
     .org 0x1fe + start
