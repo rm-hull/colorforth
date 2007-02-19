@@ -42,29 +42,49 @@ start: jmp  start0
 cylinder: .long 0
 nc: .long 9 ;# forth+icons+blocks 24-161 ;# number of cylinders, 9 (out of 80)
 gdt: .word gdt_end - gdt0 - 1 ;# GDT limit
-    .long gdt0 ;# pointer to start of table
+    .long gdt0 + loadaddr ;# pointer to start of table
+.align 8
 gdt0: .word 0, 0, 0, 0 ;# start of table must be a null entry
-    .equ code32, . - gdt0
+    .equ code32p, . - gdt0
     .word 0xffff, 0, 0x9a00, 0xcf ;# 32-bit protected-mode code
-    .equ data32, . - gdt0
+    .equ data32p, . - gdt0
     .word 0xffff, 0, 0x9200, 0xcf ;# 32-bit protected-mode data
-    .equ code16, . - gdt0
+    .equ code16r, . - gdt0
     .word 0xffff, 0, 0x9a00, 0x00 ;# 16-bit real-mode code
-    .equ data16, . - gdt0
+    .equ data16r, . - gdt0
     .word 0xffff, 0, 0x9200, 0x00 ;# 16-bit real-mode data
 gdt_end:
 .code16
 start0:
+    zero ss
     mov  sp, loadaddr  ;# stack pointer starts just below this code
     mov  ax, 0x4f02 ;# set video mode
     mov  bx, 1 ;# CGA 40 x 25 text mode, closest to CM2001 graphic mode text
     int  0x10
     call loading
 ;# (clear interrupts and relocate)
+    xor  ax, ax
+    mov  ds, ax
+    mov  es, ax
+    ;# copied protected_mode code here just for debugging purposes
+    cli
+    lgdt [gdt + loadaddr]
+    mov  eax, cr0
+    or   al, 1
+    mov  cr0, eax
+    jmp  code32p: offset pm2 + loadaddr
+.code32
+pm2:
+;# set all segment registers to protected-mode selector
+    mov  ax, data32p 
+    mov  ds, ax
+    mov  es, ax
+    mov  ss, ax  ;# same base as before (0), or ret wouldn't work!
+    call real_mode
+.code16
     ;# fall through to cold-start routine
 cold:
     mov  edi, loadaddr  ;# start by overwriting this code
-    zero es
     call loading_next
     call read
     inc  dword ptr cylinder + loadaddr
@@ -129,6 +149,39 @@ bootshow:
     mov  ax, 0x1303 ;# move cursor, attributes in-line
     int  0x10
     ret  ;# to caller of caller
+
+protected_mode:
+    cli  ;# we're not set up to handle interrupts in protected mode
+    lgdt [gdt + loadaddr]
+    mov  eax, cr0
+    or   al, 1
+    mov  cr0, eax
+    jmp  code32p: offset pm + loadaddr
+.code32
+pm: mov  ax, data32p ;# set all segment registers to protected-mode selector
+    mov  ds, ax
+    mov  es, ax
+    mov  ss, ax  ;# same base as before (0), or ret wouldn't work!
+    ret  ;# now it's a 32-bit ret; no "ret far" needed
+
+real_mode:
+    jmp  code16r: offset unreal + loadaddr
+unreal:
+    mov  ax, data16r
+    mov  ss, ax
+    mov  ds, ax
+    mov  es, ax
+    mov  eax, cr0
+    and  al, 0xfe ;# mask out bit 0, the PE (protected-mode enabled) bit
+    mov  cr0, eax
+    jmp  0:offset r + loadaddr
+r:  xor  ax, ax
+    mov  ss, ax
+    mov  ds, ax
+    mov  es, ax
+.code16
+    sti  ;# re-enable interrupts
+    data32 ret ;# adjust stack appropriately for call from protected mode
 
 ;# don't need 'write' till after bootup
     .org 0x1fe + start
