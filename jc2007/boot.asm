@@ -41,6 +41,18 @@ start: jmp  start0
 .align 4
 cylinder: .long 0
 nc: .long 9 ;# forth+icons+blocks 24-161 ;# number of cylinders, 9 (out of 80)
+gdt: .word gdt_end - gdt0 - 1 ;# GDT limit
+    .long gdt0 ;# pointer to start of table
+gdt0: .word 0, 0, 0, 0 ;# start of table must be a null entry
+    .equ code32, . - gdt0
+    .word 0xffff, 0, 0x9a00, 0xcf ;# 32-bit protected-mode code
+    .equ data32, . - gdt0
+    .word 0xffff, 0, 0x9200, 0xcf ;# 32-bit protected-mode data
+    .equ code16, . - gdt0
+    .word 0xffff, 0, 0x9a00, 0x00 ;# 16-bit real-mode code
+    .equ data16, . - gdt0
+    .word 0xffff, 0, 0x9200, 0x00 ;# 16-bit real-mode data
+gdt_end:
 .code16
 start0:
     mov  sp, loadaddr  ;# stack pointer starts just below this code
