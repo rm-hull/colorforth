@@ -10,9 +10,13 @@
 .equ red, 12
 .equ white, 15
 .macro display string, color
- .irpc char, "\string"
-  .ascii "\char"; .byte \color
- .endr
+ .ifeqs "\color", ""
+  .ascii "\r"; .byte white; .ascii "\n"; .byte white
+ .else
+  .irpc char, "\string"
+   .ascii "\char"; .byte \color
+  .endr
+ .endif
 .endm
 .macro zero register
     push 0
@@ -49,11 +53,13 @@ start0:
 cold:
     mov  edi, loadaddr  ;# start by overwriting this code
     zero es
+    call loading_next
     call read
     inc  dword ptr cylinder + loadaddr
     mov  cx, nc + loadaddr ;# number of cylinders used
     dec  cx
 0:  push cx
+    call loading_next
     call read
     pop  cx
     loop 0b
@@ -83,20 +89,32 @@ read:
     rep  movsd ;# move to ES:EDI location preloaded by caller
     mov  esi, ebp  ;# restore parameter stack pointer
     ret
+
 loading: ;# show "colorForth loading..."
     call bootshow
     .word (1f - 0f) / 2
 0:  display "color", green
     display "Forth", red
     display " loading...", white
-1:
+    display ""
+1:  ;# end display
+
+loading_next:
+    call bootshow
+    .word (1f - 0f) / 2
+0:  display "loading", white
+    display " cylinder...", white
+    display ""
+1:  ;# end display
+
 bootshow:
     pop  bp ;# pointer to length of string
+    mov  bx, 0x0000 ;# video page
+    mov  ax, 0x0300 ;# get cursor position
+    int  0x10 ;# sets row/column in DX
     mov  cx, [bp]
     add  bp, 2  ;# now point to string itself
     mov  ax, 0x1303 ;# move cursor, attributes in-line
-    mov  bx, 0x0000
-    mov  dx, 0x0000 ;# row, column
     int  0x10
     ret  ;# to caller of caller
 
@@ -107,16 +125,13 @@ bootshow:
     .long 0x44444444 ;# mark color.com
 
 loaded: ;# show a sign of life: "colorForth code loaded" to screen
-    call 1f
+    call bootshow
+    .word (1f - 0f) / 2
 0:  display "color", green; display "Forth", red
-    display " code loaded", white
-1:  pop  bp ;# pointer to string
-    mov  ax, 0x1303 ;# move cursor, attributes in-line
-    mov  bx, 0x0000
-    mov  cx, (1b - 0b) / 2
-    mov  dx, 0x0100 ;# row, column
-    int  0x10
-    ret
+    display " code", white
+    display " loaded", white
+    display ""
+1:  ;# end display
 
 write:
     mov  di, iobuffer
