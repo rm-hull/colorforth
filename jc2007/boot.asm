@@ -67,19 +67,8 @@ start0:
     mov  ds, ax
     mov  es, ax
     ;# copied protected_mode code here just for debugging purposes
-    cli
-    lgdt [gdt + loadaddr]
-    mov  eax, cr0
-    or   al, 1
-    mov  cr0, eax
-    jmp  code32p: offset pm2 + loadaddr
+    call 0: offset protected_mode + loadaddr
 .code32
-pm2:
-;# set all segment registers to protected-mode selector
-    mov  ax, data32p 
-    mov  ds, ax
-    mov  es, ax
-    mov  ss, ax  ;# same base as before (0), or ret wouldn't work!
     call real_mode
 .code16
     ;# fall through to cold-start routine
