@@ -469,7 +469,7 @@ forth0:
     packword "1,", ",", less, jump, accept, pad, erase, copy, mark, empt
     packword emit, digit, 2emit, ., h., h.n, cr, space, down, edit
     packword e, lm, rm, graphic, text, keyboard, debug, at, +at, xy
-    packword fov, fifo, box, line, color, octant, sp, last, unpack
+    packword fov, fifo, box, line, color, octant, sp, last, unpack, vframe
 forth1:
     .rept 512 - ((.-forth1)/4) .long 0; .endr
 macro2:
@@ -482,7 +482,7 @@ forth2:
     .long comma1, comma, less, jump, accept, pad, erase, copy, mark, empty
     .long emit, edig, emit2, dot10, hdot, hdotn, cr, space, down, edit
     .long e, lms, rms, graphic, text1, keyboard, debug, at, pat, xy_
-    .long fov_, fifof, box, line, color, octant, sps, last_, unpack
+    .long fov_, fifof, box, line, color, octant, sps, last_, unpack, vframe
 0:
     .rept 512 - ((.-0b)/4) .long 0; .endr ;# room for new definitions
 

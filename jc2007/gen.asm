@@ -175,9 +175,7 @@ box: ;# draw a box and fill with foreground color
 no: drop
     drop
     ret
-.ifdef MANDELBROT
-vframe:
+vframe:  ;# needed by Mandelbrot program for low-level graphic stuff
     mov eax, frame
     dup_
     ret
-.endif
