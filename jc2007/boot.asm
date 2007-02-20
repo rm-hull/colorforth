@@ -67,6 +67,7 @@ start0:
     mov  ds, ax
     mov  es, ax
     data32 call protected_mode
+    data32 call a20 ;# set A20 gate to enable access to addresses with 1xxxxx
 .code32
     call unreal_mode
 .code16
@@ -81,6 +82,7 @@ cold:
 0:  push cx
     call loading_next
     call read
+    inc  dword ptr cylinder + loadaddr
     pop  cx
     loop 0b
     call loaded
@@ -174,6 +176,16 @@ unreal:  ;# that far jump put us back to a realmode CS
     sti  ;# re-enable interrupts
     data32 ret ;# adjust stack appropriately for call from protected mode
 
+a20:
+    mov  al, 0x0d1
+    out  0x64, al ;# to keyboard
+0:  in   al, 0x64
+    and  al, 2
+    jnz  0b
+    mov  al, 0x4b
+    out  0x60, al ;# to keyboard, enable A20
+    ret
+
 ;# don't need 'write' till after bootup
     .org 0x1fe + start
     .word 0x0aa55 ;# mark boot sector
@@ -196,7 +208,7 @@ write:
     rep  movsw
     mov  ax, 3 << 8 + 18  ;# 18 sectors per head
     mov  dx, 0x0000 ;# head 0, drive 0
-    mov  cx, [cylinder]
+    mov  cx, [cylinder + loadaddr]
     shl  cx, 6  ;# put cylinder number into high 10 bits, sector = 0
     push cx
     int  0x13
