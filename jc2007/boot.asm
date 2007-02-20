@@ -86,6 +86,7 @@ cold:
     pop  cx
     loop 0b
     call loaded
+    cli  ;# DEBUGGING, so halt doesn't get woken by interrupt
     hlt
     jmp  start1 ;# start1 is outside of bootsector
 
