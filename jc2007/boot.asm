@@ -93,18 +93,13 @@ cold:
 read:
 ;# about to read 0x4800, or 18432 bytes
 ;# total of 165888 (0x28800) bytes in 9 cylinders, 1.44 MB in 80 cylinders
-;# note: old documentation shows cylinder number in high 10 bits of CX...
-;# this is wrong, cylinder number is in CH, sector number in CL
+;# (low 8 bits of) cylinder number is in CH, (6 bit) sector number in CL
     mov  ebx, iobuffer
     push ebx
-    mov  ax, (2 << 8) + 18  ;# 18 sectors per head
+    mov  ax, (2 << 8) + 36  ;# 18 sectors per head, 2 heads
     mov  dx, 0x0000 ;# head 0, drive 0
     mov  ch, [cylinder + loadaddr]
     mov  cl, 1  ;# sector number is 1-based, and we always read from first
-    int  0x13
-    mov  ax, (2 << 8) + 18  ;# 18 sectors per head
-    mov  dh, 0x01  ;# head 1, drive 0
-    add  bx, buffersize / 2  ;# second half of cylinder
     int  0x13
     mov  ebp, esi  ;# temporarily store parameter stack pointer in BP
     pop  esi  ;# load iobuffer
