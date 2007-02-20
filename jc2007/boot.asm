@@ -66,10 +66,9 @@ start0:
     xor  ax, ax
     mov  ds, ax
     mov  es, ax
-    ;# copied protected_mode code here just for debugging purposes
-    call 0: offset protected_mode + loadaddr
+    data32 call protected_mode
 .code32
-    call real_mode
+    call unreal_mode
 .code16
     ;# fall through to cold-start routine
 cold:
@@ -107,7 +106,7 @@ read:
     mov  ebp, esi  ;# temporarily store parameter stack pointer in BP
     pop  esi  ;# load iobuffer
     mov  ecx, 512*18*2/4
-    rep  movsd ;# move to ES:EDI location preloaded by caller
+    addr32 rep movsd ;# move to ES:EDI location preloaded by caller
     mov  esi, ebp  ;# restore parameter stack pointer
     ret
 
@@ -153,22 +152,25 @@ pm: mov  ax, data32p ;# set all segment registers to protected-mode selector
     mov  ss, ax  ;# same base as before (0), or ret wouldn't work!
     ret  ;# now it's a 32-bit ret; no "ret far" needed
 
-real_mode:
-    jmp  code16r: offset unreal + loadaddr
-unreal:
+unreal_mode:
+    jmp  code16r: offset code16p + loadaddr
+.code16
+code16p: ;# that far jump put us in 16-bit protected mode
+;# now let's put at least the stack segment back to 16 bits
     mov  ax, data16r
+;# any segments left commented out will be in "unreal" mode
     mov  ss, ax
-    mov  ds, ax
-    mov  es, ax
+    ;#mov  ds, ax
+    ;#mov  es, ax
     mov  eax, cr0
     and  al, 0xfe ;# mask out bit 0, the PE (protected-mode enabled) bit
     mov  cr0, eax
-    jmp  0:offset r + loadaddr
-r:  xor  ax, ax
+    jmp  0:offset unreal + loadaddr
+unreal:  ;# that far jump put us back to a realmode CS
+    xor  ax, ax
     mov  ss, ax
     mov  ds, ax
     mov  es, ax
-.code16
     sti  ;# re-enable interrupts
     data32 ret ;# adjust stack appropriately for call from protected mode
 
