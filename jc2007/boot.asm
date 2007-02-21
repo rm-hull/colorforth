@@ -39,9 +39,7 @@ gdt_end:
 start0:
     zero ss
     mov  sp, loadaddr  ;# stack pointer starts just below this code
-    mov  ax, 0x4f02 ;# set video mode
-    mov  bx, 1 ;# CGA 40 x 25 text mode, closest to CM2001 graphic mode text
-    int  0x10
+    call textmode
     call loading
     call relocate
     xor  ax, ax
@@ -67,9 +65,29 @@ cold:
     pop  cx
     loop 0b
     call loaded
-    cli  ;# DEBUGGING, so halt doesn't get woken by interrupt
-    hlt
-    jmp  start1 ;# start1 is outside of bootsector
+    call graphicsmode
+    data32 call protected_mode
+.code32
+    jmp start1 ;# start1 is outside of bootsector
+
+.code16
+textmode:
+    mov  ax, 0x4f02 ;# set video mode
+    mov  bx, 1 ;# CGA 40 x 25 text mode, closest to CM2001 graphic mode text
+    int  0x10
+    ret
+
+graphicsmode:
+    mov  ax, 0x4f01 ;# get video mode info
+    mov  cx, vesa ;# a 16-bit color linear video mode (5:6:5 rgb)
+    mov  di, iobuffer ;# use floppy buffer, not during floppy I/O!
+    int  0x10
+    mov  ax, 0x4f02 ;# set video mode
+    mov  bx, cx ;# vesa mode
+    int  0x10
+    mov  eax, dword [iobuffer + 0x28] ;# linear frame buffer address
+    mov  [displ + loadaddr], eax
+    ret
 
 read:
 ;# about to read 0x4800, or 18432 bytes

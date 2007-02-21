@@ -116,6 +116,7 @@
 .equ white, 15
 
 .include "boot.asm" ;# bootsector and related routines
+.code32 ;# protected-mode code from here on out
 warm: dup_
 start1:
     pop [displ]  ;# use address determined by VBE2 call in boot.asm
