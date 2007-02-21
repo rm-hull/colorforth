@@ -48,21 +48,21 @@ start0:
     mov  ds, ax
     mov  es, ax
     data32 call protected_mode
-    data32 call a20 ;# set A20 gate to enable access to addresses with 1xxxxx
 .code32
+    call a20 ;# set A20 gate to enable access to addresses with 1xxxxx
     call unreal_mode
 .code16
     ;# fall through to cold-start routine
 cold:
     mov  edi, loadaddr  ;# start by overwriting this code
-    call loading_next
     call read
+    call loaded_next
     inc  dword ptr cylinder + loadaddr
     mov  cx, nc + loadaddr ;# number of cylinders used
     dec  cx
 0:  push cx
-    call loading_next
     call read
+    call loaded_next
     inc  dword ptr cylinder + loadaddr
     pop  cx
     loop 0b
@@ -98,10 +98,10 @@ loading: ;# show "colorForth loading..."
     display ""
 1:  ;# end display
 
-loading_next:
+loaded_next:
     call bootshow
     .word (1f - 0f) / 2
-0:  display "loading", white
+0:  display "loaded", white
     display " cylinder...", white
     display ""
 1:  ;# end display
@@ -118,13 +118,16 @@ bootshow:
     ret  ;# to caller of caller
 
 relocate:
-    mov  edi, loadaddr
+    pop  ax ;# need to adjust return address for relocation
+    add  ax, loadaddr - bootaddr ;# assumes loadaddr > bootaddr; is it?
+    push ax
+    mov  edi, loadaddr ;# destination of relocation
     call 0f ;# where are we? (CALL puts return address on stack, we use that)
 0:  pop  si
     sub  si, offset 0b-offset start
     mov  cx, 512/4 ;# only 256 bytes unless...
-;# compile as 32-bit code here so it moves longwords and not words
-    data32 rep movsw
+    ;# compile as 32-bit code here so it moves longwords and not words
+    rep movsd
     jmp 0:offset 1f + loadaddr
 1:  ret ;# this code is executed from an offset of loadaddr, not 0x7c00
 
@@ -192,8 +195,8 @@ loaded: ;# show a sign of life: "colorForth code loaded" to screen
 write:
     mov  di, iobuffer
     mov  bx, di
-    mov  cx, 512*18
-    rep  movsw
+    mov  cx, 512*18*2/4
+    rep  movsd
     mov  ax, 3 << 8 + 18  ;# 18 sectors per head
     mov  dx, 0x0000 ;# head 0, drive 0
     mov  cx, [cylinder + loadaddr]
