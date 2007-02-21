@@ -58,22 +58,64 @@
  .endr
 .endm
 
+.macro display string, color
+ .ifeqs "\color", ""
+  .ascii "\r"; .byte white; .ascii "\n"; .byte white
+ .else
+  .irpc char, "\string"
+   .ascii "\char"; .byte \color
+  .endr
+ .endif
+.endm
+
+.macro zero register
+    push 0
+    pop \register
+.endm
+
+;# Memory map: 'xxxx' amounts vary depending on chosen stack size
+;#   100000 dictionary (grows upwards)
+;#    a0000 end of available low RAM on most systems, no more code can load 
+;#    xxxxx free
+;#     xxxx source ;# block 18, first high-level source block (load screen)
+;#     xxxx character maps ;# block 12
+;#     xxxx relocated bootcode begins here, at "gods"
+;#     xxxx top of "god" return stack
+;#     xxxx top of "god" data stack
+;#     xxxx top of "main" return stack
+;#     7c00 (bios boot sector... only during boot)
+;#     xxxx top of "main" data stack, grows downwards
+;#     4d00 bottom of edit buffer (grows upwards)
+;#      500 floppy buffer (0x4800 bytes)
+;#      400 system area, 256 bytes
+;#        0 BIOS interrupt table
+.equ cell, 4  ;# bytes per word
+.equ blocksize, 1024  ;# bytes per Forth block
 .equ hp, 1024 ;# 1024 or 800
 .equ vp, 768 ;# 768 or 600
 .equ vesa, 0x4117 ;# bit 12 sets linear address mode in 0x117 or 0x114
-.include "boot.asm" ;# boot boot0 hard
+.equ iobuffer, 0x500 ;# buffer for reading and writing floppy disk cylinders
+.equ buffersize, 0x4800 ;# 512 bytes * 18 tracks * 2 heads per cylinder
+.equ retstacksize, (1500 * cell) ;# 1500 cells in CM2001 original
+.equ datastacksize, (750 * cell) ;# 750 cells in CM2001 original
+.equ buffer, (iobuffer + buffersize) ;# this is the edit buffer
+;# wonder if edit buffer can be same as floppy buffer? not in use at same time
+.equ maind, buffer + datastacksize
+.equ mains, maind + retstacksize
+.equ godd, mains + datastacksize
+.equ gods, godd + retstacksize
+.equ remainder, (blocksize - (gods % blocksize))
+.if remainder < blocksize
+ .equ gods, gods + remainder ;# no sense wasting space, add to stack
+.endif
+.equ loadaddr, gods ;# from here upwards is where we relocate the code
+.equ bootaddr, 0x7c00
+.equ icons, loadaddr + (12 * blocksize) ;# block 12 start of character maps
+.equ green, 10
+.equ red, 12
+.equ white, 15
 
-;#   100000 dictionary
-;#    a0000 top of return stack
-;#    9f800 top of data stack
-;#    9d800 free
-;#     9400 source ;# block 18, first high-level source block (load screen)
-.equ icons, start + 12 * 256 * 4 ;# 3000, block 12 start of character maps
-;#     7c00 bios boot sector
-;#     4c00 forth bootcode
-;#      400 floppy buffer (0x4800 bytes)
-;#        0 BIOS interrupt table
-
+.include "boot.asm" ;# bootsector and related routines
 warm: dup_
 start1:
     pop [displ]  ;# use address determined by VBE2 call in boot.asm
@@ -91,11 +133,6 @@ start1:
 ;# return stack, 'd' indicates the data stack.  Thus 'Gods' and 'Godd'
 ;# are the tops of the return and data stacks, respectively, for the
 ;# God task.
-.equ gods, 0x28000*4 ;# 0xa0000, top of return stack
-.equ godd, gods-750*4 ;# 0x9f448, top of data stack
-.equ mains, godd-1500*4 ;# 0x9dcd8
-.equ maind, mains-750*4 ;# 0x9d120
-.equ buffer, maind-1500*4 ;# edit buffer, grows up not down
 .align 4
 ;# 'me' points to the save slot for the current task
 me: .long god

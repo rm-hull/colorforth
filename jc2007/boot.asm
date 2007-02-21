@@ -2,26 +2,7 @@
 ;# 0x000-0x400 is BIOS interrupt table
 ;# 0x400-0x500 is BIOS system information area
 ;# we can use starting at 0x500
-.equ iobuffer, 0x500
-.equ buffersize, 0x4800
 .org 0 ;# actually 0x7c00, where the BIOS loads the bootsector
-.equ loadaddr, 0x7c00
-.equ green, 10
-.equ red, 12
-.equ white, 15
-.macro display string, color
- .ifeqs "\color", ""
-  .ascii "\r"; .byte white; .ascii "\n"; .byte white
- .else
-  .irpc char, "\string"
-   .ascii "\char"; .byte \color
-  .endr
- .endif
-.endm
-.macro zero register
-    push 0
-    pop \register
-.endm
 start: jmp  start0
     nop
     .ascii "cmcf 1.0"
@@ -62,7 +43,7 @@ start0:
     mov  bx, 1 ;# CGA 40 x 25 text mode, closest to CM2001 graphic mode text
     int  0x10
     call loading
-;# (clear interrupts and relocate)
+    call relocate
     xor  ax, ax
     mov  ds, ax
     mov  es, ax
@@ -135,6 +116,17 @@ bootshow:
     mov  ax, 0x1303 ;# move cursor, attributes in-line
     int  0x10
     ret  ;# to caller of caller
+
+relocate:
+    mov  edi, loadaddr
+    call 0f ;# where are we? (CALL puts return address on stack, we use that)
+0:  pop  si
+    sub  si, offset 0b-offset start
+    mov  cx, 512/4 ;# only 256 bytes unless...
+;# compile as 32-bit code here so it moves longwords and not words
+    data32 rep movsw
+    jmp 0:offset 1f + loadaddr
+1:  ret ;# this code is executed from an offset of loadaddr, not 0x7c00
 
 protected_mode:
     cli  ;# we're not set up to handle interrupts in protected mode

@@ -148,6 +148,8 @@ test: ../test/b.img
 	cd ../test && $(MAKE)
 debug: ../test/b.img
 	cd ../test && $(MAKE) BXDEBUG=1
+minlog: ../test/b.img
+	cd ../test && $(MAKE) $@
 htmldiff: /tmp/color_pydump.html /tmp/color.html
 	rm -f $+
 	$(MAKE) $+
