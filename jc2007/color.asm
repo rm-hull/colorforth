@@ -162,14 +162,14 @@ main:
 
 pause: dup_ ;# save cached datum from top of data stack
     push esi ;# save data stack pointer on return stack
-    mov  eax, me ;# get current task
+    mov  eax, me + loadaddr ;# get current task
     mov  [eax], esp ;# put our stack pointer into [me]
     add  eax, 4 ;# skip storage slot, point to round-robin CALL or JMP
     jmp  eax ;# execute the CALL or JMP
 
 unpause: pop  eax ;# return address is that of 'main' slot above
     mov  esp, [eax] ;# load 'main' task return stack
-    mov  me, eax ;# 'main' task becomes 'me', current task
+    mov  me + loadaddr, eax ;# 'main' task becomes 'me', current task
     pop  esi ;# restore my task's data-stack pointer
     drop ;# load previously dup'd datum back into EAX
     ret
@@ -873,7 +873,7 @@ words: .long 1
 nul0: drop
     jmp  0f
 accept:
-acceptn: mov dword ptr  shift, offset alpha0
+acceptn: mov dword ptr shift + loadaddr, offset alpha0 + loadaddr
     lea  edi, alpha + loadaddr - 4
 accept1: mov board + loadaddr, edi
 0:  call key
@@ -1373,11 +1373,11 @@ mcur: dec dword ptr curs + loadaddr ;# minus cursor: move left
 pcur: inc dword ptr curs + loadaddr ;# plus cursor: move right
 0:  ret
 
-mmcur: sub dword ptr curs, 8 ;# move up one row
+mmcur: sub dword ptr curs + loadaddr, 8 ;# move up one row
     jns  0f  ;# return if it didn't go negative
-    mov dword ptr curs, 0  ;# otherwise set to 0
+    mov dword ptr curs + loadaddr, 0  ;# otherwise set to 0
 0:  ret
-ppcur: add dword ptr curs, 8 ;# move down one row
+ppcur: add dword ptr curs + loadaddr, 8 ;# move down one row
     ret  ;# guess it's ok to increment beyond end of screen (?)
 
 pblk: add dword ptr  blk, 2 ;# plus one block (+2 since odd are shadows)
@@ -1398,21 +1398,21 @@ e0: drop
 
 /* colorForth editor */
 ;# when invoked with 'edit', the block number is passed on the stack
-edit: mov  blk, eax
+edit: mov  blk + loadaddr, eax
     drop
 ;# when invoked with 'e', uses block number in blk, by default 18
 e:  dup_
-    mov  eax, blk
-    mov dword ptr  anumber, offset format
-    mov  byte ptr alpha0+4*4, 045 ;# .
-    mov dword ptr alpha0+4, offset e0
+    mov  eax, blk + loadaddr
+    mov dword ptr anumber+loadaddr, offset format + loadaddr
+    mov  byte ptr alpha0+loadaddr+4*4, 045 ;# .
+    mov dword ptr alpha0+loadaddr+4, offset e0 + loadaddr
     call refresh
-0:  mov dword ptr shift, offset ekbd0
-    mov dword ptr board, offset ekbd-4
-    mov dword ptr keyc, yellow ;# default key color, yellow
+0:  mov dword ptr shift + loadaddr, offset ekbd0
+    mov dword ptr board + loadaddr, offset ekbd-4
+    mov dword ptr keyc + loadaddr, yellow ;# default key color, yellow
 ;# this is the main loop
 0:  call key
-    call ekeys[eax*4]
+    call [ekeys + loadaddr + eax*4]
     drop
     jmp  0b
 
@@ -1420,45 +1420,46 @@ e:  dup_
 eout: pop  eax
     drop
     drop
-    mov  dword ptr aword, offset ex1
-    mov  dword ptr anumber, offset nul
-    mov  byte ptr alpha0+4*4, 0
-    mov  dword ptr alpha0+4, offset nul0
-    mov  dword ptr keyc, yellow ;# restore key color to yellow
+    mov  dword ptr aword + loadaddr, offset ex1 + loadaddr
+    mov  dword ptr anumber + loadaddr, offset nul + loadaddr
+    mov  byte ptr alpha0+loadaddr+4*4, 0
+    mov  dword ptr alpha0+loadaddr+4, offset nul0 + loadaddr
+    mov  dword ptr keyc + loadaddr, yellow ;# restore key color to yellow
     jmp  accept ;# revert to command-line processing
 
 /* insert, or paste */
-destack: mov  edx, trash ;# grab what was left by last "cut" operation
+;# grab what was left by last "cut" operation
+destack: mov  edx, trash + loadaddr
     cmp  edx, buffer ;# anything in there?
     jnz  0f ;# continue if so...
     ret  ;# otherwise, 'insert' is already the default action so nothing to do
 0:  sub  edx, 2*4
     mov  ecx, [edx+1*4]
-    mov  words, ecx
+    mov  words + loadaddr, ecx
 0:  dup_
     mov  eax, [edx]
     sub  edx, 1*4
     next 0b
     add  edx, 1*4
-    mov  trash, edx
+    mov  trash + loadaddr, edx
 
-insert0: mov  ecx, lcad  ;# room available?
-    add  ecx, words
-    xor  ecx, lcad
+insert0: mov  ecx, lcad + loadaddr ;# room available?
+    add  ecx, words + loadaddr
+    xor  ecx, lcad + loadaddr
     and  ecx, -0x100
     jz   insert1
-    mov  ecx, words ;# no
+    mov  ecx, words + loadaddr ;# no
 0:  drop
     next 0b
     ret
 insert1: push esi
-    mov  esi, lcad
+    mov  esi, lcad + loadaddr
     mov  ecx, esi
     dec  esi
     mov  edi, esi
-    add  edi, words
+    add  edi, words + loadaddr
     shl  edi, 2
-    sub  ecx, cad
+    sub  ecx, cad + loadaddr
     js   0f
     shl  esi, 2
     std
@@ -1468,7 +1469,7 @@ insert1: push esi
     shr  edi, 2
     inc  edi
     mov  curs, edi ;# like abort
-    mov  ecx, words
+    mov  ecx, words + loadaddr
 0:  dec  edi
     mov  [edi*4], eax
     drop ;# requires cld
@@ -1476,11 +1477,11 @@ insert1: push esi
     ret
 
 insert: call insert0
-    mov  cl, action
+    mov  cl, action + loadaddr
     xor  [edi*4], cl
     jmp  accept
 
-format: test byte ptr action, 012 ;# ignore 3 and 9
+format: test byte ptr action + loadaddr, 012 ;# ignore 3 and 9
     jz   0f
     drop
     ret
@@ -1491,50 +1492,50 @@ format: test byte ptr action, 012 ;# ignore 3 and 9
     jnz  format2
 0:  shl  eax, 5
     xor  al, 2 ;# 6
-    cmp  byte ptr  action, 4
+    cmp  byte ptr action + loadaddr, 4
     jz   0f
     xor  al, 013 ;# 8
-0:  cmp  dword ptr base, 10 ;# base 10?
+0:  cmp  dword ptr base + loadaddr, 10 ;# base 10?
     jz   0f ;# continue if so...
     xor  al, 0x10 ;# otherwise remove 'hex' bit
-0:  mov  dword ptr words, 1
+0:  mov  dword ptr words + loadaddr, 1
     jmp  insert
 
 format2: dup_
     mov  eax, 1 ;# 5
-    cmp  byte ptr  action, 4
+    cmp  byte ptr action + loadaddr, 4
     jz   0f
     mov  al, 3 ;# 2
-0:  cmp  dword ptr base, 10 ;# base 10?
+0:  cmp  dword ptr base + loadaddr, 10 ;# base 10?
     jz   0f ;# continue if so...
     xor  al, 0x10 ;# otherwise remove 'hex' bit
 0:  xchg eax, [esi]
-    mov  dword ptr words, 2
+    mov  dword ptr words + loadaddr, 2
     jmp  insert
 
 ;# delete, or cut, current word in editor (to the left of pacman cursor)
 del: call enstack
-    mov  edi, pcad
-    mov  ecx, lcad
+    mov  edi, pcad + loadaddr
+    mov  ecx, lcad + loadaddr
     sub  ecx, edi
     shl  edi, 2
     push esi
-    mov  esi, cad
+    mov  esi, cad + loadaddr
     shl  esi, 2
     rep  movsd
     pop  esi
     jmp  mcur
 
 enstack: dup_
-    mov  eax, cad
-    sub  eax, pcad
+    mov  eax, cad + loadaddr
+    sub  eax, pcad + loadaddr
     jz   ens
     mov  ecx, eax
     xchg eax, edx
     push esi
-    mov  esi, cad
+    mov  esi, cad + loadaddr
     lea  esi, [esi*4-4]
-    mov  edi, trash
+    mov  edi, trash + loadaddr
 0:  std
     lodsd
     cld
@@ -1542,19 +1543,19 @@ enstack: dup_
     next 0b
     xchg eax, edx
     stosd
-    mov  trash, edi
+    mov  trash + loadaddr, edi
     pop  esi
 ens: drop
     ret
 
 pad: pop  edx
-    mov  vector, edx
+    mov  vector + loadaddr, edx
     add  edx, 28*5
-    mov  board, edx
+    mov  board + loadaddr, edx
     sub  edx, 4*4
-    mov  shift, edx
+    mov  shift + loadaddr, edx
 0:  call key
-    mov  edx, vector
+    mov  edx, vector + loadaddr
     add  edx, eax
     lea  edx, [5+eax*4+edx]
     add  edx, [-4+edx]
