@@ -39,9 +39,9 @@ graphic: ret
 
 switch: ;# refresh screen, then switch tasks
     push esi
-    mov  esi, frame ;# source address, framebuffer
+    mov  esi, frame + loadaddr ;# source address, framebuffer
     push edi
-    mov  edi, displ ;# destination, linear memory of video controller
+    mov  edi, displ + loadaddr ;# linear memory of video controller
     mov  ecx, hp*vp/2 ;# number of 16-bits pixels, divided by 2 for dword movs
     rep  movsd ;# from buffer into video RAM
     pop  edi
@@ -55,14 +55,14 @@ clip:
     jns  0f
     xor  ecx, ecx
 0:  and  ecx, 0x0ffff
-    mov  yc, ecx
+    mov  yc + loadaddr, ecx
     imul ecx, hp*2
     sar  edi, 16
     jns  0f
     xor  edi, edi
-0:  mov  xc, edi
+0:  mov  xc + loadaddr, edi
     lea  edi, [edi*2+ecx]
-    add  edi, frame
+    add  edi, frame + loadaddr
     ret
 
 bit16: lodsw
@@ -94,9 +94,10 @@ emit: ;# paint a character on the screen
     push edi
     push edx
     imul eax, 16*24/8 ;# index into icon table...
-    lea  esi, icons[eax] ;# point to the bit-representation of this character
+;# point to the bit-representation of this character
+    lea  esi, [icons + loadaddr + eax] 
     call clip
-    mov  edx, fore ;# get foreground color into EDX
+    mov  edx, fore + loadaddr ;# get foreground color into EDX
     mov  ecx, 24
 0:  push ecx
     call bit16
@@ -115,9 +116,9 @@ emit2: push esi
     push edi
     push edx
     imul eax, 16*24/8
-    lea  esi, icons[eax]
+    lea  esi, [icons + loadaddr + eax]
     call clip
-    mov  edx, fore
+    mov  edx, fore + loadaddr
     mov  ecx, 24
 0:  push ecx
     call bit32
@@ -141,7 +142,7 @@ line: call clip
     shl  ecx, 1
     sub  edi, ecx
     mov  ecx, eax
-    mov  eax, fore
+    mov  eax, fore + loadaddr
     rep stosw
     inc dword ptr xy + loadaddr
     drop
@@ -154,18 +155,18 @@ box: ;# draw a box and fill with foreground color
     js   0f ;# continue if not
     mov  eax, vp ;# else set vertical parameter to end of screen
 0:  mov  ecx, eax
-    sub  ecx, yc
+    sub  ecx, yc + loadaddr
     jng  no
     cmp  dword ptr [loadaddr + esi], hp+1
     js   0f
     mov  dword ptr [loadaddr + esi], hp
-0:  mov  eax, xc
+0:  mov  eax, xc + loadaddr
     sub  [esi], eax
     jng  no
     mov  edx, hp
     sub  edx, [esi]
     shl  edx, 1
-    mov  eax, fore
+    mov  eax, fore + loadaddr
 0:  push ecx
     mov  ecx, [esi]
     rep stosw
@@ -176,6 +177,6 @@ no: drop
     drop
     ret
 vframe:  ;# needed by Mandelbrot program for low-level graphic stuff
-    mov eax, frame
+    mov eax, frame + loadaddr
     dup_
     ret
