@@ -556,15 +556,15 @@ copy: cmp  eax, 12 ;# can't overwrite machine-code blocks...
     mov  esi, blk ;# get current block number from blk
     shl  esi, 2+8 ;# multiply by 1024 to get address
     mov  ecx, 256 ;# 256 longwords = 1024 bytes
-    rep movsd ;# move the block from source (ESI) to destination (EDI)
+    rep  movsd ;# move the block from source (ESI) to destination (EDI)
     pop  esi  ;# restore data stack pointer
     mov  blk, eax ;# destination block becomes new current block (blk)
     drop ;# no longer need the block number
     ret
 
-debug: mov dword ptr  xy,  offset (3*0x10000+(vc-2)*ih+3)
+debug: mov dword ptr xy + loadaddr, offset (3*0x10000+(vc-2)*ih+3)
     dup_
-    mov  eax, god
+    mov  eax, god + loadaddr
     push [eax]
     call dot
     dup_
@@ -1463,7 +1463,7 @@ insert1: push esi
     js   0f
     shl  esi, 2
     std
-    rep movsd
+    rep  movsd
     cld
 0:  pop  esi
     shr  edi, 2

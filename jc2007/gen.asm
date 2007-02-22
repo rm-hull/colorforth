@@ -49,7 +49,7 @@ switch: ;# refresh screen, then switch tasks
 0:  jmp  pause ;# switch task
 
 clip:
-    mov edi, xy
+    mov edi, xy + loadaddr
     mov  ecx, edi
     test cx, cx
     jns  0f

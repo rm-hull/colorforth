@@ -87,7 +87,7 @@ graphicsmode:
     int  0x10
     mov  ebx, iobuffer + 0x28 ;# linear frame buffer address
     mov  eax, [ebx]
-    mov  [displ + loadaddr], ebx
+    mov  [displ + loadaddr], eax
     ret
 
 read:
