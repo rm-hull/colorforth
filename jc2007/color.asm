@@ -73,6 +73,12 @@
     pop \register
 .endm
 
+.macro long longwords:vararg
+ .irp longword \longwords
+  .long \longword + loadaddr
+ .endr
+.endm
+
 ;# Memory map: 'xxxx' amounts vary depending on chosen stack size
 ;#   100000 dictionary (grows upwards)
 ;#    a0000 end of available low RAM on most systems, no more code can load 
@@ -119,10 +125,10 @@
 .code32 ;# protected-mode code from here on out
 warm: dup_
 start1:
-    pop [displ]  ;# use address determined by VBE2 call in boot.asm
     call show0 ;# set up 'main' task to draw screen
-    mov  dword ptr forths, offset ((forth1-forth0)/4) ;# number of Forth words
-    mov  dword ptr macros, offset ((macro1-macro0)/4) ;# number of macros
+;# number of Forth words and number of macros
+    mov  dword ptr forths + loadaddr, offset ((forth1-forth0)/4) 
+    mov  dword ptr macros + loadaddr, offset ((macro1-macro0)/4) 
     mov  eax, 18 ;# load start screen, 18
 ;# the start screen loads a bunch of definitions, then 'empty' which shows logo
     call load
@@ -136,9 +142,9 @@ start1:
 ;# God task.
 .align 4
 ;# 'me' points to the save slot for the current task
-me: .long god
+me: long god
 screen:
-    .long 0 ;# logo
+    .long 0 ;# logo will be stored here
 ;# When we switch tasks, we need to switch stacks as well.  We do this
 ;# by pushing eax (cached top-of-stack) onto the data stack, pushing
 ;# the data stack pointer onto the return stack, and then saving the
@@ -175,18 +181,18 @@ act: ;# set currently active task
     pop  [eax] ;# return of 'god' task now on 'main' stack
     sub  eax, 4 ;# down one slot on 'main' stack
     mov  [eax], edx ;# store 'main' data stack pointer
-    mov  main, eax ;# store 'main' return stack pointer in 'main' slot
+    mov  main + loadaddr, eax ;# 'main' return stack pointer in 'main' slot
     drop ;# what was 'dup'd before now into eax
     ret ;# to previous caller, since we already popped 'our' return address
 
 show0: call show
     ret
-show: pop  screen ;# pop return address into screen; 'ret' if from show0
+show: pop screen + loadaddr ;# return address into screen; 'ret' if from show0
     dup_
     xor  eax, eax
     call act ;# make following infinite loop the 'active task'
 0:  call graphic ;# just 'ret' in gen.asm
-    call [screen] ;# ret if called from show0
+    call [screen + loadaddr] ;# ret if called from show0
     call switch ;# load framebuffer into video, then switch task
     inc  eax ;# why bother?
     jmp  0b ;# loop eternally
@@ -195,41 +201,41 @@ c_: mov  esi, godd+4
     ret
 
 mark: ;# save current state so we can recover later with 'empty'
-    mov  ecx, macros ;# save number of macros in longword mk
-    mov  mk, ecx
-    mov  ecx, forths ;# number of forth words in mk+1
-    mov  mk+4, ecx
-    mov  ecx, h ;# 'here' pointer in mk+2
-    mov  mk+2*4, ecx
+    mov  ecx, [macros + loadaddr] ;# save number of macros in longword mk
+    mov  [mk + loadaddr], ecx
+    mov  ecx, [forths + loadaddr] ;# number of forth words in mk+1
+    mov  [mk + loadaddr + 4], ecx
+    mov  ecx, [h + loadaddr] ;# 'here' pointer in mk+2
+    mov  [mk + loadaddr + 8], ecx
     ret
 
 empty: ;# restore state saved at last 'mark'
-    mov  ecx, mk+2*4
-    mov  h, ecx ;# 'here' pointer restored
-    mov  ecx, mk+4
-    mov  forths, ecx ;# number of forth words restored
-    mov  ecx, mk
-    mov  macros, ecx ;# number of macros restored
-    mov  dword ptr class, 0 ;# (jc) not sure what this is for yet
+    mov  ecx, [mk + loadaddr + 8]
+    mov  [h + loadaddr], ecx ;# 'here' pointer restored
+    mov  ecx, [mk + loadaddr + 4]
+    mov  [forths + loadaddr], ecx ;# number of forth words restored
+    mov  ecx, [mk + loadaddr]
+    mov  [macros + loadaddr], ecx ;# number of macros restored
+    mov  dword ptr class + loadaddr, 0 ;# (jc) not sure what this is for yet
     ret
 
 mfind: ;# find pointer to macro code
-    mov  ecx, macros ;# number of macros, 1-based
+    mov  ecx, [macros + loadaddr] ;# number of macros, 1-based
     push edi ;# save destination pointer, we need to use it momentarily
-    lea  edi, [macro0-4+ecx*4] ;# point to last macro
+    lea  edi, [macro0 + loadaddr - 4 + ecx * 4] ;# point to last macro
     jmp  0f ;# search dictionary
 
 find: ;# locate code of high- or low-level Forth word
     mov  ecx, forths ;# current number of Forth definitions
     push edi ;# save destination pointer so we can use it
-    lea  edi, [forth0-4+ecx*4] ;# point it to last packed Forth word
+    lea  edi, [forth0 + loadaddr -4+ecx*4] ;# point it to last packed Forth word
 0:  std  ;# search backwards
     repne scasd ;# continue moving until we hit a match
     cld  ;# clear direction flag again
     pop  edi ;# no longer need this, can tell from ECX where match was found
     ret
 
-ex1: dec dword ptr words ;# from keyboard
+ex1: dec dword ptr words + loadaddr ;# from keyboard
     jz   0f
     drop
     jmp  ex1
@@ -238,7 +244,7 @@ ex1: dec dword ptr words ;# from keyboard
     drop
     jmp  [forth2+ecx*4] ;# jump to low-level code of Forth word or macro
 
-execute: mov dword ptr lit, offset alit
+execute: mov dword ptr lit + loadaddr, offset alit + loadaddr
     dup_ ;# save EAX on data stack
     mov  eax, [-4+edi*4]
 ex2:
@@ -252,10 +258,10 @@ abort: mov  curs, edi
     shr  edi, 10-2
     mov  blk, edi
 abort1: mov  esp, gods ;# reset return stack pointer
-    mov  dword ptr  spaces+3*4, offset forthd ;# reset adefine
-    mov  dword ptr  spaces+4*4, offset qcompile
-    mov  dword ptr  spaces+5*4, offset cnum
-    mov  dword ptr  spaces+6*4, offset cshort
+    mov  dword ptr spaces+3*4 + loadaddr, offset forthd + loadaddr ;# adefine
+    mov  dword ptr spaces+4*4 + loadaddr, offset qcompile + loadaddr
+    mov  dword ptr spaces+5*4 + loadaddr, offset cnum + loadaddr
+    mov  dword ptr spaces+6*4 + loadaddr, offset cshort + loadaddr
     mov  eax, 057 ;# '?'
     call echo_
     jmp  accept
@@ -263,8 +269,8 @@ abort1: mov  esp, gods ;# reset return stack pointer
 sdefine: pop adefine
     ret
 macro_: call sdefine
-macrod: mov  ecx, macros
-    inc dword ptr  macros
+macrod: mov  ecx, [macros + loadaddr]
+    inc dword ptr [macros + loadaddr]
     lea  ecx, [macro0+ecx*4]
     jmp  0f
 
@@ -282,8 +288,8 @@ forthd:
     shr  edx, 2
     mov  last, edx
     mov  list, esp
-    mov dword ptr  lit, offset adup
-    test dword ptr class, -1
+    mov dword ptr lit + loadaddr, offset adup + loadaddr
+    test dword ptr class + loadaddr, -1
     jz   0f
     jmp  [class]
 0:  ret
@@ -291,7 +297,7 @@ forthd:
 cdrop: mov  edx, h
     mov  list, edx
     mov  byte ptr [edx], 0x0ad ;# lodsd
-    inc  dword ptr h
+    inc  dword ptr h + loadaddr
     ret
 
 qdup: mov  edx, h
@@ -474,23 +480,23 @@ load: shl  eax, 10-2 ;# multiply by 256 longwords, same as 1024 bytes
     push edi ;# save EDI register, we need it for the inner interpreter loop
     mov  edi, eax
     drop ;# block number from data stack
-inter: mov  edx, [edi*4] ;# get next longword from block
+inter: mov  edx, [loadaddr + edi*4] ;# get next longword from block
     inc  edi ;# then point to the following one
     and  edx, 017 ;# get only low 4 bits, the type tag
-    call spaces[edx*4] ;# call the routine appropriate to this type
+    call spaces[loadaddr + edx*4] ;# call the routine appropriate to this type
     jmp  inter ;# loop till "nul" reached, which ends the loop
 
 .align 4
-spaces: .long qignore, execute, num
+spaces: long qignore, execute, num
 adefine: ;# where definitions go, either in macrod (dictionary) or forthd
-    .long macrod ;# default, the macro dictionary
-    .long qcompile, cnum, cshort, compile
-    .long short_, nul, nul, nul
-    .long variable, nul, nul, nul
+    long macrod ;# default, the macro dictionary
+    long qcompile, cnum, cshort, compile
+    long short_, nul, nul, nul
+    long variable, nul, nul, nul
 
-lit: .long adup
+lit: long adup
 mk: .long 0, 0, 0
-h: .long 0x40000*4 ;# start compiling at 0x100000
+h: .long 0x100000 ;# start compiling here, beginning of extended memory
 last: .long 0
 class: .long 0
 list: .long 0, 0
@@ -511,16 +517,16 @@ forth0:
 forth1:
     .rept 512 - ((.-forth1)/4) .long 0; .endr
 macro2:
-    .long semi, cdup, qdup, cdrop, then, begin
+    long semi, cdup, qdup, cdrop, then, begin
 0:
     .rept 128 - ((.-0b)/4) .long 0; .endr
 forth2:
-    .long boot, warm, pause, macro_, forth, c_, stop, readf, writef, nc_
-    .long cmdf, seekf, readyf, act, show, load, here, qlit, comma3, comma2
-    .long comma1, comma, less, jump, accept, pad, erase, copy, mark, empty
-    .long emit, edig, emit2, dot10, hdot, hdotn, cr, space, down, edit
-    .long e, lms, rms, graphic, text1, keyboard, debug, at, pat, xy_
-    .long fov_, fifof, box, line, color, octant, sps, last_, unpack, vframe
+    long boot, warm, pause, macro_, forth, c_, stop, readf, writef, nc_
+    long cmdf, seekf, readyf, act, show, load, here, qlit, comma3, comma2
+    long comma1, comma, less, jump, accept, pad, erase, copy, mark, empty
+    long emit, edig, emit2, dot10, hdot, hdotn, cr, space, down, edit
+    long e, lms, rms, graphic, text1, keyboard, debug, at, pat, xy_
+    long fov_, fifof, box, line, color, octant, sps, last_, unpack, vframe
 0:
     .rept 512 - ((.-0b)/4) .long 0; .endr ;# room for new definitions
 
@@ -628,17 +634,17 @@ history:
     .rept 11 .byte 0; .endr
 echo_: push esi
     mov  ecx, 11-1
-    lea  edi, history
+    lea  edi, history + loadaddr
     lea  esi, [1+edi]
     rep  movsb
     pop  esi
-    mov  history+11-1, al
+    mov  history + loadaddr +11-1, al
     drop
     ret
 
 right: dup_
     mov  ecx, 11
-    lea  edi, history
+    lea  edi, history + loadaddr
     xor  eax, eax
     rep  stosb
     drop
@@ -756,23 +762,23 @@ keyboard: call text1
     dup_
     mov  eax, keyc
     call color
-    mov dword ptr  rm, hc*iw
-    mov dword ptr  lm, hp-9*iw+3
-    mov dword ptr  xy, (hp-9*iw+3)*0x10000+vp-4*ih+3
+    mov dword ptr rm + loadaddr, hc*iw
+    mov dword ptr lm + loadaddr, hp-9*iw+3
+    mov dword ptr xy + loadaddr, (hp-9*iw+3)*0x10000+vp-4*ih+3
     call eight
     call eight
     call eight
     call cr
-    add dword ptr  xy, 4*iw*0x10000
-    mov  edi, shift
+    add  dword ptr xy + loadaddr, 4*iw*0x10000
+    mov  edi, shift + loadaddr
     add  edi, 4*4-4
     mov  ecx, 3
     call four1
-    mov dword ptr  lm, 3
-    mov  word ptr xy+2, 3
+    mov  dword ptr lm + loadaddr, 3
+    mov  word ptr xy + loadaddr + 2, 3
     call stack
-    mov  word ptr xy+2, hp-(11+9)*iw+3
-    lea  edi, history-4
+    mov  word ptr xy + loadaddr +2, hp-(11+9)*iw+3
+    lea  edi, history + loadaddr -4
     mov  ecx, 11
     jmp  four1
 
@@ -841,39 +847,39 @@ key: ;# loop forever, returning keyhits when available
 ;# these sort of go in pairs:
 ;# foo0 is for the first character of a word
 ;# foo1 is used for the rest
-graph0: .long nul0, nul0, nul0, alph0
+graph0: long nul0, nul0, nul0, alph0
     .byte  0 ,  0 ,  5 , 0 ;#     a
-graph1: .long word0, x, lj, alph
+graph1: long word0, x, lj, alph
     .byte 025, 045,  5 , 0 ;# x . a
-alpha0: .long nul0, nul0, number, star0
+alpha0: long nul0, nul0, number, star0
     .byte  0 , 041, 055, 0 ;#   9 *
-alpha1: .long word0, x, lj, graph
+alpha1: long word0, x, lj, graph
     .byte 025, 045, 055, 0 ;# x . *
-numb0: .long nul0, minus, alphn, octal
+numb0: long nul0, minus, alphn, octal
     .byte 043,  5 , 016, 0 ;# - a f
-numb1: .long number0, xn, endn, number0
+numb1: long number0, xn, endn, number0
     .byte 025, 045,  0 , 0 ;# x .
 
-board: .long alpha-4
-shift: .long alpha0
+board: long alpha-4
+shift: long alpha0
 base: .long 10
-current: .long decimal
+current: long decimal
 keyc: .long yellow
 chars: .long 1
-aword: .long ex1
-anumber: .long nul
+aword: long ex1
+anumber: long nul
 words: .long 1
 
 nul0: drop
     jmp  0f
 accept:
 acceptn: mov dword ptr  shift, offset alpha0
-    lea  edi, alpha-4
-accept1: mov  board, edi
+    lea  edi, alpha + loadaddr - 4
+accept1: mov board + loadaddr, edi
 0:  call key
     cmp  al, 4
     jns  first
-    mov  edx, shift
+    mov  edx, shift + loadaddr
     jmp  dword ptr [edx+eax*4]
 
 bits: ;# number of bits available in word for packing more Huffman codes
@@ -895,7 +901,7 @@ pack: cmp  al, 0b00010000 ;# character code greater than 16?
 ;# common entry point for 4, 5, and 7-bit Huffman codes
 0:  mov  edx, eax ;# copy Huffman code into EDX
     mov  ch, cl ;# copy Huffman-code bitcount into 8-bit CH register
-0:  cmp  bits, cl ;# do we have enough bits left in the word?
+0:  cmp  bits + loadaddr, cl ;# do we have enough bits left in the word?
     jnc  0f  ;# if so, continue on
     shr  al, 1 ;# low bit of character code set?
     jc   full ;# if so, word is full, need to start an extension word instead
@@ -903,11 +909,11 @@ pack: cmp  al, 0b00010000 ;# character code greater than 16?
     jmp  0b ;# keep going; as long as we don't find any set bits, it'll fit
 0:  shl  dword ptr [esi], cl ;# shift over just the amount of bits necessary
     xor  [esi], eax ;# 'or' or 'add' would have worked as well (and clearer?)
-    sub  bits, cl ;# reduce remaining bitcount by what we just used
+    sub  bits + loadaddr, cl ;# reduce remaining bitcount by what we just used
     ret
 
 ;# left-justification routine packs Huffman codes into the MSBs of the word
-lj0: mov  cl, bits ;# bits remaining into CL register
+lj0: mov  cl, bits + loadaddr ;# bits remaining into CL register
     add  cl, 4 ;# add to that the 4 reserved bits for type tag
     shl  dword ptr [esi], cl ;# shift packed word into MSBs
     ret
@@ -919,43 +925,44 @@ lj: call lj0
 
 ;# the packed word is full, so finish processing
 full: call lj0 ;# left-justify the packed word
-    inc dword ptr words ;# bump the count
-    mov byte ptr bits, 32-4 ;# reset bit count, still saving 4 bits for tag
+    inc dword ptr words + loadaddr ;# bump the count
+;# reset bit count, still saving 4 bits for tag
+    mov byte ptr bits + loadaddr, 32-4
 ;# we were processing a character when we found the word full, so add it in
-    sub  bits, ch ;# subtract saved bitcount of this Huffman code
+    sub  bits + loadaddr, ch ;# subtract saved bitcount of this Huffman code
     mov  eax, edx ;# restore top-of-stack with partial packed word
     dup_
     ret
 
 x:  call right
-    mov  eax, words
+    mov  eax, words + loadaddr
     lea  esi, [eax*4+esi]
     drop
     jmp  accept
 
 word_: call right
-    mov dword ptr  words, 1
-    mov dword ptr  chars, 1
+    mov  dword ptr words + loadaddr, 1
+    mov  dword ptr chars + loadaddr, 1
     dup_
     mov  dword ptr [esi], 0
-    mov byte ptr bits, 28
+    mov  byte ptr bits, 28
 word1: call letter
     jns  0f
-    mov  edx, shift
+    mov  edx, shift + loadaddr
     jmp  dword ptr [edx+eax*4]
 0:  test al, al
     jz   word0
     dup_
     call echo_
     call pack
-    inc dword ptr  chars
+    inc dword ptr chars + loadaddr
 word0: drop
     call key
     jmp  word1
 
-decimal: mov dword ptr  base, 10
-    mov dword ptr  shift, offset numb0
-    mov dword ptr  board, offset numbers-4
+decimal: mov dword ptr base + loadaddr, 10
+    mov dword ptr shift + loadaddr, offset numb0 + loadaddr
+    mov dword ptr board + loadaddr, offset numbers + loadaddr - 4
     ret
 
 hex: mov dword ptr  base, 16
@@ -1012,35 +1019,35 @@ endn: drop
 
 alphn: drop
 alph0: mov dword ptr  shift, offset alpha0
-    lea  edi, alpha-4
+    lea  edi, alpha + loadaddr - 4
     jmp  0f
-star0: mov dword ptr  shift, offset graph0
-    lea  edi, graphics-4
+star0: mov dword ptr shift + loadaddr, offset graph0 + loadaddr
+    lea  edi, graphics + loadaddr - 4
 0:  drop
     jmp  accept1
 
-alph: mov dword ptr  shift, offset alpha1
+alph: mov dword ptr shift + loadaddr, offset alpha1 + loadaddr
     /* variable 'board' holds a pointer to the keyboard currently in use:
     /* alphabetic, numeric, graphic, etc.
     /* since valid key codes start at 1, subtract length of 1 address
     /* (4 bytes) from the start of the table into which we index */
-    lea  edi, alpha-4
+    lea  edi, alpha + loadaddr - 4
     jmp  0f
 graph: mov dword ptr shift, offset graph1
-    lea  edi, graphics-4
-0:  mov  board, edi
+    lea  edi, graphics + loadaddr - 4
+0:  mov  board + loadaddr, edi
     jmp  word0
 
-first: add dword ptr shift, 4*4+4
+first: add dword ptr shift + loadaddr, 4*4+4
     call word_
-    call [aword]
+    call [aword + loadaddr]
     jmp  accept
 
 hicon: .byte 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
     .byte 0x20, 0x21,  5 , 0x13, 0xa, 0x10,  4 , 0xe
 edig1: dup_
 edig: push ecx
-    mov  al, hicon[eax]
+    mov  al, hicon + loadaddr[eax]
     call emit
     pop  ecx
     ret
@@ -1065,7 +1072,7 @@ hdot: mov  ecx, 8
     ret
 
 /* '.', 'dot' is the original Forth 'word' for
-/* displaying a number off the stack */
+ * displaying a number off the stack */
 dot: mov  ecx, 7
 0:  call odig
     jnz  @h
@@ -1081,7 +1088,7 @@ dot: mov  ecx, 7
 @h: inc  ecx
     jmp  @h1
 
-qdot: cmp dword ptr  base, 10
+qdot: cmp dword ptr base + loadaddr, 10
     jnz  dot
 dot10: mov  edx, eax
     test edx, edx
@@ -1093,7 +1100,7 @@ dot10: mov  edx, eax
 0:  mov  ecx, 8
 0:  mov  eax, edx
     xor  edx, edx
-    div dword ptr  tens[ecx*4]
+    div  dword ptr [tens + loadaddr + ecx*4]
     test eax, eax
     jnz  d_1
     dec  ecx
@@ -1101,7 +1108,7 @@ dot10: mov  edx, eax
     jmp  d_2
 0:  mov  eax, edx
     xor  edx, edx
-    div dword ptr  tens[ecx*4]
+    div dword ptr [tens + loadaddr + ecx*4]
 d_1: call edig1
     dec  ecx
     jns  0b
@@ -1134,33 +1141,33 @@ unpack: dup_
 
 qring: dup_
     inc  dword ptr [esi]
-    cmp  curs, edi ;# from abort, insert
+    cmp  curs + loadaddr, edi ;# from abort, insert
     jnz  0f
-    mov  curs, eax
-0:  cmp  eax, curs
+    mov  curs + loadaddr, eax
+0:  cmp  eax, curs + loadaddr
     jz   ring
     jns  0f
-    mov  pcad, edi
+    mov  pcad + loadaddr, edi
 0:  drop
     ret
 
 ring:
     mov  cad, edi
-    sub dword ptr xy, iw*0x10000 ;# bksp
+    sub dword ptr xy + loadaddr, iw*0x10000 ;# bksp
     dup_
     mov  eax, 0x0e04000 ;# ochre-colored cursor
     call color
     mov  eax, 060
-    mov  cx, word ptr xy+2
-    cmp  cx, word ptr rm
+    mov  cx, word ptr xy + loadaddr +2
+    cmp  cx, word ptr rm + loadaddr
     js   0f
     call emit
-    sub dword ptr xy, iw*0x10000 ;# bksp
+    sub dword ptr xy + loadaddr, iw*0x10000 ;# bksp
     ret
 0:  jmp  emit
 
-rw: mov  cx, word ptr xy+2
-    cmp  cx, word ptr lm
+rw: mov  cx, word ptr xy + loadaddr +2
+    cmp  cx, word ptr lm + loadaddr
     jz   0f
     call cr
 0:  call red
@@ -1176,7 +1183,7 @@ ww: dup_
     jmp  type_
 
 type0: ;# display continuation of previous word
-    sub  dword ptr xy, iw*0x10000 ;# call bspcr
+    sub  dword ptr xy + loadaddr, iw*0x10000 ;# call bspcr
     test dword ptr [-4+edi*4], 0xfffffff0 ;# valid packed word?
     jnz  type1
     dec  edi
@@ -1236,7 +1243,7 @@ gnw: mov  edx, [edi*4]
     inc  edi
 gnw1: dup_
     mov  eax, 0x0f800 ;# green
-    cmp dword ptr bas, offset dot10 ;# is it base 10?
+    cmp dword ptr bas + loadaddr, offset dot10 ;# is it base 10?
     jz   0f ;# bright green if so
     mov  eax, 0x0c000 ;# else dark green
     jmp  0f
@@ -1251,13 +1258,13 @@ nw: mov  edx, [edi*4]
     inc  edi
 nw1: dup_
     mov  eax, yellow
-    cmp dword ptr bas, offset dot10 ;# is it base 10?
+    cmp dword ptr bas + loadaddr, offset dot10 + loadaddr ;# is it base 10?
     jz   0f ;# bright yellow if so
     mov  eax, 0x0c0c000 ;# else dark yellow
 0:  call color
     dup_
     mov  eax, edx
-    jmp  [bas]
+    jmp  [bas + loadaddr]
 
 refresh: call show
     call blank
@@ -1268,28 +1275,28 @@ refresh: call show
     xor  eax, eax
     mov  edi, blk
     shl  edi, 10-2
-    mov  pcad, edi ;# for curs=0
+    mov  pcad + loadaddr, edi ;# for curs=0
 ref1: test dword ptr [edi*4], 0x0f
     jz   0f
     call qring
 0:  mov  edx, [edi*4]
     inc  edi
-    mov dword ptr  bas, offset dot10
+    mov dword ptr bas + loadaddr, offset dot10 + loadaddr
     test dl, 020
     jz   0f
-    mov dword ptr  bas, offset dot
+    mov dword ptr bas + loadaddr, offset dot + loadaddr
 0:  and  edx, 017
     call display[edx*4]
     jmp  ref1
 
 .align 4
-display: .long type0, ww, nw, rw
-    .long gw, gnw, gsw, mw
-    .long sw, text, cap, caps
-    .long var, nul, nul, nul
+display: long type0, ww, nw, rw
+    long gw, gnw, gsw, mw
+    long sw, text, cap, caps
+    long var, nul, nul, nul
 tens: .long 10, 100, 1000, 10000, 100000, 1000000
     .long 10000000, 100000000, 1000000000
-bas: .long dot10
+bas: long dot10
 blk: .long 18
 curs: .long 0
 cad: .long 0
@@ -1300,18 +1307,18 @@ trash: .long buffer
 /* the editor keys and their actions */
 ekeys:
 ;# delete (cut), exit editor, insert (paste)
-    .long nul, del, eout, destack ;# n<space><alt>
+    long nul, del, eout, destack ;# n<space><alt>
 ;# white (yellow), red, green, to shadow block
-    .long act1, act3, act4, shadow ;# uiop=yrg*
+    long act1, act3, act4, shadow ;# uiop=yrg*
 ;# left, up, down, right
-    .long mcur, mmcur, ppcur, pcur ;# jkl;=ludr
+    long mcur, mmcur, ppcur, pcur ;# jkl;=ludr
 ;# previous block, magenta (variable), cyan (macro), next block
-    .long mblk, actv, act7, pblk ;# m,./=-mc+
+    long mblk, actv, act7, pblk ;# m,./=-mc+
 ;# white (comment) all caps, white (comment) capitalized, white (comment)
-    .long nul, act11, act10, act9 ;# wer=SCt
-    .long nul, nul, nul, nul ;# df=fj (find and jump) not in this version
+    long nul, act11, act10, act9 ;# wer=SCt
+    long nul, nul, nul, nul ;# df=fj (find and jump) not in this version
 ;# these are the huffman encodings of the characters to display
-ekbd0: .long nul, nul, nul, nul
+ekbd0: long nul, nul, nul, nul
     .byte 21, 37,  7,  0  ;# x  .  i
 ekbd:
     .byte 15,  1, 13, 45  ;# w  r  g  *
@@ -1341,28 +1348,29 @@ act10: mov  al, 10 ;# word comment, white Capitalized
 act11: mov  al, 11 ;# word comment, ALL CAPS
     jmp  0f
 act7: mov  al, 7 ;# macro compile, cyan
-0:  mov  action, al ;# number of action
-    mov  eax, [actc-4+eax*4] ;# load color corresponding to action
-    mov dword ptr aword, offset insert ;# "insert" becomes the active word
+0:  mov  action + loadaddr, al ;# number of action
+    mov  eax, [actc + loadaddr -4+eax*4] ;# load color corresponding to action
+;# "insert" becomes the active word
+    mov dword ptr aword + loadaddr, offset insert + loadaddr
 ;# action for number
-actn: mov  keyc, eax
+actn: mov  keyc + loadaddr, eax
     pop  eax
     drop
     jmp  accept
 ;# after 'm' pressed, change color and prepare to store variable name
-actv: mov byte ptr action, 12 ;# variable
+actv: mov byte ptr action + loadaddr, 12 ;# variable
     mov  eax, 0x0ff00ff ;# magenta
-    mov dword ptr aword, offset 0f
+    mov dword ptr aword + loadaddr, offset 0f
     jmp  actn
 ;# this is the action performed after the variable name is entered
 0:  dup_ ;# save EAX (packed word) on stack
     xor  eax, eax ;# zero out EAX
-    inc  dword ptr words ;# add one to count of words
+    inc  dword ptr words + loadaddr ;# add one to count of words
     jmp  insert ;# insert new word into dictionary
 
-mcur: dec dword ptr curs ;# minus cursor: move left
+mcur: dec dword ptr curs + loadaddr ;# minus cursor: move left
     jns  0f  ;# just return if it didn't go negative, otherwise undo it...
-pcur: inc dword ptr curs ;# plus cursor: move right
+pcur: inc dword ptr curs + loadaddr ;# plus cursor: move right
 0:  ret
 
 mmcur: sub dword ptr curs, 8 ;# move up one row

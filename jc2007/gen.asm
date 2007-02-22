@@ -108,7 +108,7 @@ emit: ;# paint a character on the screen
     pop  esi
 bl_: drop
 space:
-    add dword ptr xy, iw*0x10000
+    add dword ptr xy + loadaddr, iw*0x10000
     ret
 
 emit2: push esi
@@ -127,13 +127,13 @@ emit2: push esi
     pop  edx
     pop  edi
     pop  esi
-    add  dword ptr xy, iw*0x10000*2
+    add  dword ptr xy + loadaddr, iw*0x10000*2
     drop
     ret
 
 text1: call white
-    mov  dword ptr lm, 3
-    mov  dword ptr rm, hc*iw
+    mov  dword ptr lm + loadaddr, 3
+    mov  dword ptr rm + loadaddr, hc*iw
     jmp  top
 
 line: call clip
@@ -143,7 +143,7 @@ line: call clip
     mov  ecx, eax
     mov  eax, fore
     rep stosw
-    inc dword ptr xy
+    inc dword ptr xy + loadaddr
     drop
     drop
     ret
@@ -156,9 +156,9 @@ box: ;# draw a box and fill with foreground color
 0:  mov  ecx, eax
     sub  ecx, yc
     jng  no
-    cmp  dword ptr [esi], hp+1
+    cmp  dword ptr [loadaddr + esi], hp+1
     js   0f
-    mov  dword ptr [esi], hp
+    mov  dword ptr [loadaddr + esi], hp
 0:  mov  eax, xc
     sub  [esi], eax
     jng  no

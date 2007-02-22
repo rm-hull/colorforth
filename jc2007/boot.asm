@@ -85,8 +85,9 @@ graphicsmode:
     mov  ax, 0x4f02 ;# set video mode
     mov  bx, cx ;# vesa mode
     int  0x10
-    mov  eax, dword [iobuffer + 0x28] ;# linear frame buffer address
-    mov  [displ + loadaddr], eax
+    mov  ebx, iobuffer + 0x28 ;# linear frame buffer address
+    mov  eax, [ebx]
+    mov  [displ + loadaddr], ebx
     ret
 
 read:
