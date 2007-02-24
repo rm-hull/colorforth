@@ -35,6 +35,7 @@ config:
 	 --enable-fast-function-calls \
 	 --enable-icache \
 	 --enable-repeat-speedups \
+	 --enable-show-ips \
 	 --enable-guest2host-tlb \
 	 --enable-sep \
 	 --enable-pge \
