@@ -226,7 +226,7 @@ mfind: ;# find pointer to macro code
     jmp  0f ;# search dictionary
 
 find: ;# locate code of high- or low-level Forth word
-    mov  ecx, forths ;# current number of Forth definitions
+    mov  ecx, forths + loadaddr ;# current number of Forth definitions
     push edi ;# save destination pointer so we can use it
     lea  edi, [forth0 + loadaddr -4+ecx*4] ;# point it to last packed Forth word
 0:  std  ;# search backwards
@@ -272,15 +272,16 @@ sdefine: pop adefine
 macro_: call sdefine
 macrod: mov  ecx, [macros + loadaddr]
     inc dword ptr [macros + loadaddr]
-    lea  ecx, [macro0+ecx*4]
+    lea  ecx, [macro0+loadaddr+ecx*4]
     jmp  0f
 
 forth: call sdefine
 forthd:
-    mov  ecx, forths ;# current count of Forth words
-    inc dword ptr forths ;# make it one more
-    lea  ecx, [forth0+ecx*4] ;# point to the slot for the next definition
-0:  mov  edx, [-4+edi*4] ;# load the packed word from ???
+    mov  ecx, forths + loadaddr ;# current count of Forth words
+    inc dword ptr forths + loadaddr ;# make it one more
+;# point to the slot for the next definition
+    lea  ecx, [forth0+loadaddr+ecx*4]
+0:  mov  edx, [loadaddr-4+edi*4] ;# load the packed word from source block
     and  edx, 0xfffffff0 ;# mask out the tag bits
     mov  [ecx], edx ;# store the "naked" word in the dictionary
     mov  edx, h + loadaddr ;# 'here' pointer for new compiled code
@@ -289,7 +290,7 @@ forthd:
     shr  edx, 2
     mov  last, edx
     mov  list, esp
-    mov dword ptr lit + loadaddr, offset adup + loadaddr
+    mov  dword ptr lit + loadaddr, offset adup + loadaddr
     test dword ptr class + loadaddr, -1
     jz   0f
     jmp  [class + loadaddr]
