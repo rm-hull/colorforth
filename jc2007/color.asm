@@ -338,12 +338,12 @@ variable: call forthd
     jmp  0f
 
 cnum: call [lit + loadaddr]
-    mov  eax, [edi*4]
+    mov  eax, [loadaddr+edi*4]
     inc  edi
     jmp  0f
 
 cshort: call [lit + loadaddr]
-    mov  eax, [-4+edi*4]
+    mov  eax, [loadaddr-4+edi*4]
     sar  eax, 5
 0:  call literal
     drop
@@ -361,7 +361,7 @@ literal: call qdup
     ret
 
 qcompile: call [lit + loadaddr]
-    mov  eax, [-4+edi*4]
+    mov  eax, [loadaddr-4+edi*4]
     and  eax, 0xfffffff0 ;# mask out tag bits
     call mfind ;# locate word in macro dictionary
     jnz  0f ;# if failed, try in Forth dictionary
@@ -383,7 +383,7 @@ call_:
     ret
 
 compile: call [lit + loadaddr]
-    mov  eax, [-4+edi*4]
+    mov  eax, [loadaddr-4+edi*4]
     and  eax, 0xfffffff0 ;# mask out tag bits
     call mfind
     mov  eax, [loadaddr + macro2 + ecx*4]
