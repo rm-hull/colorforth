@@ -130,6 +130,7 @@ start1:
     mov  dword ptr forths + loadaddr, offset ((forth1-forth0)/4) 
     mov  dword ptr macros + loadaddr, offset ((macro1-macro0)/4) 
     mov  eax, 18 ;# load start screen, 18
+    dup_ ;# so when the load routine "drops" it, the stack won't underflow
 ;# the start screen loads a bunch of definitions, then 'empty' which shows logo
     call load
     jmp  accept ;# wait for keyhit
@@ -285,11 +286,11 @@ forthd:
     and  edx, 0xfffffff0 ;# mask out the tag bits
     mov  [ecx], edx ;# store the "naked" word in the dictionary
     mov  edx, h + loadaddr ;# 'here' pointer for new compiled code
-    mov  [forth2-forth0+ecx], edx
-    lea  edx, [forth2-forth0+ecx]
+    mov  [loadaddr+forth2-forth0+ecx], edx
+    lea  edx, [loadaddr+forth2-forth0+ecx]
     shr  edx, 2
-    mov  last, edx
-    mov  list, esp
+    mov  last + loadaddr, edx
+    mov  list + loadaddr, esp
     mov  dword ptr lit + loadaddr, offset adup + loadaddr
     test dword ptr class + loadaddr, -1
     jz   0f
@@ -297,7 +298,7 @@ forthd:
 0:  ret
 
 cdrop: mov  edx, h + loadaddr
-    mov  list, edx
+    mov  list + loadaddr, edx
     mov  byte ptr [edx], 0x0ad ;# lodsd
     inc  dword ptr h + loadaddr
     ret
