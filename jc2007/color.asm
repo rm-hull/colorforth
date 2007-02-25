@@ -242,21 +242,22 @@ ex1: dec dword ptr words + loadaddr ;# from keyboard
 0:  call find
     jnz  abort1
     drop
-    jmp  [forth2+ecx*4] ;# jump to low-level code of Forth word or macro
+;# jump to low-level code of Forth word or macro
+    jmp  [forth2+loadaddr+ecx*4]
 
 execute: mov dword ptr lit + loadaddr, offset alit + loadaddr
     dup_ ;# save EAX on data stack
-    mov  eax, [-4+edi*4]
+    mov  eax, [loadaddr-4+edi*4]
 ex2:
     and  eax, 0xfffffff0 ;# mask tag bits which indicate word type
     call find ;# look for word in the dictionary
     jnz  abort ;# if not found, abort
     drop ;# restore EAX from data stack
-    jmp  [forth2+ecx*4] ;# execute the Forth word found
+    jmp  [forth2+loadaddr+ecx*4] ;# execute the Forth word found
 
-abort: mov  curs, edi
+abort: mov  curs + loadaddr, edi
     shr  edi, 10-2
-    mov  blk, edi
+    mov  blk + loadaddr, edi
 abort1: mov  esp, gods ;# reset return stack pointer
     mov  dword ptr spaces+3*4 + loadaddr, offset forthd + loadaddr ;# adefine
     mov  dword ptr spaces+4*4 + loadaddr, offset qcompile + loadaddr
