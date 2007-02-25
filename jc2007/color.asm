@@ -388,13 +388,13 @@ compile: call [lit + loadaddr]
 
 short_: mov dword ptr lit + loadaddr, offset alit + loadaddr
     dup_
-    mov  eax, [-4+edi*4]
+    mov  eax, [loadaddr-4+edi*4]
     sar  eax, 5
     ret
 
 num: mov dword ptr lit + loadaddr, offset alit + loadaddr
     dup_
-    mov  eax, [edi*4]
+    mov  eax, [loadaddr+edi*4]
     inc  edi
     ret
 
@@ -464,7 +464,7 @@ less: cmp  [esi], eax
     xor  ecx, ecx ;# flag z
 0:  ret
 
-qignore: test dword ptr [-4+edi*4], 0xfffffff0 ;# valid packed word?
+qignore: test dword ptr [loadaddr-4+edi*4], 0xfffffff0 ;# valid packed word?
     jnz  nul  ;# return if so
     pop  edi  ;# otherwise escape from load loop
     pop  edi
