@@ -282,7 +282,7 @@ forthd:
 0:  mov  edx, [-4+edi*4] ;# load the packed word from ???
     and  edx, 0xfffffff0 ;# mask out the tag bits
     mov  [ecx], edx ;# store the "naked" word in the dictionary
-    mov  edx, h ;# 'here' pointer, place available for new compiled code
+    mov  edx, h + loadaddr ;# 'here' pointer for new compiled code
     mov  [forth2-forth0+ecx], edx
     lea  edx, [forth2-forth0+ecx]
     shr  edx, 2
@@ -291,119 +291,120 @@ forthd:
     mov dword ptr lit + loadaddr, offset adup + loadaddr
     test dword ptr class + loadaddr, -1
     jz   0f
-    jmp  [class]
+    jmp  [class + loadaddr]
 0:  ret
 
-cdrop: mov  edx, h
+cdrop: mov  edx, h + loadaddr
     mov  list, edx
     mov  byte ptr [edx], 0x0ad ;# lodsd
     inc  dword ptr h + loadaddr
     ret
 
-qdup: mov  edx, h
+qdup: mov  edx, h + loadaddr
     dec  edx
-    cmp  list, edx
+    cmp  list + loadaddr, edx
     jnz  cdup
     cmp  byte ptr [edx], 0x0ad
     jnz  cdup
-    mov  h, edx
+    mov  h + loadaddr, edx
     ret
-cdup: mov  edx, h
+cdup: mov  edx, h + loadaddr
     mov  dword ptr [edx], 0x89fc768d
     mov  byte ptr [4+edx], 06
-    add dword ptr  h, 5
+    add dword ptr h + loadaddr, 5
     ret
 
 adup: dup_
     ret
 
 var1: dup_
-    mov  eax, [4+forth0+ecx*4]
+    mov  eax, [loadaddr+4+forth0+ecx*4]
     ret
 variable: call forthd
-    mov dword ptr  [forth2-forth0+ecx], offset var1
-    inc dword ptr  forths ;# dummy entry for source address
-    mov  [4+ecx], edi
+    mov dword ptr [loadaddr+forth2-forth0+ecx], offset var1 + loadaddr
+    inc dword ptr forths + loadaddr ;# dummy entry for source address
+    mov  [loadaddr+4+ecx], edi
     call macrod
-    mov dword ptr  [forth2-forth0+ecx], offset 0f
-    inc dword ptr  macros
-    mov  [4+ecx], edi
+    mov dword ptr [loadaddr + forth2-forth0+ecx], offset 0f
+    inc dword ptr macros + loadaddr
+    mov  [loadaddr+4+ecx], edi
     inc  edi
     ret
-0:  call [lit]
-    mov  eax, [4+macro0+ecx*4]
+0:  call [lit + loadaddr]
+    mov  eax, [loadaddr+4+macro0+ecx*4]
     jmp  0f
 
-cnum: call [lit]
+cnum: call [lit + loadaddr]
     mov  eax, [edi*4]
     inc  edi
     jmp  0f
 
-cshort: call [lit]
+cshort: call [lit + loadaddr]
     mov  eax, [-4+edi*4]
     sar  eax, 5
 0:  call literal
     drop
     ret
 
-alit: mov dword ptr lit, offset adup
+alit: mov dword ptr lit + loadaddr, offset adup + loadaddr
 literal: call qdup
-    mov  edx, list
-    mov  list+4, edx
-    mov  edx, h
-    mov  list, edx
+    mov  edx, list + loadaddr
+    mov  list + loadaddr + 4, edx
+    mov  edx, h + loadaddr
+    mov  list + loadaddr, edx
     mov  byte ptr [edx], 0x0b8
-    mov  [1+edx], eax
-    add dword ptr  h, 5
+    mov  [edx+1], eax
+    add dword ptr h + loadaddr, 5
     ret
 
-qcompile: call [lit]
+qcompile: call [lit + loadaddr]
     mov  eax, [-4+edi*4]
     and  eax, 0xfffffff0 ;# mask out tag bits
     call mfind ;# locate word in macro dictionary
     jnz  0f ;# if failed, try in Forth dictionary
     drop ;# restore EAX
-    jmp  [macro2+ecx*4] ;# jmp to macro code
+    jmp  [loadaddr + macro2+ecx*4] ;# jmp to macro code
 0:  call find ;# try to find the word in the Forth dictionary
-    mov  eax, [forth2+ecx*4] ;# load code pointer in case there was a match
+;# load code pointer in case there was a match
+    mov  eax, [loadaddr + forth2 + ecx*4]
 0:  jnz  abort ;# abort if no match in Forth dictionary
 call_:
-    mov  edx, h ;# get 'here' pointer to where new compiled code goes
-    mov  list, edx
+    mov  edx, h + loadaddr ;# get 'here' pointer, where new compiled code goes
+    mov  list + loadaddr, edx
     mov  byte ptr [edx], 0x0e8 ;# x86 "call" instruction
     add  edx, 5
     sub  eax, edx ;# it has to be a 32-bit offset rather than absolute address
-    mov  [-4+edx], eax ;# store it after the "call" instruction
-    mov  h, edx ;# point 'here' to end of just-compiled code
+    mov  [edx+4], eax ;# store it after the "call" instruction
+    mov  h + loadaddr, edx ;# point 'here' to end of just-compiled code
     drop ;# restore EAX from data stack
     ret
 
-compile: call [lit]
+compile: call [lit + loadaddr]
     mov  eax, [-4+edi*4]
     and  eax, 0xfffffff0 ;# mask out tag bits
     call mfind
-    mov  eax, [macro2+ecx*4]
+    mov  eax, [loadaddr + macro2 + ecx*4]
     jmp  0b
 
-short_: mov dword ptr lit, offset alit
+short_: mov dword ptr lit + loadaddr, offset alit + loadaddr
     dup_
     mov  eax, [-4+edi*4]
     sar  eax, 5
     ret
 
-num: mov dword ptr lit, offset alit
+num: mov dword ptr lit + loadaddr, offset alit + loadaddr
     dup_
     mov  eax, [edi*4]
     inc  edi
     ret
 
 comma: mov  ecx, 4
-0:  mov  edx, h
+0:  mov  edx, h + loadaddr
     mov  [edx], eax
     mov  eax, [esi] ;# drop
     lea  edx, [edx+ecx]
     lea  esi, [esi+4]
-    mov  h, edx
+    mov  h + loadaddr, edx
     ret
 
 comma1: mov  ecx, 1
@@ -415,45 +416,45 @@ comma2: mov  ecx, 2
 comma3: mov  ecx, 3
     jmp  0b
 
-semi: mov  edx, h
+semi: mov  edx, h + loadaddr
     sub  edx, 5
-    cmp  list, edx
+    cmp  list + loadaddr, edx
     jnz  0f
     cmp  byte ptr [edx], 0x0e8
     jnz  0f
     inc  byte ptr [edx] ;# jmp
     ret
 0:  mov  byte ptr [5+edx], 0x0c3 ;# ret
-    inc  dword ptr h
+    inc  dword ptr h + loadaddr
     ret
 
-then: mov  list, esp
-    mov  edx, h
+then: mov  list + loadaddr, esp
+    mov  edx, h + loadaddr
     sub  edx, eax
     mov  [-1+eax], dl
     drop
     ret
 
-begin: mov  list, esp
+begin: mov  list + loadaddr, esp
 here: dup_
-    mov  eax, h
+    mov  eax, h + loadaddr
     ret
 
-qlit: mov  edx, h
+qlit: mov  edx, h + loadaddr
     lea  edx, [edx-5]
-    cmp  list, edx
+    cmp  list + loadaddr, edx
     jnz  0f
     cmp  byte ptr [edx], 0x0b8
     jnz  0f
     dup_
-    mov  eax, list+4
-    mov  list, eax
+    mov  eax, list+loadaddr+4
+    mov  list + loadaddr, eax
     mov  eax, [1+edx]
     cmp  dword ptr [edx-5], 0x89fc768d ;# dup
     jz   q1
-    mov  h, edx
+    mov  h + loadaddr, edx
     jmp  cdrop
-q1: add dword ptr  h, -10 ;# flag nz
+q1: add dword ptr h + loadaddr, -10 ;# flag nz
     ret
 0:  xor  edx, edx ;# flag z
     ret
@@ -465,7 +466,7 @@ less: cmp  [esi], eax
 
 qignore: test dword ptr [-4+edi*4], 0xfffffff0 ;# valid packed word?
     jnz  nul  ;# return if so
-    pop  edi
+    pop  edi  ;# otherwise escape from load loop
     pop  edi
 nul: ret
 
@@ -558,7 +559,8 @@ copy: cmp  eax, 12 ;# can't overwrite machine-code blocks...
     mov  ecx, 256 ;# 256 longwords = 1024 bytes
     rep  movsd ;# move the block from source (ESI) to destination (EDI)
     pop  esi  ;# restore data stack pointer
-    mov  blk, eax ;# destination block becomes new current block (blk)
+;# destination block becomes new current block (blk)
+    mov  blk + loadaddr, eax
     drop ;# no longer need the block number
     ret
 
@@ -656,7 +658,7 @@ down: dup_
     div  ecx
     mov  eax, edx
     add  edx, 3*0x10000+0x8000-ih+3
-    mov  xy, edx
+    mov  xy + loadaddr, edx
 zero: test eax, eax
     mov  eax, 0
     jnz  0f
@@ -665,7 +667,7 @@ zero: test eax, eax
 
 blank: dup_
     xor  eax, eax
-    mov  xy, eax
+    mov  xy + loadaddr, eax
     call color
     dup_
     mov  eax, hp
@@ -673,42 +675,42 @@ blank: dup_
     mov  eax, vp
     jmp  box
 
-top: mov  ecx, lm
+top: mov  ecx, lm + loadaddr
     shl  ecx, 16
     add  ecx, 3
-    mov  xy, ecx
-    mov  xycr, ecx
+    mov  xy + loadaddr, ecx
+    mov  xycr + loadaddr, ecx
     ret
 
 ;# insert a carriage return if at end of line
-qcr: mov  cx, word ptr xy+2
-    cmp  cx, word ptr rm
+qcr: mov  cx, word ptr xy+loadaddr+2
+    cmp  cx, word ptr rm + loadaddr
     js   0f
 ;# insert a carriage return (drop to next line)
-cr: mov  ecx, lm
+cr: mov  ecx, lm + loadaddr
     shl  ecx, 16
-    mov  cx, word ptr xy
+    mov  cx, word ptr xy + loadaddr
     add  ecx, ih
-    mov  xy, ecx
+    mov  xy + loadaddr, ecx
 0:  ret
 
-lms: mov  lm, eax
+lms: mov  lm + loadaddr, eax
     drop
     ret
 
-rms: mov  rm, eax
+rms: mov  rm + loadaddr, eax
     drop
     ret
 
-at: mov  word ptr xy, ax
+at: mov  word ptr xy + loadaddr, ax
     drop
-    mov  word ptr xy+2, ax
+    mov  word ptr xy+loadaddr+2, ax
     drop
     ret
 
-pat: add  word ptr xy, ax
+pat: add  word ptr xy + loadaddr, ax
     drop
-    add  word ptr xy+2, ax
+    add  word ptr xy+loadaddr+2, ax
     drop
     ret
 
@@ -758,9 +760,9 @@ stack: mov  edi, godd-4
 0:  ret
 
 keyboard: call text1
-    mov  edi, board
+    mov  edi, board + loadaddr
     dup_
-    mov  eax, keyc
+    mov  eax, keyc + loadaddr
     call color
     mov dword ptr rm + loadaddr, hc*iw
     mov dword ptr lm + loadaddr, hp-9*iw+3
