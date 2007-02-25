@@ -268,7 +268,7 @@ abort1: mov  esp, gods ;# reset return stack pointer
     call echo_
     jmp  accept
 
-sdefine: pop adefine
+sdefine: pop adefine + loadaddr
     ret
 macro_: call sdefine
 macrod: mov  ecx, [macros + loadaddr]
@@ -286,8 +286,8 @@ forthd:
     and  edx, 0xfffffff0 ;# mask out the tag bits
     mov  [ecx], edx ;# store the "naked" word in the dictionary
     mov  edx, h + loadaddr ;# 'here' pointer for new compiled code
-    mov  [loadaddr+forth2-forth0+ecx], edx
-    lea  edx, [loadaddr+forth2-forth0+ecx]
+    mov  [forth2-forth0+ecx], edx
+    lea  edx, [forth2-forth0+ecx]
     shr  edx, 2
     mov  last + loadaddr, edx
     mov  list + loadaddr, esp
