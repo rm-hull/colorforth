@@ -377,7 +377,7 @@ call_:
     mov  byte ptr [edx], 0x0e8 ;# x86 "call" instruction
     add  edx, 5
     sub  eax, edx ;# it has to be a 32-bit offset rather than absolute address
-    mov  [edx+4], eax ;# store it after the "call" instruction
+    mov  [edx-4], eax ;# store it after the "call" instruction
     mov  h + loadaddr, edx ;# point 'here' to end of just-compiled code
     drop ;# restore EAX from data stack
     ret

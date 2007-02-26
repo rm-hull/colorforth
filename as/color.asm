@@ -122,6 +122,9 @@ start1:
     mov  dword ptr macros, offset ((macro1-macro0)/4) ;# number of macros
     mov  eax, 18 ;# load start screen, 18
 ;# the start screen loads a bunch of definitions, then 'empty' which shows logo
+.ifndef cm2001
+    dup_ ;# so the 'drop' in 'load' doesn't move stack out of bounds
+.endif
     call load
     jmp  accept ;# wait for keyhit
 

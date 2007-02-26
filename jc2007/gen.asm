@@ -30,7 +30,7 @@ rgb: ;# change 8:8:8 bit format to 5:6:5
 white: dup_
     mov  eax, 0x0ffffff ;# 8:8:8 rgb, full brightness
 color: call rgb ;# change to 5:6:5 bit format
-    mov  fore, eax
+    mov  fore + loadaddr, eax
     drop
     ret
 
@@ -95,7 +95,7 @@ emit: ;# paint a character on the screen
     push edx
     imul eax, 16*24/8 ;# index into icon table...
 ;# point to the bit-representation of this character
-    lea  esi, [icons + loadaddr + eax] 
+    lea  esi, [icons + eax] 
     call clip
     mov  edx, fore + loadaddr ;# get foreground color into EDX
     mov  ecx, 24
@@ -116,7 +116,7 @@ emit2: push esi
     push edi
     push edx
     imul eax, 16*24/8
-    lea  esi, [icons + loadaddr + eax]
+    lea  esi, [icons + eax]
     call clip
     mov  edx, fore + loadaddr
     mov  ecx, 24
