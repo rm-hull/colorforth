@@ -950,7 +950,7 @@ word_: call right
     mov  dword ptr chars + loadaddr, 1
     dup_
     mov  dword ptr [esi], 0
-    mov  byte ptr bits, 28
+    mov  byte ptr bits + loadaddr, 28
 word1: call letter
     jns  0f
     mov  edx, shift + loadaddr
@@ -970,14 +970,14 @@ decimal: mov dword ptr base + loadaddr, 10
     mov dword ptr board + loadaddr, offset numbers + loadaddr - 4
     ret
 
-hex: mov dword ptr  base, 16
-    mov dword ptr  shift, offset numb0 ;# oct0
-    mov dword ptr  board, offset octals-4
+hex: mov dword ptr base + loadaddr, 16
+    mov dword ptr shift + loadaddr, offset numb0 + loadaddr ;# oct0
+    mov dword ptr board + loadaddr, offset octals + loadaddr - 4
     ret
 
-octal: xor dword ptr current, (offset decimal-offset start) ^ (offset hex-offset start)
-    xor  byte ptr numb0+18, 041 ^ 016 ;# f vs 9
-    call [current]
+octal: xor dword ptr current + loadaddr, (offset decimal-offset start) ^ (offset hex-offset start)
+    xor  byte ptr numb0 + loadaddr + 18, 041 ^ 016 ;# f vs 9
+    call [current + loadaddr]
     jmp  number0
 
 xn: drop
@@ -991,39 +991,39 @@ digit: .byte 14, 10,  0,  0
     .byte  8,  9
 sign: .byte 0
 minus:
-    mov  sign, al
+    mov  sign + loadaddr, al
     jmp  number2
 
 number0: drop
     jmp  number3
-number: call [current]
-    mov byte ptr sign, 0
+number: call [current + loadaddr]
+    mov byte ptr sign + loadaddr, 0
     xor  eax, eax
 number3: call key
     call letter
     jns  0f
-    mov  edx, shift
-    jmp  dword ptr [edx+eax*4]
+    mov  edx, shift + loadaddr
+    jmp  dword ptr [loadaddr+edx+eax*4]
 0:  test al, al
     jz   number0
-    mov  al, [digit-4+eax]
-    test byte ptr sign, 037
+    mov  al, [loadaddr+digit-4+eax]
+    test byte ptr sign + loadaddr, 037
     jz   0f
     neg  eax
 0:  mov  edx, [esi]
-    imul edx, base
+    imul edx, base + loadaddr
     add  edx, eax
 0:  mov  [esi], edx
 number2: drop
-    mov  dword ptr  shift, offset numb1
+    mov  dword ptr shift + loadaddr, offset numb1 + loadaddr
     jmp  number3
 
 endn: drop
-    call [anumber]
+    call [anumber + loadaddr]
     jmp  acceptn
 
 alphn: drop
-alph0: mov dword ptr  shift, offset alpha0
+alph0: mov dword ptr shift + loadaddr, offset alpha0 + loadaddr
     lea  edi, alpha + loadaddr - 4
     jmp  0f
 star0: mov dword ptr shift + loadaddr, offset graph0 + loadaddr
@@ -1038,7 +1038,7 @@ alph: mov dword ptr shift + loadaddr, offset alpha1 + loadaddr
     /* (4 bytes) from the start of the table into which we index */
     lea  edi, alpha + loadaddr - 4
     jmp  0f
-graph: mov dword ptr shift, offset graph1
+graph: mov dword ptr shift + loadaddr, offset graph1
     lea  edi, graphics + loadaddr - 4
 0:  mov  board + loadaddr, edi
     jmp  word0
@@ -1157,7 +1157,7 @@ qring: dup_
     ret
 
 ring:
-    mov  cad, edi
+    mov  cad + loadaddr, edi
     sub dword ptr xy + loadaddr, iw*0x10000 ;# bksp
     dup_
     mov  eax, 0x0e04000 ;# ochre-colored cursor
@@ -1189,10 +1189,10 @@ ww: dup_
 
 type0: ;# display continuation of previous word
     sub  dword ptr xy + loadaddr, iw*0x10000 ;# call bspcr
-    test dword ptr [-4+edi*4], 0xfffffff0 ;# valid packed word?
+    test dword ptr [loadaddr-4+edi*4], 0xfffffff0 ;# valid packed word?
     jnz  type1
     dec  edi
-    mov  lcad, edi
+    mov  lcad + loadaddr, edi
     call space
     call qring
     pop  edx ;# .end of block
@@ -1248,7 +1248,7 @@ gnw: mov  edx, [edi*4]
     inc  edi
 gnw1: dup_
     mov  eax, 0x0f800 ;# green
-    cmp dword ptr bas + loadaddr, offset dot10 ;# is it base 10?
+    cmp dword ptr bas + loadaddr, offset dot10 + loadaddr ;# is it base 10?
     jz   0f ;# bright green if so
     mov  eax, 0x0c000 ;# else dark green
     jmp  0f
@@ -1275,13 +1275,13 @@ refresh: call show
     call blank
     call text1
     dup_            ;# counter
-    mov  eax, lcad
-    mov  cad, eax ;# for curs beyond .end
+    mov  eax, lcad + loadaddr
+    mov  cad + loadaddr, eax ;# for curs beyond .end
     xor  eax, eax
     mov  edi, blk
     shl  edi, 10-2
     mov  pcad + loadaddr, edi ;# for curs=0
-ref1: test dword ptr [edi*4], 0x0f
+ref1: test dword ptr [loadaddr+edi*4], 0x0f
     jz   0f
     call qring
 0:  mov  edx, [edi*4]
