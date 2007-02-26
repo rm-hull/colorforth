@@ -844,7 +844,7 @@ key: ;# loop forever, returning keyhits when available
     /* since we're ignoring scancodes less than 0x10, we subtract that
     /* before indexing into the table, that way the table doesn't have
     /* to have 16 wasted bytes */
-    mov  al, [keys-0x10+eax] ;# index into key table
+    mov  al, [loadaddr+keys-0x10+eax] ;# index into key table
     ret
 
 .align 4
@@ -1384,13 +1384,13 @@ mmcur: sub dword ptr curs + loadaddr, 8 ;# move up one row
 0:  ret
 ppcur: add dword ptr curs + loadaddr, 8 ;# move down one row
     ret  ;# guess it's ok to increment beyond end of screen (?)
-
-pblk: add dword ptr  blk, 2 ;# plus one block (+2 since odd are shadows)
+;# plus one block (+2 since odd are shadows)
+pblk: add dword ptr blk + loadaddr, 2
     add  dword ptr [esi], 2
     ret
-mblk: cmp dword ptr  blk, 20 ;# minus one block unless below 20
+mblk: cmp dword ptr blk + loadaddr, 20 ;# minus one block unless below 20
     js   0f ;# (18 is first block available for editing)
-    sub dword ptr  blk, 2
+    sub dword ptr blk + loadaddr, 2
     sub  dword ptr [esi], 2
 0:  ret
 ;# shadow screens in Forth are documentation for corresponding source screens
@@ -1412,8 +1412,8 @@ e:  dup_
     mov  byte ptr alpha0+loadaddr+4*4, 045 ;# .
     mov dword ptr alpha0+loadaddr+4, offset e0 + loadaddr
     call refresh
-0:  mov dword ptr shift + loadaddr, offset ekbd0
-    mov dword ptr board + loadaddr, offset ekbd-4
+0:  mov dword ptr shift + loadaddr, offset ekbd0 + loadaddr
+    mov dword ptr board + loadaddr, offset ekbd-4 + loadaddr
     mov dword ptr keyc + loadaddr, yellow ;# default key color, yellow
 ;# this is the main loop
 0:  call key
@@ -1448,7 +1448,8 @@ destack: mov  edx, trash + loadaddr
     add  edx, 1*4
     mov  trash + loadaddr, edx
 
-insert0: mov  ecx, lcad + loadaddr ;# room available?
+insert0:
+    mov  ecx, lcad + loadaddr ;# room available?
     add  ecx, words + loadaddr
     xor  ecx, lcad + loadaddr
     and  ecx, -0x100
@@ -1457,7 +1458,8 @@ insert0: mov  ecx, lcad + loadaddr ;# room available?
 0:  drop
     next 0b
     ret
-insert1: push esi
+insert1:
+    push esi
     mov  esi, lcad + loadaddr
     mov  ecx, esi
     dec  esi
@@ -1473,20 +1475,22 @@ insert1: push esi
 0:  pop  esi
     shr  edi, 2
     inc  edi
-    mov  curs, edi ;# like abort
+    mov  curs + loadaddr, edi ;# like abort
     mov  ecx, words + loadaddr
 0:  dec  edi
-    mov  [edi*4], eax
+    mov  [loadaddr+edi*4], eax
     drop ;# requires cld
     next 0b
     ret
 
-insert: call insert0
+insert:
+    call insert0
     mov  cl, action + loadaddr
-    xor  [edi*4], cl
+    xor  [loadaddr+edi*4], cl
     jmp  accept
 
-format: test byte ptr action + loadaddr, 012 ;# ignore 3 and 9
+format:
+    test byte ptr action + loadaddr, 012 ;# ignore 3 and 9
     jz   0f
     drop
     ret
@@ -1553,7 +1557,8 @@ enstack: dup_
 ens: drop
     ret
 
-pad: pop  edx
+pad: pop  edx  ;# keypad data must immediately follow call...
+;# we're popping the "return" address which is really the address of data
     mov  vector + loadaddr, edx
     add  edx, 28*5
     mov  board + loadaddr, edx
