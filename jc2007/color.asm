@@ -558,7 +558,7 @@ copy: cmp  eax, 12 ;# can't overwrite machine-code blocks...
     shl  edi, 2+8 ;# multiply by 1024 to get physical (byte) address
     add  edi, loadaddr ;# adjust for relocation
     push esi  ;# save data stack pointer so we can use it for block move
-    mov  esi, blk ;# get current block number from blk
+    mov  esi, blk + loadaddr ;# get current block number from blk
     shl  esi, 2+8 ;# multiply by 1024 to get address
     add  esi, loadaddr  ;# adjust for relocation
     mov  ecx, 256 ;# 256 longwords = 1024 bytes
@@ -1284,7 +1284,7 @@ refresh: call show
     mov  eax, lcad + loadaddr
     mov  cad + loadaddr, eax ;# for curs beyond .end
     xor  eax, eax
-    mov  edi, blk
+    mov  edi, blk + loadaddr ;# get current block, which is being edited
     shl  edi, 10-2
     mov  pcad + loadaddr, edi ;# for curs=0
 ref1: test dword ptr [loadaddr+edi*4], 0x0f
@@ -1390,17 +1390,18 @@ mmcur: sub dword ptr curs + loadaddr, 8 ;# move up one row
 0:  ret
 ppcur: add dword ptr curs + loadaddr, 8 ;# move down one row
     ret  ;# guess it's ok to increment beyond end of screen (?)
-;# plus one block (+2 since odd are shadows)
-pblk: add dword ptr blk + loadaddr, 2
+pblk: ;# plus one block (+2 since odd are shadows)
+    add dword ptr blk + loadaddr, 2
     add  dword ptr [esi], 2
     ret
-mblk: cmp dword ptr blk + loadaddr, 20 ;# minus one block unless below 20
+mblk: ;# minus one block (-2 since odd blocks are shadow blocks)
+    cmp dword ptr blk + loadaddr, 20 ;# minus one block unless below 20
     js   0f ;# (18 is first block available for editing)
     sub dword ptr blk + loadaddr, 2
     sub  dword ptr [esi], 2
 0:  ret
 ;# shadow screens in Forth are documentation for corresponding source screens
-shadow: xor dword ptr  blk, 1 ;# switch between shadow and source
+shadow: xor dword ptr blk, 1 ;# switch between shadow and source
     xor  dword ptr [esi], 1 ;# change odd to even and vice versa
     ret
 
