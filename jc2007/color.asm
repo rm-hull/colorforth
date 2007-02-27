@@ -1202,7 +1202,7 @@ type0: ;# display continuation of previous word
 cap: ;# display a capitalized comment word
     call white
     dup_
-    mov  eax, [-4+edi*4]
+    mov  eax, [loadaddr-4+edi*4]
     and  eax, 0xfffffff0 ;# mask out tag bits
     call unpack
     add  al, 48
@@ -1212,7 +1212,7 @@ cap: ;# display a capitalized comment word
 caps: ;# display an all-caps comment word
     call white
     dup_
-    mov  eax, [-4+edi*4]
+    mov  eax, [loadaddr-4+edi*4]
     and  eax, 0xfffffff0 ;# mask out tag bits
 0:  call unpack
     jz   0f ;# space if it unpacked to nothing
@@ -1223,7 +1223,7 @@ caps: ;# display an all-caps comment word
 text: call white
 type_:
 type1: dup_
-    mov  eax, [-4+edi*4]
+    mov  eax, [loadaddr-4+edi*4]
     and  eax, 0xfffffff0 ;# mask out tag bits
 type2: call unpack
     jz   0f
@@ -1235,7 +1235,7 @@ type2: call unpack
     ret
 
 ;# green (compiled) short (27 bits) word
-gsw: mov  edx, [-4+edi*4]
+gsw: mov  edx, [loadaddr-4+edi*4]
     sar  edx, 5 ;# shift into position
     jmp  gnw1
 
@@ -1254,7 +1254,7 @@ gnw1: dup_
     jmp  0f
 
 ;# short (27 bits) yellow (executable) word
-sw: mov  edx, [-4+edi*4]
+sw: mov  edx, [loadaddr-4+edi*4]
     sar  edx, 5 ;# shift into position
     jmp  nw1
 
@@ -1291,7 +1291,7 @@ ref1: test dword ptr [loadaddr+edi*4], 0x0f
     jz   0f
     mov dword ptr bas + loadaddr, offset dot + loadaddr
 0:  and  edx, 017
-    call display[edx*4]
+    call display[loadaddr+edx*4]
     jmp  ref1
 
 .align 4
