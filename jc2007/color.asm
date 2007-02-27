@@ -839,7 +839,7 @@ key: ;# loop forever, returning keyhits when available
     in   al, 0x60    ;# fetch the scancode
     test al, 0xf0    ;# top row of keyboard generates scancodes < 0x10
     jz   0b          ;# we don't use that row (the numbers row), so ignore it
-    cmp  al, 58      ;# 57, right shift, is the highest scancode we use
+    cmp  al, 58      ;# 57, space, is the highest scancode we use
     jnc  0b          ;# so if it's over, ignore that too
     /* since we're ignoring scancodes less than 0x10, we subtract that
     /* before indexing into the table, that way the table doesn't have
@@ -1003,7 +1003,7 @@ number3: call key
     call letter
     jns  0f
     mov  edx, shift + loadaddr
-    jmp  dword ptr [loadaddr+edx+eax*4]
+    jmp  dword ptr [edx+eax*4]
 0:  test al, al
     jz   number0
     mov  al, [loadaddr+digit-4+eax]
