@@ -787,34 +787,38 @@ keyboard: call text1
     mov  ecx, 11
     jmp  four1
 
-alpha: .byte 015, 012,  1 , 014
-    .byte 024,  2 ,  6 , 010
-    .byte 023, 011, 017, 021
-    .byte 022, 013, 016,  7
-    .byte  5 ,  3 ,  4 , 026
-    .byte 027, 044, 025, 020
-graphics: .byte 031, 032, 033, 0 ;# 1 2 3
+alpha:
+    .byte 015, 012,  1 , 014 ;# g c r l
+    .byte 024,  2 ,  6 , 010 ;# h t n s
+    .byte 023, 011, 017, 021 ;# b m w v
+    .byte 022, 013, 016,  7  ;# p y f i
+    .byte  5 ,  3 ,  4 , 026 ;# a o e u
+    .byte 027, 044, 025, 020 ;# q k x d
+graphics:
+    .byte 031, 032, 033, 0   ;# 1 2 3
     .byte 034, 035, 036, 030 ;# 4 5 6 0
     .byte 037, 040, 041, 057 ;# 7 8 9 ?
     .byte 051, 050, 052, 054 ;# : ; ! @
     .byte 046, 042, 045, 056 ;# z j . ,
     .byte 055, 047, 053, 043 ;# * / + -
-numbers: .byte 031, 032, 033, 0 ;# 1 2 3
+numbers:
+    .byte 031, 032, 033, 0   ;# 1 2 3
     .byte 034, 035, 036, 030 ;# 4 5 6 0
     .byte 037, 040, 041,  0  ;# 7 8 9 ?
     .byte  0,   0 ,  0 ,  0
     .byte  0,   0 ,  0 ,  0
     .byte  0,   0 ,  0 ,  0
-octals: .byte 031, 032, 033, 0 ;# 1 2 3
+octals:
+    .byte 031, 032, 033, 0   ;# 1 2 3
     .byte 034, 035, 036, 030 ;# 4 5 6 0
     .byte 037, 040, 041,  0  ;# 7 8 9
-    .byte  0 ,  5 , 023, 012
-    .byte  0 , 020,  4 , 016
+    .byte  0 ,  5 , 023, 012 ;#   a b c
+    .byte  0 , 020,  4 , 016 ;#   d e f
     .byte  0 ,  0 ,  0 ,  0
 letter:
     cmp  al, 4
     js   0f
-    mov  edx, board
+    mov  edx, board + loadaddr
     mov  al, [edx][eax]
 0:  ret
 
@@ -865,7 +869,7 @@ numb0: long nul0, minus, alphn, octal
 numb1: long number0, xn, endn, number0
     .byte 025, 045,  0 , 0 ;# x .
 
-board: long alpha-4
+board: long alpha-4  ;# alphabetic keyboard is default
 shift: long alpha0
 base: .long 10
 current: long decimal
