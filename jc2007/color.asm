@@ -556,9 +556,11 @@ copy: cmp  eax, 12 ;# can't overwrite machine-code blocks...
     jc   abort1 ;# so if we're asked to, abort the operation
     mov  edi, eax ;# get block number into EDI
     shl  edi, 2+8 ;# multiply by 1024 to get physical (byte) address
+    add  edi, loadaddr ;# adjust for relocation
     push esi  ;# save data stack pointer so we can use it for block move
     mov  esi, blk ;# get current block number from blk
     shl  esi, 2+8 ;# multiply by 1024 to get address
+    add  esi, loadaddr  ;# adjust for relocation
     mov  ecx, 256 ;# 256 longwords = 1024 bytes
     rep  movsd ;# move the block from source (ESI) to destination (EDI)
     pop  esi  ;# restore data stack pointer
@@ -1288,7 +1290,7 @@ refresh: call show
 ref1: test dword ptr [loadaddr+edi*4], 0x0f
     jz   0f
     call qring
-0:  mov  edx, [edi*4]
+0:  mov  edx, [loadaddr+edi*4]
     inc  edi
     mov dword ptr bas + loadaddr, offset dot10 + loadaddr
     test dl, 020
@@ -1412,13 +1414,13 @@ edit: mov  blk + loadaddr, eax
 ;# when invoked with 'e', uses block number in blk, by default 18
 e:  dup_
     mov  eax, blk + loadaddr
-    mov dword ptr anumber+loadaddr, offset format + loadaddr
+    mov  dword ptr anumber+loadaddr, offset format + loadaddr
     mov  byte ptr alpha0+loadaddr+4*4, 045 ;# .
-    mov dword ptr alpha0+loadaddr+4, offset e0 + loadaddr
+    mov  dword ptr alpha0+loadaddr+4, offset e0 + loadaddr
     call refresh
-0:  mov dword ptr shift + loadaddr, offset ekbd0 + loadaddr
-    mov dword ptr board + loadaddr, offset ekbd-4 + loadaddr
-    mov dword ptr keyc + loadaddr, yellow ;# default key color, yellow
+0:  mov  dword ptr shift + loadaddr, offset ekbd0 + loadaddr
+    mov  dword ptr board + loadaddr, offset ekbd-4 + loadaddr
+    mov  dword ptr keyc + loadaddr, yellow ;# default key color, yellow
 ;# this is the main loop
 0:  call key
     call [ekeys + loadaddr + eax*4]
