@@ -239,9 +239,37 @@ write:
     int  0x13
     ret
 
-;# these must be defined elsewhere before use
+.code32 ;# these routines called from high-level Forth (protected mode)
 readf:
+    push edi
+    mov  edi, [esi+4]
+    shl  edi, 2
+    call unreal_mode
+.code16
+    call read
+    data32 call protected_mode
+.code32
+    pop  edi
+
+readf1:
+    drop
+    inc  eax
+    add  dword ptr [esi], 0x1200
+    ret
+
 writef:
+    push esi
+    mov  esi, [esi+4]
+    shl  esi, 2
+    call unreal_mode
+.code16
+    call write
+    data32 call protected_mode
+.code32
+    pop  esi
+    jmp  readf1
+
+;# these must be defined elsewhere before use
 seekf:
 cmdf:
 readyf:
