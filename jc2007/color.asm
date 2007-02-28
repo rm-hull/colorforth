@@ -836,7 +836,7 @@ key: ;# loop forever, returning keyhits when available
 /* by calling 'pause' each time through the loop. this is what enables
 /* the constant screen refresh, which causes significant delays in
 /* keystroke processing under Bochs. */
-    dup_             ;# save copy of return stack pointer(?)
+    dup_             ;# save EAX, will be restored by caller using 'drop'
     xor  eax, eax    ;# used as index later, so clear it
 0:  call pause       ;# give other task a chance to run
     in   al, 0x64    ;# keyboard status port
@@ -848,8 +848,8 @@ key: ;# loop forever, returning keyhits when available
     cmp  al, 58      ;# 57, space, is the highest scancode we use
     jnc  0b          ;# so if it's over, ignore that too
     /* since we're ignoring scancodes less than 0x10, we subtract that
-    /* before indexing into the table, that way the table doesn't have
-    /* to have 16 wasted bytes */
+     * before indexing into the table, that way the table doesn't have
+     * to have 16 wasted bytes */
     mov  al, [loadaddr+keys-0x10+eax] ;# index into key table
     ret
 
@@ -872,8 +872,8 @@ numb1: long number0, xn, endn, number0
     .byte 025, 045,  0 , 0 ;# x .
 
 board: long alpha-4  ;# alphabetic keyboard is default
-shift: long alpha0
-base: .long 10
+shift: long alpha0   ;# has options for shifting to numeric and graphic keypads
+base: .long 10  ;# default base is decimal
 current: long decimal
 keyc: .long yellow
 chars: .long 1
@@ -888,10 +888,10 @@ acceptn: mov dword ptr shift + loadaddr, offset alpha0 + loadaddr
     lea  edi, alpha + loadaddr - 4
 accept1: mov board + loadaddr, edi
 0:  call key
-    cmp  al, 4
-    jns  first
-    mov  edx, shift + loadaddr
-    jmp  dword ptr [edx+eax*4]
+    cmp  al, 4 ;# one of the shift keys?
+    jns  first ;# nope, it's the first character of a word
+    mov  edx, shift + loadaddr ;# otherwise get the "shift" value
+    jmp  dword ptr [edx+eax*4] ;# jump to corresponding longword pointer
 
 bits: ;# number of bits available in word for packing more Huffman codes
    .byte 28
@@ -1565,20 +1565,37 @@ ens: drop
     ret
 
 pad: pop  edx  ;# keypad data must immediately follow call...
+;# there are 28 keys total, 12 on each side plus "n", "space" and the 2 alts
 ;# we're popping the "return" address which is really the address of data
-    mov  vector + loadaddr, edx
-    add  edx, 28*5
+    mov  vector + loadaddr, edx ;# pointer to words for each possible keyhit
+    add  edx, 28*5 ;# 5 bytes to each "call" instruction
+;# just past that is character data, one byte for the Huffman code of each
+;# character that the physical keyboard represents ("r"=1, "t"=2, "o"=3, etc.)
+;# but remember that "board" contains 4 less than that address, which means
+;# that the first 4 must be those for the "shift" keys
     mov  board + loadaddr, edx
-    sub  edx, 4*4
-    mov  shift + loadaddr, edx
-0:  call key
-    mov  edx, vector + loadaddr
-    add  edx, eax
-    lea  edx, [5+eax*4+edx]
-    add  edx, [-4+edx]
-    drop
-    call edx
-    jmp  0b
+;# now, the following makes no sense... subtracting 4*4 from an array of
+;# 5-byte entries should point in the middle of an instruction (which indeed
+;# it does). but the "shift" table is ordinarily an array of 4 longwords
+;# followed by the 4 character codes, so there's a method to CM's madness.
+    sub  edx, 4*4  ;# simulate the 4 longwords, can't really use them
+    mov  shift + loadaddr, edx ;# this is only to point to the character codes
+0:  call key  ;# wait for a keyhit and return the code
+    mov  edx, vector + loadaddr ;# load vector table into EDX
+;# the following 3 instructions point to the appropriate vector for the key
+;# it amounts to adding eax*5 to the start of the vector table
+    add  edx, eax ;# add keyvalue once
+    lea  edx, [5+eax*4+edx] ;# add keyvalue 4 more times for total of 5...
+;# plus an extra 5 bytes, which we explain next...
+;# remember that a "call" instruction is e8xxxxxxxx, where the xxxxxxxx is
+;# the offset to the address from the _end_ of the current instruction. now,
+;# since by adding that extra 5 bytes we _are_ pointing to the end, adding the
+;# 4-byte offset just preceding our address should point us to the routine to
+;# be called. why not just "jmp" to the address instead? no clue.
+    add  edx, [-4+edx] ;# point to the address of the routine to be called
+    drop  ;# restore EAX from the data stack
+    call edx ;# call the routine corresponding to keyhit
+    jmp  0b  ;# loop until "accept" code reached, which exits program
 
  .include "chars.asm"
 .ifdef I_HAVE_AT_LEAST_1GB_RAM
