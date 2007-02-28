@@ -109,27 +109,37 @@ read:
     ret
 
 loading: ;# show "colorForth loading..."
-    call bootshow
+    call textshow
     .word (1f - 0f) / 2
 0:  display "color", green
     display "Forth", red
-    display " loading...", white
-    display ""
+    display " loading:", white
+    display " ", white
 1:  ;# end display
 
 loaded_next:
-    call bootshow
-    .word (1f - 0f) / 2
-0:  display "loaded", white
-    display " cylinder...", white
-    display ""
-1:  ;# end display
+    mov  al, cylinder + loadaddr
+    ;# fall through to numbershow
 
-bootshow:
-    pop  bp ;# pointer to length of string
-    mov  bx, 0x0000 ;# video page
+numbershow:
+    aam  10  ;# split byte into BCD
+    xchg ah, al ;# put high byte first
+    add  ax, 0x3030 ;# make it into an ASCII number
+    push ax
+    mov  bp, sp
+    mov  bx, 0x0000 | white ;# video page 0, white characters
     mov  ax, 0x0300 ;# get cursor position
     int  0x10 ;# sets row/column in DX
+    mov  ax, 0x1300 ;# leave cursor where it is, attributes in BL
+    mov  cx, 2 ;# write the 2-byte string to the console
+    int  0x10
+    pop  ax  ;#clean up stack before returning
+    ret
+
+textshow:
+    pop  bp ;# pointer to length of string
+    mov  bx, 0x0000 ;# video page
+    xor  dx, dx  ;# show at top of screen (row=0, column=0)
     mov  cx, [bp]
     add  bp, 2  ;# now point to string itself
     mov  ax, 0x1303 ;# move cursor, attributes in-line
@@ -202,8 +212,8 @@ a20:
     ;# end of boot sector
     .long 0x44444444 ;# mark color.com
 
-loaded: ;# show a sign of life: "colorForth code loaded" to screen
-    call bootshow
+loaded: ;# "colorForth code loaded" to screen
+    call textshow
     .word (1f - 0f) / 2
 0:  display "color", green; display "Forth", red
     display " code", white
