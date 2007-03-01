@@ -100,6 +100,8 @@
 .equ hp, 1024 ;# 1024 or 800
 .equ vp, 768 ;# 768 or 600
 .equ vesa, 0x4117 ;# bit 12 sets linear address mode in 0x117 or 0x114
+.equ hexbit, 020  ;# that's octal, bit 4 set to indicate hexadecimal display
+.equ tagbits, 017 ;# octal again, low 4 bits (0-3) indicate type tag
 .equ iobuffer, 0x500 ;# buffer for reading and writing floppy disk cylinders
 .equ buffersize, 0x4800 ;# 512 bytes * 18 tracks * 2 heads per cylinder
 .equ retstacksize, (1500 * cell) ;# 1500 cells in CM2001 original
@@ -131,6 +133,7 @@ start1:
     mov  dword ptr macros + loadaddr, offset ((macro1-macro0)/4) 
     mov  eax, 18 ;# load start screen, 18
     dup_ ;# so when the load routine "drops" it, the stack won't underflow
+    ;# other things need to be fixed so extra stack element doesn't show up
 ;# the start screen loads a bunch of definitions, then 'empty' which shows logo
     call load
     jmp  accept ;# wait for keyhit
@@ -195,7 +198,7 @@ show: pop screen + loadaddr ;# return address into screen; 'ret' if from show0
 0:  call graphic ;# just 'ret' in gen.asm
     call [screen + loadaddr] ;# ret if called from show0
     call switch ;# load framebuffer into video, then switch task
-    inc  eax ;# why bother?
+    inc  eax ;# why bother? maybe a counter for debugging purposes
     jmp  0b ;# loop eternally
 
 c_: mov  esi, godd+4
@@ -256,10 +259,13 @@ ex2:
     drop ;# restore EAX from data stack
     jmp  [forth2+loadaddr+ecx*4] ;# execute the Forth word found
 
-abort: mov  curs + loadaddr, edi
-    shr  edi, 10-2
+;# user entered a word we don't recognize
+abort:
+    mov  curs + loadaddr, edi
+    shr  edi, 10-2 ;# divide by 256 to get block number
     mov  blk + loadaddr, edi
-abort1: mov  esp, gods ;# reset return stack pointer
+abort1:
+    mov  esp, gods ;# reset return stack pointer
     mov  dword ptr spaces+3*4 + loadaddr, offset forthd + loadaddr ;# adefine
     mov  dword ptr spaces+4*4 + loadaddr, offset qcompile + loadaddr
     mov  dword ptr spaces+5*4 + loadaddr, offset cnum + loadaddr
@@ -279,7 +285,7 @@ macrod: mov  ecx, [macros + loadaddr]
 forth: call sdefine
 forthd:
     mov  ecx, forths + loadaddr ;# current count of Forth words
-    inc dword ptr forths + loadaddr ;# make it one more
+    inc  dword ptr forths + loadaddr ;# make it one more
 ;# point to the slot for the next definition
     lea  ecx, [forth0+loadaddr+ecx*4]
 0:  mov  edx, [loadaddr-4+edi*4] ;# load the packed word from source block
@@ -419,19 +425,21 @@ comma2: mov  ecx, 2
 comma3: mov  ecx, 3
     jmp  0b
 
-semi: mov  edx, h + loadaddr
-    sub  edx, 5
+semi:    ;# end definition
+    mov  edx, h + loadaddr  ;# get 'here' pointer
+    sub  edx, 5 ;# back to last instruction compiled
     cmp  list + loadaddr, edx
     jnz  0f
-    cmp  byte ptr [edx], 0x0e8
-    jnz  0f
-    inc  byte ptr [edx] ;# jmp
+    cmp  byte ptr [edx], 0x0e8 ;# was it a 'call' instruction?
+    jnz  0f  ;# skip ahead if not
+    inc  byte ptr [edx] ;# tail optimization; turn 'call' into 'jmp' (0xe9)
     ret
-0:  mov  byte ptr [5+edx], 0x0c3 ;# ret
-    inc  dword ptr h + loadaddr
+0:  mov  byte ptr [5+edx], 0x0c3 ;# compile a 'ret' at end
+    inc  dword ptr h + loadaddr  ;# make 'here' pointer reflect that
     ret
 
-then: mov  list + loadaddr, esp
+then:
+    mov  list + loadaddr, esp
     mov  edx, h + loadaddr
     sub  edx, eax
     mov  [-1+eax], dl
@@ -486,7 +494,7 @@ load: shl  eax, 10-2 ;# multiply by 256 longwords, same as 1024 bytes
     drop ;# block number from data stack
 inter: mov  edx, [loadaddr + edi*4] ;# get next longword from block
     inc  edi ;# then point to the following one
-    and  edx, 017 ;# get only low 4 bits, the type tag
+    and  edx, tagbits ;# get only low 4 bits, the type tag
     call spaces[loadaddr + edx*4] ;# call the routine appropriate to this type
     jmp  inter ;# loop till "nul" reached, which ends the loop
 
@@ -569,7 +577,8 @@ copy: cmp  eax, 12 ;# can't overwrite machine-code blocks...
     drop ;# no longer need the block number
     ret
 
-debug: mov dword ptr xy + loadaddr, offset (3*0x10000+(vc-2)*ih+3)
+debug:
+    mov dword ptr xy + loadaddr, offset (3*0x10000+(vc-2)*ih+3)
     dup_
     mov  eax, god + loadaddr
     push [eax]
@@ -753,10 +762,11 @@ four1: push ecx
     next four1
     ret
 
-stack: mov  edi, godd-4
-0:  mov  edx, god
+stack:   ;# show stack picture at lower left of screen
+    mov  edi, godd-4 ;# point to 2nd element down on God data stack
+0:  mov  edx, god + loadaddr
     cmp  [edx], edi
-    jnc  0f
+    jnc  0f  ;# return if greater or equal
     dup_
     mov  eax, [edi]
     sub  edi, 4
@@ -1280,23 +1290,24 @@ nw1: dup_
 refresh: call show
     call blank
     call text1
-    dup_            ;# counter
-    mov  eax, lcad + loadaddr
+    dup_ ;# counter
+    mov  eax, lcad + loadaddr ;# get last cursor address
     mov  cad + loadaddr, eax ;# for curs beyond .end
     xor  eax, eax
     mov  edi, blk + loadaddr ;# get current block, which is being edited
-    shl  edi, 10-2
-    mov  pcad + loadaddr, edi ;# for curs=0
+    shl  edi, 10-2 ;# multiply by 256 longwords per block
+    mov  pcad + loadaddr, edi ;# for curs=0 (page cursor address)
 ref1: test dword ptr [loadaddr+edi*4], 0x0f
     jz   0f
     call qring
 0:  mov  edx, [loadaddr+edi*4]
     inc  edi
+    ;# assume decimal number display
     mov dword ptr bas + loadaddr, offset dot10 + loadaddr
-    test dl, 020
-    jz   0f
-    mov dword ptr bas + loadaddr, offset dot + loadaddr
-0:  and  edx, 017
+    test dl, hexbit
+    jz   0f ;# not set, so skip ahead
+    mov dword ptr bas + loadaddr, offset dot + loadaddr ;# display as hex
+0:  and  edx, tagbits
     call display[loadaddr+edx*4]
     jmp  ref1
 
@@ -1564,7 +1575,11 @@ enstack: dup_
 ens: drop
     ret
 
-pad: pop  edx  ;# keypad data must immediately follow call...
+;# 'pad' is called by a high-level program to define the keypad, followed by
+;# 28 high-level compiled words that define the key vectors (actions), again
+;# followed by the Huffman codes for the characters representing the keys
+pad:
+    pop  edx  ;# keypad data must immediately follow call...
 ;# there are 28 keys total, 12 on each side plus "n", "space" and the 2 alts
 ;# we're popping the "return" address which is really the address of data
     mov  vector + loadaddr, edx ;# pointer to words for each possible keyhit
@@ -1578,6 +1593,8 @@ pad: pop  edx  ;# keypad data must immediately follow call...
 ;# 5-byte entries should point in the middle of an instruction (which indeed
 ;# it does). but the "shift" table is ordinarily an array of 4 longwords
 ;# followed by the 4 character codes, so there's a method to CM's madness.
+;# the 'keyboard' routine uses this address only for the 4 character codes
+;# at the end of the table
     sub  edx, 4*4  ;# simulate the 4 longwords, can't really use them
     mov  shift + loadaddr, edx ;# this is only to point to the character codes
 0:  call key  ;# wait for a keyhit and return the code
@@ -1591,7 +1608,8 @@ pad: pop  edx  ;# keypad data must immediately follow call...
 ;# the offset to the address from the _end_ of the current instruction. now,
 ;# since by adding that extra 5 bytes we _are_ pointing to the end, adding the
 ;# 4-byte offset just preceding our address should point us to the routine to
-;# be called. why not just "jmp" to the address instead? no clue.
+;# be called. why not just push the address of the "jmp 0b" below, then
+;# "jmp" to the address of the call instead? guess it wouldn't be any clearer.
     add  edx, [-4+edx] ;# point to the address of the routine to be called
     drop  ;# restore EAX from the data stack
     call edx ;# call the routine corresponding to keyhit
