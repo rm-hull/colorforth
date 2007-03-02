@@ -132,7 +132,7 @@ start1:
     mov  dword ptr forths + loadaddr, offset ((forth1-forth0)/4) 
     mov  dword ptr macros + loadaddr, offset ((macro1-macro0)/4) 
     mov  eax, 18 ;# load start screen, 18
-    dup_ ;# so when the load routine "drops" it, the stack won't underflow
+    ;#dup_ ;# so when the load routine "drops" it, the stack won't underflow
     ;# other things need to be fixed so extra stack element doesn't show up
 ;# the start screen loads a bunch of definitions, then 'empty' which shows logo
     call load
@@ -146,7 +146,7 @@ start1:
 ;# God task.
 .align 4
 ;# 'me' points to the save slot for the current task
-me: long god
+me: .long god + loadaddr ;# causes crash?
 screen:
     .long 0 ;# logo will be stored here
 ;# When we switch tasks, we need to switch stacks as well.  We do this
@@ -158,10 +158,10 @@ screen:
 ;# next task - the last one jumps 'round to the first.
 round: call unpause
 god:
-    .long 0 ;# gods-2*4
+    .long 0 ;# gods-2*4 <-- CM's comment, no explanation
     call unpause
 main:
-    .long 0 ;# mains-2*4
+    .long 0 ;# mains-2*4 <-- CM's comment, no explanation
     jmp  round
 
 pause: dup_ ;# save cached datum from top of data stack
@@ -201,7 +201,7 @@ show: pop screen + loadaddr ;# return address into screen; 'ret' if from show0
     inc  eax ;# why bother? maybe a counter for debugging purposes
     jmp  0b ;# loop eternally
 
-c_: mov  esi, godd+4
+c_: mov  esi, godd+4 ;# why +4? what is this for?
     ret
 
 mark: ;# save current state so we can recover later with 'empty'
@@ -309,18 +309,25 @@ cdrop: mov  edx, h + loadaddr
     inc  dword ptr h + loadaddr
     ret
 
-qdup: mov  edx, h + loadaddr
+qdup: ;# compile DUP only if needed (tail optimization)
+    mov  edx, h + loadaddr
     dec  edx
     cmp  list + loadaddr, edx
     jnz  cdup
-    cmp  byte ptr [edx], 0x0ad
-    jnz  cdup
+    cmp  byte ptr [edx], 0xad ;# is it a LODS operator (DROP)?
+    jnz  cdup ;# DUP if not
     mov  h + loadaddr, edx
     ret
-cdup: mov  edx, h + loadaddr
+
+cdup: ;# compile DUP
+/* compiles DUP in place
+    8d 76 fc                lea    0xfffffffc(%esi),%esi
+    89 06                   mov    %eax,(%esi)
+*/
+    mov  edx, h + loadaddr  ;# get HERE pointer
     mov  dword ptr [edx], 0x89fc768d
     mov  byte ptr [4+edx], 06
-    add dword ptr h + loadaddr, 5
+    add dword ptr h + loadaddr, 5 ;# point past compiled code
     ret
 
 adup: dup_
@@ -763,7 +770,7 @@ four1: push ecx
     ret
 
 stack:   ;# show stack picture at lower left of screen
-    mov  edi, godd-4 ;# point to 2nd element down on God data stack
+    mov  edi, godd-4 ;# point to 1st element on God data stack
 0:  mov  edx, god + loadaddr
     cmp  [edx], edi
     jnc  0f  ;# return if greater or equal
@@ -1554,25 +1561,25 @@ del: call enstack
     jmp  mcur
 
 enstack: dup_
-    mov  eax, cad + loadaddr
-    sub  eax, pcad + loadaddr
-    jz   ens
-    mov  ecx, eax
-    xchg eax, edx
-    push esi
-    mov  esi, cad + loadaddr
-    lea  esi, [esi*4-4]
-    mov  edi, trash + loadaddr
-0:  std
-    lodsd
-    cld
-    stosd
-    next 0b
-    xchg eax, edx
-    stosd
-    mov  trash + loadaddr, edi
-    pop  esi
-ens: drop
+    mov  eax, cad + loadaddr  ;# current cursor address
+    sub  eax, pcad + loadaddr ;# page cursor address, the first block word
+    jz   ens  ;# one and the same? skip it
+    mov  ecx, eax  ;# this is the count of words to enstack
+    xchg eax, edx  ;# safer than a MOV in case EDX is being used for something
+    push esi  ;# ;# save data stack pointer
+    mov  esi, cad + loadaddr ;# point ESI to where cursor is
+    lea  esi, [loadaddr+esi*4-4] ;# make it an absolute address
+    mov  edi, trash + loadaddr ;# get pointer into edit buffer
+0:  std  ;# move backwards with ESI...
+    lodsd  ;# grabbing one cell at a time...
+    cld  ;# then forwards storing it...
+    stosd ;# into the edit buffer
+    next 0b  ;# loop until done
+    xchg eax, edx ;# get count back into EAX
+    stosd ;# store the count also in the edit buffer
+    mov  trash + loadaddr, edi ;# store the updated pointer
+    pop  esi ;# restore data stack pointer
+ens: drop ;# restore EAX before returning
     ret
 
 ;# 'pad' is called by a high-level program to define the keypad, followed by
