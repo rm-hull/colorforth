@@ -107,8 +107,10 @@
 .equ retstacksize, (1500 * cell) ;# 1500 cells in CM2001 original
 .equ datastacksize, (750 * cell) ;# 750 cells in CM2001 original
 .equ buffer, (iobuffer + buffersize) ;# this is the edit buffer
+;# it grows upwards, give it enough space to hold a block of data
 ;# wonder if edit buffer can be same as floppy buffer? not in use at same time
-.equ maind, buffer + datastacksize
+;# now, maind grows downwards, so add enough space for both it and "buffer"
+.equ maind, buffer + 1024 + datastacksize
 .equ mains, maind + retstacksize
 .equ godd, mains + datastacksize
 .equ gods, godd + retstacksize
@@ -146,7 +148,7 @@ start1:
 ;# God task.
 .align 4
 ;# 'me' points to the save slot for the current task
-me: .long god + loadaddr ;# causes crash?
+me: .long god + loadaddr
 screen:
     .long 0 ;# logo will be stored here
 ;# When we switch tasks, we need to switch stacks as well.  We do this
@@ -800,7 +802,7 @@ keyboard: call text1
     call four1
     mov  dword ptr lm + loadaddr, 3
     mov  word ptr xy + loadaddr + 2, 3
-    call stack
+    call stack ;# draw stack picture
     mov  word ptr xy + loadaddr +2, hp-(11+9)*iw+3
     lea  edi, history + loadaddr -4
     mov  ecx, 11
