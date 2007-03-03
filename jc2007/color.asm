@@ -345,13 +345,15 @@ var1: dup_
     mov  eax, [loadaddr+4+forth0+ecx*4]
     ret
 variable: call forthd
-    mov dword ptr [loadaddr+forth2-forth0+ecx], offset var1 + loadaddr
+;# after forthd, ECX is already offset by loadaddr
+    mov dword ptr [forth2-forth0+ecx], offset var1 + loadaddr
     inc dword ptr forths + loadaddr ;# dummy entry for source address
-    mov  [loadaddr+4+ecx], edi
+    mov  [4+ecx], edi
     call macrod
-    mov dword ptr [loadaddr + forth2-forth0+ecx], offset 0f
+;# after call to macrod, ECX is offset by loadaddr
+    mov dword ptr [forth2-forth0+ecx], offset 0f
     inc dword ptr macros + loadaddr
-    mov  [loadaddr+4+ecx], edi
+    mov  [4+ecx], edi
     inc  edi
     ret
 0:  call [lit + loadaddr]
