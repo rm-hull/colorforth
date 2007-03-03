@@ -68,6 +68,7 @@ cold:
     call graphicsmode
     data32 call protected_mode
 .code32
+    mov esi, godd
     jmp start1 ;# start1 is outside of bootsector
 
 .code16

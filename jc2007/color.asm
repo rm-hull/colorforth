@@ -118,6 +118,7 @@
 .if remainder < blocksize
  .equ gods, gods + remainder ;# no sense wasting space, add to stack
 .endif
+.globl godd, gods, maind, mains  ;# show these in symbol table
 .equ loadaddr, gods ;# from here upwards is where we relocate the code
 .equ bootaddr, 0x7c00
 .equ icons, loadaddr + (12 * blocksize) ;# block 12 start of character maps
@@ -141,11 +142,11 @@ start1:
     jmp  accept ;# wait for keyhit
 
 ;# This version of colorforth has cooperative round-robin multi-tasking.
-;# the tasks are: God (the forth kernel), and main
+;# the tasks are: god (the forth kernel), and main
 ;# Each has two grow-down stacks; 's' indicates the
-;# return stack, 'd' indicates the data stack.  Thus 'Gods' and 'Godd'
+;# return stack, 'd' indicates the data stack.  Thus 'gods' and 'godd'
 ;# are the tops of the return and data stacks, respectively, for the
-;# God task.
+;# god task.
 .align 4
 ;# 'me' points to the save slot for the current task
 me: .long god + loadaddr
@@ -157,13 +158,18 @@ screen:
 ;# return stack pointer into the save slot for the task.
 ;#
 ;# these are the save slots - each is followed by code to resume the
-;# next task - the last one jumps 'round to the first.
+;# next task - the last one jumps around to the first.
 round: call unpause
 god:
-    .long 0 ;# gods-2*4 <-- CM's comment, no explanation
+    .long 0 ;# gods-2*4 <-- this means there are two elements on the stack...
+;# the top element is the data stack pointer ESI saved in 'pause' below;
+;# the bottom element (highest in memory) is the return address from the
+;# call to 'pause', which occurred in 'key'
     call unpause
 main:
-    .long 0 ;# mains-2*4 <-- CM's comment, no explanation
+    .long 0 ;# mains-2*4 ;# this (main return stack) also has 2 elements...
+;# the top is the maind pointer, and the bottom is the return address from
+;# 'call act' in 'show'
     jmp  round
 
 pause: dup_ ;# save cached datum from top of data stack
@@ -772,7 +778,11 @@ four1: push ecx
     ret
 
 stack:   ;# show stack picture at lower left of screen
-    mov  edi, godd-4 ;# point to 1st element on God data stack
+    mov  edi, godd-4 ;# point to 1st element on god data stack
+;# the top-of-stack (TOS) of the god stack, whose pointer is available in
+;# the save slot labeled 'god', contains 'godd', the god data stack pointer.
+;# we're going to compare it to the godd base, and show anything that's
+;# there.
 0:  mov  edx, god + loadaddr
     cmp  [edx], edi
     jnc  0f  ;# return if greater or equal
