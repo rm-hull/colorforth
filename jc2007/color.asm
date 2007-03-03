@@ -1227,7 +1227,7 @@ type0: ;# display continuation of previous word
     test dword ptr [loadaddr-4+edi*4], 0xfffffff0 ;# valid packed word?
     jnz  type1
     dec  edi
-    mov  lcad + loadaddr, edi
+    mov  lcad + loadaddr, edi  ;# save address of leftmost part of word
     call space
     call qring
     pop  edx ;# .end of block
@@ -1310,7 +1310,7 @@ refresh: call show
     call blank
     call text1
     dup_ ;# counter
-    mov  eax, lcad + loadaddr ;# get last cursor address
+    mov  eax, lcad + loadaddr ;# get address of leftmost part of word
     mov  cad + loadaddr, eax ;# for curs beyond .end
     xor  eax, eax
     mov  edi, blk + loadaddr ;# get current block, which is being edited
@@ -1340,9 +1340,9 @@ tens: .long 10, 100, 1000, 10000, 100000, 1000000
 bas: long dot10
 blk: .long 18
 curs: .long 0
-cad: .long 0
-pcad: .long 0
-lcad: .long 0
+cad: .long 0  ;# cursor address
+pcad: .long 0 ;# page cursor address
+lcad: .long 0 ;# left cursor address (of multipart word)
 trash: .long buffer
 
 /* the editor keys and their actions */
@@ -1561,15 +1561,17 @@ format2: dup_
 
 ;# delete, or cut, current word in editor (to the left of pacman cursor)
 del: call enstack
-    mov  edi, pcad + loadaddr
-    mov  ecx, lcad + loadaddr
-    sub  ecx, edi
-    shl  edi, 2
-    push esi
-    mov  esi, cad + loadaddr
-    shl  esi, 2
-    rep  movsd
-    pop  esi
+    mov  edi, pcad + loadaddr  ;# get page cursor address into EDI
+    mov  ecx, lcad + loadaddr  ;# leftmost address of multi-word 'word'
+    sub  ecx, edi ;# subtract to get word count
+    shl  edi, 2  ;# multiply by 4 to get byte offset
+    add  edi, loadaddr  ;# make absolute address
+    push esi  ;# save data stack pointer
+    mov  esi, cad + loadaddr  ;# get current cursor (end of word)
+    shl  esi, 2 ;# byte offset
+    add esi, loadaddr ;# make absolute address
+    rep  movsd ;# cover what we deleted
+    pop  esi  ;# restore data stack pointer
     jmp  mcur
 
 enstack: dup_
