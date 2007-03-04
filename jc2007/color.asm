@@ -311,20 +311,21 @@ forthd:
     jmp  [class + loadaddr]
 0:  ret
 
-cdrop: mov  edx, h + loadaddr
-    mov  list + loadaddr, edx
-    mov  byte ptr [edx], 0x0ad ;# lodsd
-    inc  dword ptr h + loadaddr
+cdrop: ;# compile DROP
+    mov  edx, h + loadaddr ;# get HERE address
+    mov  list + loadaddr, edx  ;# save in 'list' for possible tail optimization
+    mov  byte ptr [edx], 0x0ad ;# compile 'lodsd'=DROP
+    inc  dword ptr h + loadaddr ;# move HERE forward accordingly
     ret
 
 qdup: ;# compile DUP only if needed (tail optimization)
-    mov  edx, h + loadaddr
-    dec  edx
-    cmp  list + loadaddr, edx
-    jnz  cdup
+    mov  edx, h + loadaddr ;# point to...
+    dec  edx  ;# ...last byte compiled
+    cmp  list + loadaddr, edx  ;# was this address saved in 'list'?
+    jnz  cdup  ;# if not, compile the DUP
     cmp  byte ptr [edx], 0xad ;# is it a LODS operator (DROP)?
     jnz  cdup ;# DUP if not
-    mov  h + loadaddr, edx
+    mov  h + loadaddr, edx ;# adjust HERE pointer
     ret
 
 cdup: ;# compile DUP
@@ -335,24 +336,33 @@ cdup: ;# compile DUP
     mov  edx, h + loadaddr  ;# get HERE pointer
     mov  dword ptr [edx], 0x89fc768d
     mov  byte ptr [4+edx], 06
-    add dword ptr h + loadaddr, 5 ;# point past compiled code
+    add  dword ptr h + loadaddr, 5 ;# point past compiled code
     ret
 
-adup: dup_
+adup:
+    dup_
     ret
 
-var1: dup_
+var1:
+    dup_
     mov  eax, [loadaddr+4+forth0+ecx*4]
     ret
-variable: call forthd
+
+variable: ;# compile a variable from preparsed source
+;# note: it doesn't actually compile anything at this point, just adds to
+;# the dictionaries. when the variable is _used_ is when something
+;# gets compiled
+;# first add it to the forth dictionary...
+    call forthd
 ;# after forthd, ECX is already offset by loadaddr
-    mov dword ptr [forth2-forth0+ecx], offset var1 + loadaddr
-    inc dword ptr forths + loadaddr ;# dummy entry for source address
+    mov  dword ptr [forth2-forth0+ecx], offset var1 + loadaddr
+    inc  dword ptr forths + loadaddr ;# dummy entry for source address
     mov  [4+ecx], edi
+;# also add it to the macro dictionary (why?)
     call macrod
 ;# after call to macrod, ECX is offset by loadaddr
-    mov dword ptr [forth2-forth0+ecx], offset 0f
-    inc dword ptr macros + loadaddr
+    mov  dword ptr [forth2-forth0+ecx], (offset 0f) + loadaddr
+    inc  dword ptr macros + loadaddr
     mov  [4+ecx], edi
     inc  edi
     ret
@@ -360,27 +370,32 @@ variable: call forthd
     mov  eax, [loadaddr+4+macro0+ecx*4]
     jmp  0f
 
-cnum: call [lit + loadaddr]
-    mov  eax, [loadaddr+edi*4]
+cnum: ;# compile number
+    call [lit + loadaddr]
+    mov  eax, [loadaddr+edi*4] ;# get the number from preparsed source
     inc  edi
-    jmp  0f
+    jmp  0f ;# join common code below
 
-cshort: call [lit + loadaddr]
-    mov  eax, [loadaddr-4+edi*4]
-    sar  eax, 5
+cshort: ;# compile short (27 bits or less) signed number
+    call [lit + loadaddr]
+    mov  eax, [loadaddr-4+edi*4] ;# get number from preparsed source
+    sar  eax, 5 ;# get rid of hexbit and tagbits
+;# common code for both cnum and cshort
 0:  call literal
     drop
     ret
 
-alit: mov dword ptr lit + loadaddr, offset adup + loadaddr
-literal: call qdup
-    mov  edx, list + loadaddr
-    mov  list + loadaddr + 4, edx
-    mov  edx, h + loadaddr
-    mov  list + loadaddr, edx
-    mov  byte ptr [edx], 0x0b8
-    mov  [edx+1], eax
-    add dword ptr h + loadaddr, 5
+alit:
+    mov dword ptr lit + loadaddr, offset adup + loadaddr
+literal: ;# compile the literal (number) in EAX
+    call qdup
+    mov  edx, list + loadaddr ;# get what was last saved in 'list'
+    mov  list + loadaddr + 4, edx ;# save that in next slot...
+    mov  edx, h + loadaddr ;# now get HERE pointer
+    mov  list + loadaddr, edx ;# and store that in 'list'
+    mov  byte ptr [edx], 0x0b8 ;# compile 'mov eax, N'
+    mov  [edx+1], eax  ;# store the N
+    add  dword ptr h + loadaddr, 5 ;# adjust HERE pointer
     ret
 
 qcompile: call [lit + loadaddr]
@@ -396,9 +411,9 @@ qcompile: call [lit + loadaddr]
 0:  jnz  abort ;# abort if no match in Forth dictionary
 call_:
     mov  edx, h + loadaddr ;# get 'here' pointer, where new compiled code goes
-    mov  list + loadaddr, edx
+    mov  list + loadaddr, edx ;# save that in 'list' for tail optimization
     mov  byte ptr [edx], 0x0e8 ;# x86 "call" instruction
-    add  edx, 5
+    add  edx, 5 ;# whole instruction including offset is 5 bytes
     sub  eax, edx ;# it has to be a 32-bit offset rather than absolute address
     mov  [edx-4], eax ;# store it after the "call" instruction
     mov  h + loadaddr, edx ;# point 'here' to end of just-compiled code
@@ -523,7 +538,7 @@ adefine: ;# where definitions go, either in macrod (dictionary) or forthd
     long short_, nul, nul, nul
     long variable, nul, nul, nul
 
-lit: long adup
+lit: .long adup + loadaddr
 mk: .long 0, 0, 0
 h: .long 0x100000 ;# start compiling here, beginning of extended memory
 last: .long 0
@@ -1401,9 +1416,10 @@ actn: mov  keyc + loadaddr, eax
     drop
     jmp  accept
 ;# after 'm' pressed, change color and prepare to store variable name
-actv: mov byte ptr action + loadaddr, 12 ;# variable
+actv:
+    mov  byte ptr action + loadaddr, 12 ;# variable
     mov  eax, 0x0ff00ff ;# magenta
-    mov dword ptr aword + loadaddr, offset 0f
+    mov  dword ptr aword + loadaddr, (offset 0f) + loadaddr
     jmp  actn
 ;# this is the action performed after the variable name is entered
 0:  dup_ ;# save EAX (packed word) on stack
