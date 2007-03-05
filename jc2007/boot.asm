@@ -223,21 +223,15 @@ loaded: ;# "colorForth code loaded" to screen
 1:  ;# end display
 
 write:
-    mov  di, iobuffer
-    mov  bx, di
-    mov  cx, 512*18*2/4
-    rep  movsd
-    mov  ax, 3 << 8 + 18  ;# 18 sectors per head
+    mov  edi, iobuffer ;# destination address
+    mov  ebx, edi  ;# save in EBX for BIOS call
+    mov  ecx, 512*18*2/4 ;# using 32-bit MOVS instruction
+    addr32 rep movsd
+    mov  ax, (3 << 8) + 36  ;# 18 sectors per head, 2 heads
     mov  dx, 0x0000 ;# head 0, drive 0
-    mov  cx, [cylinder + loadaddr]
-    shl  cx, 6  ;# put cylinder number into high 10 bits, sector = 0
-    push cx
-    int  0x13
-    mov  ax, 3 << 8 + 18  ;# 18 sectors per head
-    mov  dx, 0x0100  ;# head 1, drive 0
-    pop  cx
-    add  bx, buffersize / 2  ;# second half of cylinder
-    int  0x13
+    mov  ch, [cylinder + loadaddr] ;# cylinder number in CH
+    mov  cl, 1  ;# sector number is 1-based
+    int  0x13  ;# let BIOS handle the nitty-gritty floppy I/O
     ret
 
 .code32 ;# these routines called from high-level Forth (protected mode)
@@ -258,10 +252,14 @@ readf1:
     add  dword ptr [esi], 0x1200
     ret
 
-writef:
+writef:  ;# write cylinder to floppy disk
+;# called with cylinder number in AL, source address, in longwords, in ESI
+    mov  cylinder + loadaddr, al
+    dup_ ;# save cylinder number
     push esi
     mov  esi, [esi+4]
     shl  esi, 2
+    add  esi, loadaddr
     call unreal_mode
 .code16
     call write

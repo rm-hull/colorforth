@@ -638,23 +638,23 @@ xycr: .long 0
 fov: .long 10*(2*vp+vp/2)
 
 nc_: dup_
-    mov  eax, (offset nc-offset start)/4
+    mov  eax, (loadaddr + (offset nc-offset start)) / 4
     ret
 
 xy_: dup_
-    mov  eax, (offset xy-offset start)/4
+    mov  eax, (loadaddr + (offset xy-offset start)) / 4
     ret
 
 fov_: dup_
-    mov  eax, (offset fov-offset start)/4
+    mov  eax, (loadaddr + (offset fov-offset start)) / 4
     ret
 
 sps: dup_
-    mov  eax, (offset spaces-offset start)/4
+    mov  eax, (loadaddr + (offset spaces-offset start)) / 4
     ret
 
 last_: dup_
-    mov  eax, (offset last-offset start)/4
+    mov  eax, (loadaddr + (offset last-offset start)) / 4
     ret
 
 .include "gen.asm" ;# cce.asm pio.asm ati128.asm ati64.asm gen.asm
