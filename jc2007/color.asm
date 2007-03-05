@@ -346,6 +346,7 @@ adup:
 var1:
     dup_
     mov  eax, [loadaddr+4+forth0+ecx*4]
+    add  eax, loadaddr >> 2
     ret
 
 variable: ;# compile a variable from preparsed source
@@ -1145,14 +1146,18 @@ dot: mov  ecx, 7
 @h: inc  ecx
     jmp  @h1
 
-qdot: cmp dword ptr base + loadaddr, 10
-    jnz  dot
-dot10: mov  edx, eax
+qdot: ;# display number as decimal or hexadecimal (hex)
+    cmp dword ptr base + loadaddr, 10 ;# is current base decimal?
+    jnz  dot ;# display as hex if not
+    ;# otherwise fall through to dot10 routine
+
+dot10: ;# display decimal number
+    mov  edx, eax
     test edx, edx
     jns  0f
     neg  edx
     dup_
-    mov  eax, 043
+    mov  eax, 043 ;# Huffman code for '-'
     call emit
 0:  mov  ecx, 8
 0:  mov  eax, edx
@@ -1214,7 +1219,7 @@ ring:
     dup_
     mov  eax, 0x0e04000 ;# ochre-colored cursor
     call color
-    mov  eax, 060
+    mov  eax, 48  ;# shift-space, according to this Huffman code, is pacman
     mov  cx, word ptr xy + loadaddr +2
     cmp  cx, word ptr rm + loadaddr
     js   0f
@@ -1425,7 +1430,7 @@ actv:
 0:  dup_ ;# save EAX (packed word) on stack
     xor  eax, eax ;# zero out EAX
     inc  dword ptr words + loadaddr ;# add one to count of words
-    jmp  insert ;# insert new word into dictionary
+    jmp  insert ;# insert packed word into preparsed source
 
 mcur: dec dword ptr curs + loadaddr ;# minus cursor: move left
     jns  0f  ;# just return if it didn't go negative, otherwise undo it...
@@ -1545,14 +1550,14 @@ insert:
     jmp  accept
 
 format:
-    test byte ptr action + loadaddr, 012 ;# ignore 3 and 9
+    test byte ptr action + loadaddr, 0xa ;# ignore 3 and 9
     jz   0f
     drop
     ret
 0:  mov  edx, eax
-    and  edx, 0x0fc000000
-    jz   0f
-    cmp  edx, 0x0fc000000
+    and  edx, 0xfc000000 ;# check if we have room for tagbits, hexbit, sign bit
+    jz   0f ;# continue if so
+    cmp  edx, 0xfc000000
     jnz  format2
 0:  shl  eax, 5
     xor  al, 2 ;# 6
@@ -1572,7 +1577,7 @@ format2: dup_
     mov  al, 3 ;# 2
 0:  cmp  dword ptr base + loadaddr, 10 ;# base 10?
     jz   0f ;# continue if so...
-    xor  al, 0x10 ;# otherwise remove 'hex' bit
+    xor  al, 0x10 ;# otherwise toggle 'hex' bit
 0:  xchg eax, [esi]
     mov  dword ptr words + loadaddr, 2
     jmp  insert
