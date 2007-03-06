@@ -48,7 +48,13 @@ start0:
     data32 call protected_mode
 .code32
     call a20 ;# set A20 gate to enable access to addresses with 1xxxxx
-    call unreal_mode
+    cmp  si, 0x7e00 ;# boot from floppy?
+    jz   0f  ;# continue if so...
+    mov  cx, 63*0x100-0x80 ;# ... otherwise relocate color.com
+    rep  movsd
+    mov  esi, offset godd ;# set up data stack pointer for 'god' task
+    jmp  start2
+0:  call unreal_mode
 .code16
     ;# fall through to cold-start routine
 cold:
