@@ -236,37 +236,42 @@ write:
 
 .code32 ;# these routines called from high-level Forth (protected mode)
 readf:
+    mov  cylinder + loadaddr, al
+    dup_ ;# save cylinder number
     push edi
     mov  edi, [esi+4]
-    shl  edi, 2
+    shl  edi, 2  ;# convert longwords to bytes...
+    add  edi, loadaddr ;# ... and then to absolute address
     call unreal_mode
 .code16
     call read
     data32 call protected_mode
 .code32
     pop  edi
+    ;# fall through to common code
 
+;# common code for both reads and writes
 readf1:
-    drop
-    inc  eax
-    add  dword ptr [esi], 0x1200
+    drop ;# restore EAX, cylinder number
+    inc  eax  ;# next cylinder
+    add  dword ptr [esi], 0x1200  ;# move memory pointer up this many longwords
     ret
 
 writef:  ;# write cylinder to floppy disk
 ;# called with cylinder number in AL, source address, in longwords, in ESI
     mov  cylinder + loadaddr, al
     dup_ ;# save cylinder number
-    push esi
-    mov  esi, [esi+4]
-    shl  esi, 2
-    add  esi, loadaddr
+    push esi  ;# save data stack pointer, we need it for memory transfer
+    mov  esi, [esi+4]  ;# get memory offset
+    shl  esi, 2  ;# convert from longwords to bytes...
+    add  esi, loadaddr  ;# ... and then to absolute address
     call unreal_mode
 .code16
     call write
     data32 call protected_mode
 .code32
-    pop  esi
-    jmp  readf1
+    pop  esi  ;# restore stack pointer
+    jmp  readf1  ;# join common code
 
 ;# these must be defined elsewhere before use
 seekf:
