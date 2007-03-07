@@ -37,11 +37,13 @@ gdt0: .word 0, 0, 0, 0 ;# start of table must be a null entry
 gdt_end:
 .code16
 start0:
-    zero ss
-    mov  sp, loadaddr  ;# stack pointer starts just below this code
+    zero es
     call textmode
     call loading
     call relocate
+init: ;# label used by relocate to calculate start address
+    zero ss
+    mov  sp, loadaddr  ;# stack pointer starts just below this code
     xor  ax, ax
     mov  ds, ax
     mov  es, ax
@@ -153,19 +155,14 @@ textshow:
     int  0x10
     ret  ;# to caller of caller
 
-relocate:
-    pop  ax ;# need to adjust return address for relocation
-    add  ax, loadaddr - bootaddr ;# assumes loadaddr > bootaddr; is it?
-    push ax
+relocate:  ;# move code from where DOS or BIOS put it, to where we want it
+    pop  si  ;# just using return address for calculation...
+    ;# we know to where to 'return'
+    sub  si, offset init-offset start  ;# locate where 'start' actually is
     mov  edi, loadaddr ;# destination of relocation
-    call 0f ;# where are we? (CALL puts return address on stack, we use that)
-0:  pop  si
-    sub  si, offset 0b-offset start
-    mov  cx, 512/4 ;# only 256 bytes unless...
-    ;# compile as 32-bit code here so it moves longwords and not words
-    rep movsd
-    jmp 0:offset 1f + loadaddr
-1:  ret ;# this code is executed from an offset of loadaddr, not 0x7c00
+    mov  cx, 512/4 ;# 128 longwords
+    addr32 rep movsd
+    jmp  0: (offset init) + loadaddr
 
 protected_mode:
     cli  ;# we're not set up to handle interrupts in protected mode
