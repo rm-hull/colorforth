@@ -9,7 +9,7 @@ export
 cfbochs.zip: bochs.exe bochsdbg.exe a.img bochsrc.bxrc cfbochs.bat README.txt
 	cp -f $+ cfBochs
 	zip -r $@ cfBochs
-a.img:	$(CF_SRC)/colorforth/as/color.com
+a.img:	$(CF_SRC)/colorforth/jc2007/color.com
 	dd if=/dev/zero of=$@ bs=1024 count=1440
 	dd if=$< of=$@ conv=notrunc
 set:

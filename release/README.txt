@@ -4,8 +4,7 @@ the necessary BIOS files. This has been tested with Bochs-2.3 only.
 
 Keystroke recognition is slow, so be patient. You might
 try changing the IPS (emulated instructions per second) in the bochsrc.bxrc
-file, but I haven't had any luck with it higher or lower than its current
-setting.
+file, according to what the IPS shows in the emulator.
 
 For documentation, see http://colorforth.com/. For a really quick start,
 run cfbochs.bat, hit the spacebar once to get the numeric keyboard, and
@@ -22,5 +21,11 @@ Then there is always the source code! Follow the Code menu at
 http://sourceforge.net/projects/colorforth/ to the CVS page, which gives
 instructions for anonymous CVS access. The compilation (assembly, to be
 precise) has only been tested under GNU/Cygwin under Windows XP.
+
+The sources currently used for cfBochs are found in the jc2007/ subdirectory.
+These have been modified so that the x86 "unreal" mode can be used for
+BIOS services, meaning that the interrupt table and BIOS area are left alone,
+and all buffers needed for I/O have been relocated to the first 64K of RAM.
+Check the README under the source directory for more details.
 
 Enjoy! -- jcATunternet.net

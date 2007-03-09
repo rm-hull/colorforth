@@ -61,15 +61,19 @@ init: ;# label used by relocate to calculate start address
     ;# fall through to cold-start routine
 cold:
     mov  edi, loadaddr  ;# start by overwriting this code
+    ;# that's why it's so critical that 'cylinder' be reset to zero before
+    ;# saving the image; if it's anything but that, when this block is
+    ;# overwritten, 'cylinder' will be changed, and cylinders will be skipped
+    ;# in loading, making the bootblock unusable
     call read
     call loaded_next
-    inc  dword ptr cylinder + loadaddr
+    inc  byte ptr cylinder + loadaddr
     mov  cx, nc + loadaddr ;# number of cylinders used
     dec  cx
 0:  push cx
     call read
     call loaded_next
-    inc  dword ptr cylinder + loadaddr
+    inc  byte ptr cylinder + loadaddr
     pop  cx
     loop 0b
     call loaded

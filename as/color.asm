@@ -123,7 +123,9 @@ start1:
     mov  eax, 18 ;# load start screen, 18
 ;# the start screen loads a bunch of definitions, then 'empty' which shows logo
 .ifndef cm2001
-    dup_ ;# so the 'drop' in 'load' doesn't move stack out of bounds
+;# in theory this is a good idea, preventing stack underflow...
+;# in practice, other things are messed up so this causes extra item on stack
+;#  dup_ ;# so the 'drop' in 'load' doesn't move cause stack underflow
 .endif
     call load
     jmp  accept ;# wait for keyhit

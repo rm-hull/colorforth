@@ -47,6 +47,8 @@ sed := sed $(foreach regex, $(recipes), $($(regex)))
 GAS := as -R -Z -L
 DEFINES := $(shell cat *.asm | grep '\.ifn\?def' | \
  awk '{print $$2}' | sort | uniq)
+COLINUX := /cygdrive/c/Program\ Files/coLinux
+JC2007 := $(shell cygpath -w $(PWD))
 export
 color.com: $(sources) chars.asm color.dat
 ifdef I_HAVE_AT_LEAST_1GB_RAM
@@ -222,3 +224,6 @@ boot.dsm: boot.blk
 ../test/b.img: color.com
 	dd if=/dev/zero of=$@ bs=1024 count=1440
 	dd if=$< of=$@ conv=notrunc
+freedos: color.com
+	cd $(COLINUX) && colinux-daemon @"$(JC2007)"\\copy_to_freedos.conf
+	~/src/freedos.sh
