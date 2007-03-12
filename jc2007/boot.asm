@@ -37,9 +37,9 @@ gdt0: .word 0, 0, 0, 0 ;# start of table must be a null entry
 gdt_end:
 .code16
 start0:
-    zero es
     call textmode
     call loading
+    zero es
     call relocate
 init: ;# label used by relocate to calculate start address
     zero ss
@@ -279,6 +279,17 @@ writef:  ;# write cylinder to floppy disk
 .code32
     pop  esi  ;# restore stack pointer
     jmp  readf1  ;# join common code
+
+buffer:  ;# return IO buffer address in words, for compatibility reasons
+    dup_
+    mov  eax, iobuffer >> 2
+    ret
+
+off:  ;# return loadaddr expressed in words
+;# this is the offset in RAM to where block 0 is loaded
+    dup_
+    mov  eax, loadaddr >> 2
+    ret
 
 ;# these must be defined elsewhere before use
 seekf:

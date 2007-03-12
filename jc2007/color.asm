@@ -91,8 +91,8 @@
 ;#     xxxx top of "main" return stack
 ;#     7c00 (bios boot sector... only during boot)
 ;#     xxxx top of "main" data stack, grows downwards
-;#     4d00 bottom of edit buffer (grows upwards)
-;#      500 floppy buffer (0x4800 bytes)
+;#     4d00 end of floppy I/O buffer, stacks start here
+;#      500 floppy buffer (0x4800 bytes), also edit buffer
 ;#      400 system area, 256 bytes
 ;#        0 BIOS interrupt table
 .equ cell, 4  ;# bytes per word
@@ -106,11 +106,7 @@
 .equ buffersize, 0x4800 ;# 512 bytes * 18 tracks * 2 heads per cylinder
 .equ retstacksize, (1500 * cell) ;# 1500 cells in CM2001 original
 .equ datastacksize, (750 * cell) ;# 750 cells in CM2001 original
-.equ buffer, (iobuffer + buffersize) ;# this is the edit buffer
-;# it grows upwards, give it enough space to hold a block of data
-;# wonder if edit buffer can be same as floppy buffer? not in use at same time
-;# now, maind grows downwards, so add enough space for both it and "buffer"
-.equ maind, buffer + 1024 + datastacksize
+.equ maind, iobuffer + buffersize + datastacksize
 .equ mains, maind + retstacksize
 .equ godd, mains + datastacksize
 .equ gods, godd + retstacksize
@@ -267,7 +263,7 @@ ex2:
     drop ;# restore EAX from data stack
     jmp  [forth2+loadaddr+ecx*4] ;# execute the Forth word found
 
-;# user entered a word we don't recognize
+;# user entered a word we don't recognize, or caused stack underflow, or ???
 abort:
     mov  curs + loadaddr, edi
     shr  edi, 10-2 ;# divide by 256 to get block number
@@ -559,6 +555,7 @@ forth0:
     packword emit, digit, 2emit, ., h., h.n, cr, space, down, edit
     packword e, lm, rm, graphic, text, keyboard, debug, at, +at, xy
     packword fov, fifo, box, line, color, octant, sp, last, unpack, vframe
+    packword buffer, off, rgb, hp, vp, hc, vc
 forth1:
     .rept 512 - ((.-forth1)/4) .long 0; .endr
 macro2:
@@ -572,6 +569,7 @@ forth2:
     long emit, edig, emit2, dot10, hdot, hdotn, cr, space, down, edit
     long e, lms, rms, graphic, text1, keyboard, debug, at, pat, xy_
     long fov_, fifof, box, line, color, octant, sps, last_, unpack, vframe
+    long buffer, off, rgb, hp_, vp_, hc_, vc_
 0:
     .rept 512 - ((.-0b)/4) .long 0; .endr ;# room for new definitions
 
@@ -1365,7 +1363,7 @@ curs: .long 0
 cad: .long 0  ;# cursor address
 pcad: .long 0 ;# page cursor address
 lcad: .long 0 ;# left cursor address (of multipart word)
-trash: .long buffer
+trash: .long iobuffer
 
 /* the editor keys and their actions */
 ekeys:
@@ -1495,7 +1493,7 @@ eout: pop  eax
 /* insert, or paste */
 ;# grab what was left by last "cut" operation
 destack: mov  edx, trash + loadaddr
-    cmp  edx, buffer ;# anything in there?
+    cmp  edx, iobuffer ;# anything in there?
     jnz  0f ;# continue if so...
     ret  ;# otherwise, 'insert' is already the default action so nothing to do
 0:  sub  edx, 2*4
@@ -1658,6 +1656,28 @@ pad:
     drop  ;# restore EAX from the data stack
     call edx ;# call the routine corresponding to keyhit
     jmp  0b  ;# loop until "accept" code reached, which exits program
+
+;# make assembly source constants available to high-level routines
+
+hp_: ;# horizontal pixels
+    dup_
+    mov  eax, hp
+    ret
+
+vp_:  ;# vertical pixels
+    dup_
+    mov  eax, vp
+    ret
+
+hc_:  ;# horizontal characters
+    dup_
+    mov  eax, hc
+    ret
+
+vc_:  ;# vertical characters
+    dup_
+    mov  eax, vc
+    ret
 
  .include "chars.asm"
 .ifdef I_HAVE_AT_LEAST_1GB_RAM

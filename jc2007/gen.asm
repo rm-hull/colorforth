@@ -177,6 +177,6 @@ no: drop
     drop
     ret
 vframe:  ;# needed by Mandelbrot program for low-level graphic stuff
-    mov eax, frame + loadaddr
     dup_
+    mov eax, frame + loadaddr
     ret
