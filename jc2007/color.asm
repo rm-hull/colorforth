@@ -569,7 +569,7 @@ forth2:
     long emit, edig, emit2, dot10, hdot, hdotn, cr, space, down, edit
     long e, lms, rms, graphic, text1, keyboard, debug, at, pat, xy_
     long fov_, fifof, box, line, color, octant, sps, last_, unpack, vframe
-    long buffer, off, rgb, hp_, vp_, hc_, vc_, fx_multiply
+    long buffer, off, rgb, hp_, vp_, hc_, vc_, fx_mul
 0:
     .rept 512 - ((.-0b)/4) .long 0; .endr ;# room for new definitions
 
@@ -1089,7 +1089,7 @@ alph: mov dword ptr shift + loadaddr, offset alpha1 + loadaddr
     /* (4 bytes) from the start of the table into which we index */
     lea  edi, alpha + loadaddr - 4
     jmp  0f
-graph: mov dword ptr shift + loadaddr, offset graph1
+graph: mov dword ptr shift + loadaddr, offset graph1 + loadaddr
     lea  edi, graphics + loadaddr - 4
 0:  mov  board + loadaddr, edi
     jmp  word0
@@ -1657,30 +1657,9 @@ pad:
     call edx ;# call the routine corresponding to keyhit
     jmp  0b  ;# loop until "accept" code reached, which exits program
 
-;# make assembly source constants available to high-level routines
-
-hp_: ;# horizontal pixels
-    dup_
-    mov  eax, hp
-    ret
-
-vp_:  ;# vertical pixels
-    dup_
-    mov  eax, vp
-    ret
-
-hc_:  ;# horizontal characters
-    dup_
-    mov  eax, hc
-    ret
-
-vc_:  ;# vertical characters
-    dup_
-    mov  eax, vc
-    ret
- .include "extensions.asm" ;# things added to colorForth by jc and others
+.include "extensions.asm" ;# things added to colorForth by jc and others
 ;# now load in the character maps
- .include "chars.asm"
+.include "chars.asm"
 ;# finally load in compiled high-level code
 .ifdef I_HAVE_AT_LEAST_1GB_RAM
  .incbin "newcode.dat"
