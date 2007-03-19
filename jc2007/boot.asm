@@ -55,7 +55,7 @@ init: ;# label used by relocate to calculate start address
     mov  cx, 63*0x100-0x80 ;# ... otherwise relocate color.com
     rep  movsd
     mov  esi, offset godd ;# set up data stack pointer for 'god' task
-    jmp  start2
+    jmp  start1
 0:  call unreal_mode
 .code16
     ;# fall through to cold-start routine

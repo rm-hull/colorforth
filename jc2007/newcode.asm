@@ -584,5 +584,9 @@ FORTH "test",  "tare",  "time",  "+",  "-",  "[COMPILESHORT]", "1000",  "for",  
 FORTH "c!",  "[COMPILESHORTHEX]", "c88b",  "2,",  "[COMPILEMACRO]", "drop",  "here",  ";"
 FORTH "loop",  "[COMPILESHORTHEX]", "49",  "1,",  "[COMPILESHORTHEX]", "75",  "1,",  "[TEXT]", "e2",  "here",  "-",  "+",  "1,",  ";",  "[EXECUTE]", "forth"
 FORTH "try",  "time",  "-",  "[COMPILESHORT]", "1000",  "c!",  "loop",  "time",  "+",  ";"
-BLOCK
+BLOCK 63
+BLOCK 64
+FORTH "[TEXTCAPITALIZED]", "mandelbrot", "[TEXT]", "display", "[EXECUTE]", "empty", "[EXECUTE]", "forth"
+FORTH "ok", "show", "black", "screen", ";"
+FORTH "fx", "[COMPILELONGHEX]", "11000000", "[COMPILELONGHEX]", "22000000", "fx*", ";"
 BLOCK
