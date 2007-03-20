@@ -97,9 +97,9 @@
 ;#        0 BIOS interrupt table
 .equ cell, 4  ;# bytes per word
 .equ blocksize, 1024  ;# bytes per Forth block
-.equ hp, 1024 ;# 1024 or 800
-.equ vp, 768 ;# 768 or 600
-.equ vesa, 0x4117 ;# bit 12 sets linear address mode in 0x117 or 0x114
+.equ hp, 800 ;# 1024 or 800
+.equ vp, 600 ;# 768 or 600
+.equ vesa, 0x4114 ;# bit 12 sets linear address mode in 0x117 or 0x114
 .equ hexbit, 020  ;# that's octal, bit 4 set to indicate hexadecimal display
 .equ tagbits, 017 ;# octal again, low 4 bits (0-3) indicate type tag
 .equ iobuffer, 0x500 ;# buffer for reading and writing floppy disk cylinders
@@ -1662,9 +1662,10 @@ pad:
 .include "chars.asm"
 ;# finally load in compiled high-level code
 .ifdef I_HAVE_AT_LEAST_1GB_RAM
- .incbin "newcode.dat"
+ .incbin "newcode.dat" ;# blocks 18-63 are CM's code
+ .incbin "appcode.dat" ;# blocks 64+ for colorForth community applications
 .else
- .incbin "color.dat"
+ .incbin "color.dat" ;# some things including "icons" won't work with this
 .endif
 ;# from CM's "user.htm" file:
 ;#  I'll be changing blocks 0-62. So to allow updates,

@@ -152,6 +152,8 @@ debug: ../test/b.img
 	cd ../test && $(MAKE) BXDEBUG=1
 minlog: ../test/b.img
 	cd ../test && $(MAKE) $@
+bochs23: ../test/b.img
+	cd ../test && $(MAKE) oldbxnewcf
 htmldiff: /tmp/color_pydump.html /tmp/color.html
 	rm -f $+
 	$(MAKE) $+
@@ -168,7 +170,9 @@ chars.asm: charmap.asm Makefile
 	cat $< > $@
 	./cf2text ../color.com | sed -n '/{block 12}/,/{block 18}/p' | \
 	 grep -v '{block [0-9]\+}' >> $@
-newcode.asm: forth.asm Makefile
+appcode.asm: forth.asm apps.asm
+	cat $+ > $@
+newcode.asm: forth.asm  # it is now in repository, don't make
 	cat $< > $@
 	./cf2text ../color.com | sed -n '/{block 18}/,$$p' | \
 	 sed \
