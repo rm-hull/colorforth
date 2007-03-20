@@ -50,12 +50,10 @@ DEFINES := $(shell cat *.asm | grep '\.ifn\?def' | \
 COLINUX := /cygdrive/c/Program\ Files/coLinux
 JC2007 := $(shell cygpath -w $(PWD))
 export
+default: newcode
 color.com: $(sources) chars.asm color.dat
 ifdef I_HAVE_AT_LEAST_1GB_RAM
 	$(MAKE) newcode.dat
-endif
-ifdef MANDELBROT
-	$(MAKE) new_mandelbrot.blk
 endif
 	$(GAS) $(foreach definition,$(DEFINES),\
 	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
@@ -166,7 +164,7 @@ textdiff: ../color.txt color.txt
 	/usr/src/howerd/cf2html $< > $@
 /usr/src/howerd/cf2html: /usr/src/howerd/cf2html.c
 	gcc -o $@ $<
-chars.asm: charmap.asm Makefile
+chars.asm: charmap.asm
 	cat $< > $@
 	./cf2text ../color.com | sed -n '/{block 12}/,/{block 18}/p' | \
 	 grep -v '{block [0-9]\+}' >> $@
@@ -212,7 +210,7 @@ new_%.blk: new_%.dsm
 	 --reduce-memory-overheads \
 	 -o $*.o $<
 	objcopy $*.o -O binary $@
-empty_block.dat: Makefile
+empty_block.dat:
 	dd if=/dev/zero of=$@ bs=1024 count=1
 %.rblk: %.lst  # reverse masm listing into binary
 	sed -n 's/^..........\([0-9A-F]\+\).*/\1/p' "$<" | xxd -r -p > "$@"

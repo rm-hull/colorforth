@@ -320,6 +320,29 @@ def unpack(coded):
    bits -= 3
  return text
 
+def packword(word):
+ """pack a word into a 32-bit integer like colorForth editor does
+
+    this routine ignores anything past 28 bits"""
+ packed, bits = 0, 28
+ for letter in word:
+  lettercode = code.index(letter)
+  DebugPrint('lettercode for "%s" is 0x%x' % (letter, lettercode))
+  length = 4 + (lettercode > 7) + (2 * (lettercode > 15))  # using True as 1
+  lettercode += (8 * (length == 5)) + ((96 - 16) * (length == 7))  # True=1
+  DebugPrint('length of huffman code is %d' % length)
+  packed = (packed << length) + lettercode
+  DebugPrint('packed is now: 0x%08x' % packed)
+  bits -= length
+ packed <<= bits + 4
+ if word != unpack(packed):
+  sys.stderr.write('packword: error: word "%s" packed as 0x%08x, "%s"\n' % (
+   word, packed, unpack(packed)))
+  sys.exit(1)
+ else:
+  DebugPrint('packed: 0x%08x' % packed)
+  return packed
+
 def dump_tags(number):
  pass
 

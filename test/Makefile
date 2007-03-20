@@ -12,7 +12,7 @@ default: newbxnewcf
 	uniq -f 4 -c $< > $@
 %cf.uniq.txt: %cf.txt
 	uniq -f 1 -c $< > $@
-oldbx%: logging.bxrc a.img b.img
+oldbx%: minlog.bxrc a.img b.img
 	-export BXRC=$@ && \
 	export BOOTFLOPPY=$($*) && \
 	export OTHERFLOPPY=$(filter-out $< $($*),$+) && \
@@ -21,11 +21,6 @@ oldbx%: logging.bxrc a.img b.img
 	else \
 	 $(BOCHS)/bochs -f $< -q; \
 	fi
-	touch $(TEMP)/$@.txt $(TEMP)/$@.debug.txt
-	sed -i 's/\r//' $(TEMP)/$@.txt $(TEMP)/$@.debug.txt
-	$(MAKE) $(TEMP)/$@.uniq.txt
-	$(MAKE) $(TEMP)/$@.debug.uniq.txt
-	less $(TEMP)/$@.uniq.txt
 newbx%: logging.bxrc a.img b.img
 	-export BXRC=$@ && \
 	export BOOTFLOPPY=$($*) && \
