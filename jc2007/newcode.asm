@@ -587,6 +587,7 @@ FORTH "try",  "time",  "-",  "[COMPILESHORT]", "1000",  "c!",  "loop",  "time", 
 BLOCK 63
 BLOCK 64
 FORTH "[TEXTCAPITALIZED]", "mandelbrot", "[TEXT]", "display", "[EXECUTE]", "empty", "[EXECUTE]", "forth"
+FORTH "fixed", "here", "[COMPILESHORT]", "4", "-", "@", ";"
 FORTH "ok", "show", "black", "screen", ";"
-FORTH "fx", "[COMPILELONGHEX]", "11000000", "[COMPILELONGHEX]", "22000000", "fx*", ";"
+FORTH "test", "[TEXT]", "1.2", "[EXECUTE]", "fixed", ";"
 BLOCK
