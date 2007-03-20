@@ -157,9 +157,9 @@ box: ;# draw a box and fill with foreground color
 0:  mov  ecx, eax
     sub  ecx, yc + loadaddr
     jng  no
-    cmp  dword ptr [loadaddr + esi], hp+1
+    cmp  dword ptr [esi], hp+1
     js   0f
-    mov  dword ptr [loadaddr + esi], hp
+    mov  dword ptr [esi], hp
 0:  mov  eax, xc + loadaddr
     sub  [esi], eax
     jng  no

@@ -1,32 +1,27 @@
 .intel_syntax
 .code32
 ;# extensions to colorForth better written in assembly language
+;# i'm not of the opinion that coding in machine language is a step forward
+;# jc.unternet.net
 
-;# make assembly source constants available to high-level routines
-hp_: ;# horizontal pixels
-    dup_
-    mov  eax, hp
-    ret
+.macro highlevel constant
+ ;# make assembly source constants available to high-level routines
+ dup_ ;# push anything in EAX onto stack
+ mov eax, \constant
+ ret ;# return with constant at TOS (top of stack = EAX)
+.endm
 
-vp_:  ;# vertical pixels
-    dup_
-    mov  eax, vp
-    ret
+hp_: highlevel hp ;# horizontal pixels
+vp_: highlevel vp ;# vertical pixels
+hc_: highlevel hc ;# horizontal characters
+vc_: highlevel vc ;# vertical characters
+vframe: highlevel frame+loadaddr ;# needed for low-level graphic stuff
 
-hc_:  ;# horizontal characters
-    dup_
-    mov  eax, hc
-    ret
-
-vc_:  ;# vertical characters
-    dup_
-    mov  eax, vc
-    ret
-
-vframe:  ;# needed by Mandelbrot program for low-level graphic stuff
-    dup_
-    mov eax, frame + loadaddr
-    ret
+fixed: ;# at compile time, take a text float and convert to fixed-point
+ ;# use like this: [white] 1.25 [yellow] fixed
+ dup_
+ mov eax, [edi-2*4] ;# get the text number
+ ret
 
 fx_mul: ;# fixed-point A(3,28) multiplication
  ;# for notation, see http://home.earthlink.net/~yatescr/fp.pdf

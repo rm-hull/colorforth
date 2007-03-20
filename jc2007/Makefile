@@ -50,7 +50,7 @@ DEFINES := $(shell cat *.asm | grep '\.ifn\?def' | \
 COLINUX := /cygdrive/c/Program\ Files/coLinux
 JC2007 := $(shell cygpath -w $(PWD))
 export
-default: newcode
+default: newcode bochs23
 color.com: $(sources) chars.asm color.dat
 ifdef I_HAVE_AT_LEAST_1GB_RAM
 	$(MAKE) newcode.dat
@@ -66,7 +66,7 @@ endif
 	 --reduce-memory-overheads \
 	 -o $*.o $<
 	objcopy $*.o -O binary $@
-newcode: color.asm newcode.dat
+newcode: color.asm newcode.dat appcode.dat
 	touch $<
 	$(MAKE) I_HAVE_AT_LEAST_1GB_RAM=1 color.com
 kbd:	color.asm
