@@ -1460,7 +1460,7 @@ mblk: ;# minus one block (-2 since odd blocks are shadow blocks)
     sub  dword ptr [esi], 2
 0:  ret
 ;# shadow screens in Forth are documentation for corresponding source screens
-shadow: xor dword ptr blk, 1 ;# switch between shadow and source
+shadow: xor dword ptr blk + loadaddr, 1 ;# switch between shadow and source
     xor  dword ptr [esi], 1 ;# change odd to even and vice versa
     ret
 

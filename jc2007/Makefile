@@ -50,7 +50,7 @@ DEFINES := $(shell cat *.asm | grep '\.ifn\?def' | \
 COLINUX := /cygdrive/c/Program\ Files/coLinux
 JC2007 := $(shell cygpath -w $(PWD))
 export
-default: newcode bochs23
+default: small bochs23
 color.com: $(sources) chars.asm color.dat
 ifdef I_HAVE_AT_LEAST_1GB_RAM
 	$(MAKE) newcode.dat
@@ -74,7 +74,7 @@ kbd:	color.asm
 	$(MAKE) SMALLSCREEN=1 DEBUG_KBD=1 color.com
 small:	color.asm
 	touch $<
-	$(MAKE) SMALLSCREEN=1 color.com
+	$(MAKE) SMALLSCREEN=1 newcode
 cm2001: color.asm
 	touch $<
 	$(MAKE) CM2001=1 color.com
