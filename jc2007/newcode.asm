@@ -287,7 +287,7 @@ FORTH "black",  "[COMPILESHORT]", "0",  "color",  ";"
 FORTH "screen",  "[COMPILESHORT]", "0",  "dup",  "at",  "hp",  "vp",  "box",  ";"
 FORTH "5*",  "[COMPILESHORT]", "5",  "for",  "2emit",  "next",  ";"
 FORTH "cf",  "[COMPILESHORT]", "25",  "dup",  "at",  "red",  "[COMPILESHORTHEX]", "1",  "[COMPILESHORTHEX]", "3",  "[COMPILESHORTHEX]", "c",  "[COMPILESHORTHEX]", "3",  "[COMPILESHORTHEX]", "a",  "5*",  "green",  "[COMPILESHORTHEX]", "14",  "[COMPILESHORTHEX]", "2",  "[COMPILESHORTHEX]", "1",  "[COMPILESHORTHEX]", "3",  "[COMPILESHORTHEX]", "3e",  "5*",  ";"
-FORTH "logo",  "show",  "black",  "screen",  "[COMPILESHORT]", "800",  "[COMPILESHORT]", "710",  "blue",  "box",  "[COMPILESHORT]", "600",  "[COMPILESHORT]", "50",  "at",  "hp",  "vp",  "red",  "box",  "[COMPILESHORT]", "200",  "[COMPILESHORT]", "100",  "at",  "[COMPILESHORT]", "700",  "[COMPILESHORT]", "500",  "green",  "box",  "text",  "cf",  "keyboard",  ";"
+FORTH "logo",  "show",  "black",  "screen", "hp", "iw", "[COMPILESHORT]", "10", "*", "negate", "+", "vp", "ih", "[COMPILESHORT]", "2", "*", "negate", "+", "blue",  "box", "[COMPILESHORT]", "600", "[COMPILESHORT]", "50",  "at",  "hp",  "vp", "ih", "[COMPILESHORT]", "5", "*", "negate", "+", "red",  "box",  "[COMPILESHORT]", "200",  "[COMPILESHORT]", "100",  "at", "hp", "[COMPILESHORT]", "-324", "+", "vp", "ih", "[COMPILESHORT]", "9", "*", "negate", "+", "green",  "box",  "text",  "cf",  "keyboard",  ";"
 FORTH "empty",  "empt",  "logo",  ";"
 BLOCK 31
 FORTH "block",  "[COMPILEWORD]", "n-a",  "block",  "number",  "to",  "word",  "address"

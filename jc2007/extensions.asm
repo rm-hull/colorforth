@@ -13,6 +13,8 @@
 
 hp_: highlevel hp ;# horizontal pixels
 vp_: highlevel vp ;# vertical pixels
+iw_: highlevel iw ;# icon width including padding
+ih_: highlevel ih ;# icon height including padding
 hc_: highlevel hc ;# horizontal characters
 vc_: highlevel vc ;# vertical characters
 vframe: highlevel frame+loadaddr ;# needed for low-level graphic stuff
