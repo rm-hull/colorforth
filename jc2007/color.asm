@@ -97,9 +97,15 @@
 ;#        0 BIOS interrupt table
 .equ cell, 4  ;# bytes per word
 .equ blocksize, 1024  ;# bytes per Forth block
-.equ hp, 800 ;# 1024 or 800
-.equ vp, 600 ;# 768 or 600
-.equ vesa, 0x4114 ;# bit 12 sets linear address mode in 0x117 or 0x114
+.ifdef SMALLSCREEN
+ .equ hp, 800 ;# 1024 or 800
+ .equ vp, 600 ;# 768 or 600
+ .equ vesa, 0x4114 ;# bit 12 sets linear address mode in 0x117 or 0x114
+.else
+ .equ hp, 1024
+ .equ vp, 768
+ .equ vesa, 0x4117
+.endif
 .equ hexbit, 020  ;# that's octal, bit 4 set to indicate hexadecimal display
 .equ tagbits, 017 ;# octal again, low 4 bits (0-3) indicate type tag
 .equ iobuffer, 0x500 ;# buffer for reading and writing floppy disk cylinders

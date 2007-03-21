@@ -287,7 +287,24 @@ FORTH "black",  "[COMPILESHORT]", "0",  "color",  ";"
 FORTH "screen",  "[COMPILESHORT]", "0",  "dup",  "at",  "hp",  "vp",  "box",  ";"
 FORTH "5*",  "[COMPILESHORT]", "5",  "for",  "2emit",  "next",  ";"
 FORTH "cf",  "[COMPILESHORT]", "25",  "dup",  "at",  "red",  "[COMPILESHORTHEX]", "1",  "[COMPILESHORTHEX]", "3",  "[COMPILESHORTHEX]", "c",  "[COMPILESHORTHEX]", "3",  "[COMPILESHORTHEX]", "a",  "5*",  "green",  "[COMPILESHORTHEX]", "14",  "[COMPILESHORTHEX]", "2",  "[COMPILESHORTHEX]", "1",  "[COMPILESHORTHEX]", "3",  "[COMPILESHORTHEX]", "3e",  "5*",  ";"
-FORTH "logo",  "show",  "black",  "screen", "hp", "iw", "[COMPILESHORT]", "10", "*", "negate", "+", "vp", "ih", "[COMPILESHORT]", "2", "*", "negate", "+", "blue",  "box", "[COMPILESHORT]", "600", "[COMPILESHORT]", "50",  "at",  "hp",  "vp", "ih", "[COMPILESHORT]", "5", "*", "negate", "+", "red",  "box",  "[COMPILESHORT]", "200",  "[COMPILESHORT]", "100",  "at", "hp", "[COMPILESHORT]", "-324", "+", "vp", "ih", "[COMPILESHORT]", "9", "*", "negate", "+", "green",  "box",  "text",  "cf",  "keyboard",  ";"
+FORTH "logo",  "show",  "black",  "screen",
+ FORTH "[COMPILEWORD]", "hp", "iw", "[COMPILESHORT]", "10", "*", "negate", "+",
+ FORTH "[COMPILEWORD]", "dup", "dup", ;# copies to compute red and green
+ FORTH "[COMPILEWORD]", "vp", "ih", "[COMPILESHORT]", "2", "*", "negate", "+",
+ FORTH "[COMPILEWORD]", "blue", "box",
+ FORTH "[COMPILESHORT]", "-465", "+",
+ FORTH "[COMPILESHORT]", 4, "[COMPILESHORT]", 10, "*/", ;# .4 of difference
+ FORTH "[COMPILESHORT]", "465", "+", "dup", ;# save copy to compute green
+ FORTH "[COMPILESHORT]", "50", "at",
+ FORTH "[COMPILEWORD]", "hp",
+ FORTH "[COMPILEWORD]", "vp", "ih", "[COMPILESHORT]", "5", "*", "negate", "+",
+ FORTH "[COMPILEWORD]", "red",  "box",
+ FORTH "[COMPILESHORT]", "200", "[COMPILESHORT]", "100", "at",
+;# FORTH "[COMPILEWORD]", "drop", ;# align green with blue? nope
+;# FORTH "[COMPILEWORD]", "swap", "drop", ;# align green with red? testing
+ FORTH "[COMPILEWORD]", "+", "2/", ;# halfway between blue and red
+ FORTH "[COMPILEWORD]", "vp", "ih", "[COMPILESHORT]", "9", "*", "negate", "+",
+ FORTH "[COMPILEWORD]", "green", "box", "text", "cf", "keyboard", ";"
 FORTH "empty",  "empt",  "logo",  ";"
 BLOCK 31
 FORTH "block",  "[COMPILEWORD]", "n-a",  "block",  "number",  "to",  "word",  "address"
