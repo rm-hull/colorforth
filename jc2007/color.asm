@@ -616,8 +616,14 @@ copy: cmp  eax, 12 ;# can't overwrite machine-code blocks...
     drop ;# no longer need the block number
     ret
 
-debug:
-    mov dword ptr xy + loadaddr, offset (3*0x10000+(vc-2)*ih+3)
+.equ iw, 16+6 ;# icon width, including 6 pixels padding
+.equ ih, 24+6 ;# icon height, including padding
+.equ hc, hp/iw ;# 46 ;# number of horizontal characters on screen
+.equ vc, vp/ih ;# 25 ;# number of vertical characters
+
+debug: ;# show current machine state
+    ;# locate character output two lines above bottom
+    mov dword ptr xy + loadaddr, ((3*0x10000)+(((vc-2)*ih)+3))
     dup_
     mov  eax, god + loadaddr
     push [eax]
@@ -626,20 +632,17 @@ debug:
     pop  eax
     call dot
     dup_
-    mov  eax, main
+    mov  eax, main + loadaddr
     call dot
     dup_
     mov  eax, esi
     jmp  dot
 
-.equ iw, 16+6 ;# icon width, including 6 pixels padding
-.equ ih, 24+6 ;# icon height, including padding
-.equ hc, hp/iw ;# 46 ;# number of horizontal characters on screen
-.equ vc, vp/ih ;# 25 ;# number of vertical characters
 .align 4 
+;# in xy, x is the high 16 bits and y is the low 16 bits
 xy: .long 3*0x10000+3 ;# 3 pixels padding on each side of icons
-lm: .long 3
-rm: .long hc*iw ;# 1012
+lm: .long 3  ;# left margin
+rm: .long hc*iw  ;# right margin, 0x1012 (iw already includes padding)
 xycr: .long 0
 fov: .long 10*(2*vp+vp/2)
 
@@ -647,7 +650,8 @@ nc_: dup_
     mov  eax, (loadaddr + (offset nc-offset start)) / 4
     ret
 
-xy_: dup_
+xy_: ;# return xy address in words to high-level application
+    dup_
     mov  eax, (loadaddr + (offset xy-offset start)) / 4
     ret
 
@@ -728,23 +732,24 @@ blank: dup_
     mov  eax, vp
     jmp  box
 
-top: mov  ecx, lm + loadaddr
-    shl  ecx, 16
-    add  ecx, 3
-    mov  xy + loadaddr, ecx
+top: ;# move character display address to top of screen
+    mov  ecx, lm + loadaddr ;# get left margin
+    shl  ecx, 16 ;# shift into 'x' word of xy
+    add  ecx, 3  ;# add vertical padding to y
+    mov  xy + loadaddr, ecx ;# set xy and xycr to this setting
     mov  xycr + loadaddr, ecx
     ret
 
-;# insert a carriage return if at end of line
-qcr: mov  cx, word ptr xy+loadaddr+2
-    cmp  cx, word ptr rm + loadaddr
-    js   0f
-;# insert a carriage return (drop to next line)
-cr: mov  ecx, lm + loadaddr
-    shl  ecx, 16
-    mov  cx, word ptr xy + loadaddr
-    add  ecx, ih
-    mov  xy + loadaddr, ecx
+qcr: ;# insert a carriage return if at end of line
+    mov  cx, word ptr xy+loadaddr+2 ;# get 'x' (horizontal) word of xy
+    cmp  cx, word ptr rm + loadaddr ;# are we at right margin?
+    js   0f  ;# return if not, else fall through to 'cr' routine
+cr: ;# insert a carriage return (drop to next line)
+    mov  ecx, lm + loadaddr ;# get left margin
+    shl  ecx, 16 ;# shift into 'x' word for 'xy'
+    mov  cx, word ptr xy + loadaddr ;# get current 'y' word
+    add  ecx, ih ;# add one icon height to it (includes padding)
+    mov  xy + loadaddr, ecx ;# update xy
 0:  ret
 
 lms: mov  lm + loadaddr, eax
@@ -755,13 +760,15 @@ rms: mov  rm + loadaddr, eax
     drop
     ret
 
-at: mov  word ptr xy + loadaddr, ax
-    drop
-    mov  word ptr xy+loadaddr+2, ax
-    drop
+at: ;# set display address, eats top two words on stack
+    mov  word ptr xy + loadaddr, ax ;# set 'y'
+    drop ;# moves 'y' into EAX
+    mov  word ptr xy+loadaddr+2, ax ;# set 'x'
+    drop ;# cleans up stack
     ret
 
-pat: add  word ptr xy + loadaddr, ax
+pat: ;# "plus at" -- add to current xy position
+    add  word ptr xy + loadaddr, ax
     drop
     add  word ptr xy+loadaddr+2, ax
     drop
@@ -823,7 +830,7 @@ keyboard: call text1
     mov  eax, keyc + loadaddr
     call color
     mov dword ptr rm + loadaddr, hc*iw
-    mov dword ptr lm + loadaddr, hp-9*iw+3
+    mov dword ptr lm + loadaddr, hp-((9*iw)+3)
     mov dword ptr xy + loadaddr, (hp-9*iw+3)*0x10000+vp-4*ih+3
     call eight
     call eight
