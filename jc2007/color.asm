@@ -1307,7 +1307,7 @@ var: ;# within editor, display a variable name
     call type_
 ;# fall through to next routine to display its value
 ;# green (compiled) normal (32 bits) word
-gnw: mov  edx, [edi*4]
+gnw: mov  edx, [loadaddr+edi*4]
     inc  edi
 gnw1: dup_
     mov  eax, 0x0f800 ;# green
@@ -1422,7 +1422,7 @@ act7: mov  al, 7 ;# macro compile, cyan
 ;# "insert" becomes the active word
     mov dword ptr aword + loadaddr, offset insert + loadaddr
 ;# action for number
-actn: mov  keyc + loadaddr, eax
+actn: mov  keyc + loadaddr, eax  ;# store key color
     pop  eax
     drop
     jmp  accept

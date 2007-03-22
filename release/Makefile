@@ -20,9 +20,10 @@ clean:
 	rm -f *.exe a.img *.zip *.rtf cfBochs/* LICENSE.txt
 %.exe:
 	cp -f $(BOCHS_SRC)/$@ .
-upload: cfbochs.exe
-	ncftpput -C upload.sourceforge.net $< incoming/cfbochs-$(TIMESTAMP).exe
-cfbochs.exe: cfbochs.nsi LICENSE.rtf README.rtf cfbochs.zip
+upload: cfbochs-jc2007.exe
+	ncftpput -C upload.sourceforge.net $< \
+	 incoming/cfbochs-jc2007-$(TIMESTAMP).exe
+cfbochs-jc2007.exe: cfbochs.nsi LICENSE.rtf README.rtf cfbochs.zip
 	$(NSIS) $<
 LICENSE.txt: NOLICENSE.txt /usr/src/bochs/COPYING
 	cat $+ > $@

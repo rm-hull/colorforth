@@ -1,21 +1,19 @@
-This is a demo of colorForth running under a patched Bochs emulator. You will
-need to download the latest version of Bochs from bochs.sourceforge.net for
-the necessary BIOS files. This has been tested with Bochs-2.3 only.
+This is a demo of colorForth running under the Bochs-2.3 emulator. Install that
+first, downloading from bochs.sourceforge.net. This cfBochs installer assumes
+you've installed it under \Program Files\Bochs-2.3\.
 
-Keystroke recognition is slow, so be patient. You might
+Because Bochs-2.3 doesn't have the same fullscreen support as the patched
+Bochs (that still comes in this package but is not used by the .bat file),
+this colorForth was built in 800x600 mode.
+
+Keystroke recognition is faster than under the patched Bochs in the cfBochs
+download, but still somewhat slow, so be patient. You might
 try changing the IPS (emulated instructions per second) in the bochsrc.bxrc
-file, according to what the IPS shows in the emulator.
+file.
 
-For documentation, see http://colorforth.com/. For a really quick start,
-run cfbochs.bat, hit the spacebar once to get the numeric keyboard, and
-type 56 (keys "kl"), space, then "load" (keys "psav"), then space. The "rose"
-screen of hexagons should display. The keys uiojkl will adjust the red, green,
-and blue settings, and keys "m" for minus and "/" for plus will adjust the
-brightness. Alt-enter to get the top row of buttons back, and you can turn off
-the emulator.
-
-For even better documentation, search the web for "colorforth tutorial".
-No coordinated effort has really yet emerged, but it's getting better.
+For documentation, see http://colorforth.com/ or search the web for 
+"colorforth tutorial".  No coordinated effort has really yet emerged, 
+but it's getting better.
 
 Then there is always the source code! Follow the Code menu at
 http://sourceforge.net/projects/colorforth/ to the CVS page, which gives

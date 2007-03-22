@@ -17,7 +17,7 @@ SetCompress off
 Name "cfBochs"
 Caption "colorForth in a Bochs"
 Icon "${NSISDIR}\Contrib\Graphics\Icons\nsis1-install.ico"
-OutFile "cfbochs.exe"
+OutFile "cfbochs-jc2007.exe"
 
 SetDateSave on
 SetDatablockOptimize on

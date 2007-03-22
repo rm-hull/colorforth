@@ -152,6 +152,8 @@ minlog: ../test/b.img
 	cd ../test && $(MAKE) $@
 bochs23: ../test/b.img
 	cd ../test && $(MAKE) oldbxnewcf
+vmware: ../test/b.img
+	cd ../test && $(MAKE) vmware
 htmldiff: /tmp/color_pydump.html /tmp/color.html
 	rm -f $+
 	$(MAKE) $+

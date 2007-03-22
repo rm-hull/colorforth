@@ -21,8 +21,12 @@ vframe: highlevel frame+loadaddr ;# needed for low-level graphic stuff
 
 fixed: ;# at compile time, take a text float and convert to fixed-point
  ;# use like this: [white] 1.25 [yellow] fixed
+ ;# don't try any more than 4 characters in the number including the point;
+ ;# since numbers and the decimal point are all 7-bitters that's all that
+ ;# can fit in a 28-bit packed source word.
  dup_
- mov eax, [edi-2*4] ;# get the text number
+ mov eax, [loadaddr-8+edi*4] ;# get the text number
+ and eax, 0xfffffff0 
  ret
 
 fx_mul: ;# fixed-point A(3,28) multiplication

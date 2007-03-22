@@ -30,6 +30,8 @@ gdt0: .word 0, 0, 0, 0 ;# start of table must be a null entry
     .word 0xffff, 0, 0x9a00, 0xcf ;# 32-bit protected-mode code
     .equ data32p, . - gdt0
     .word 0xffff, 0, 0x9200, 0xcf ;# 32-bit protected-mode data
+    .equ dos32p, . - gdt0
+    .word 0xffff, 0, 0x9200, 0xcf ;# same but overwrite offset for MS-DOS load
     .equ code16r, . - gdt0
     .word 0xffff, 0, 0x9a00, 0x00 ;# 16-bit real-mode code
     .equ data16r, . - gdt0
@@ -38,22 +40,29 @@ gdt_end:
 .code16
 start0:
     call textmode
-    call loading
     zero es
     call relocate
 init: ;# label used by relocate to calculate start address
     zero ss
     mov  sp, loadaddr  ;# stack pointer starts just below this code
-    xor  ax, ax
-    mov  ds, ax
-    mov  es, ax
+    xor  eax, eax
+    mov  ax, ds
+    shl  eax, 4
+    mov  [loadaddr + gdt0 + dos32p + 2], ax
+    shr  eax, 16
+    mov  [loadaddr + gdt0 + dos32p + 4], al
+    zero ds
     data32 call protected_mode
 .code32
     call a20 ;# set A20 gate to enable access to addresses with 1xxxxx
     cmp  si, 0x7e00 ;# boot from floppy?
     jz   0f  ;# continue if so...
-    mov  cx, 63*0x100-0x80 ;# ... otherwise relocate color.com
+    push ds
+    mov  eax, dos32p
+    mov  ds, eax
+    mov  ecx, 63*0x100-0x80 ;# ... otherwise relocate color.com
     rep  movsd
+    pop  ds
     mov  esi, offset godd ;# set up data stack pointer for 'god' task
     jmp  start1
 0:  call unreal_mode
@@ -120,16 +129,16 @@ read:
     addr32 rep movsd ;# move to ES:EDI location preloaded by caller
     mov  esi, ebp  ;# restore parameter stack pointer
     ret
-
+/* no room for this any more
 loading: ;# show "colorForth loading..."
     call textshow
     .word (1f - 0f) / 2
 0:  display "color", green
     display "Forth", red
-    display " loading:", white
+    display " loading", white
     display " ", white
 1:  ;# end display
-
+*/
 loaded_next:
     mov  al, cylinder + loadaddr
     ;# fall through to numbershow
