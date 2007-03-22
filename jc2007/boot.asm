@@ -40,6 +40,7 @@ gdt_end:
 .code16
 start0:
     call textmode
+    call loading
     zero es
     call relocate
 init: ;# label used by relocate to calculate start address
@@ -129,16 +130,14 @@ read:
     addr32 rep movsd ;# move to ES:EDI location preloaded by caller
     mov  esi, ebp  ;# restore parameter stack pointer
     ret
-/* no room for this any more
 loading: ;# show "colorForth loading..."
     call textshow
     .word (1f - 0f) / 2
-0:  display "color", green
-    display "Forth", red
-    display " loading", white
+0:  display "c", green
+    display "F", red
     display " ", white
 1:  ;# end display
-*/
+
 loaded_next:
     mov  al, cylinder + loadaddr
     ;# fall through to numbershow

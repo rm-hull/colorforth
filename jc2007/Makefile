@@ -153,7 +153,9 @@ minlog: ../test/b.img
 bochs23: ../test/b.img
 	cd ../test && $(MAKE) oldbxnewcf
 vmware: ../test/b.img
-	cd ../test && $(MAKE) vmware
+	cd ../test && $(MAKE) vmclean vmware
+qemu:	../test/b.img
+	cd ../test && $(MAKE) vmclean qemu
 htmldiff: /tmp/color_pydump.html /tmp/color.html
 	rm -f $+
 	$(MAKE) $+
