@@ -3,6 +3,7 @@ BOCHS_SRC := /usr/src/bochs
 CF_SRC := ~/src
 VMWARE := /cygdrive/c/Program\ Files/VMWare/VMware\ Player
 BXSHARE := $(shell cygpath -w $(BOCHS))
+QEMU := /cygdrive/c/Program Files/QEMU
 TEMP ?= /tmp
 oldcf := a.img
 newcf := b.img
@@ -47,8 +48,11 @@ b.img:	$(CF_SRC)/colorforth/as/color.com
 	dd if=$< of=$@ conv=notrunc
 vmware: cf.vmx b.img
 	$(VMWARE)/vmplayer.exe cf.vmx
-clean:
-	rm -f new*.txt old*.txt cf.{vmem,vmss,vmsd} *.img *.log *.vmem \
-	 *.vmem.lck *.nvram *.dbg
+qemu: cfqemu.bat b.img
+	cp $+ "$(QEMU)/" && cd "$(QEMU)" && cmd /c cfqemu.bat
+clean: vmclean
+	rm -f new*.txt old*.txt *.img
+vmclean:
+	rm -f cf.{vmss,vmsd} *.log *.vmem *.vmem.lck *.nvram *.dbg
 set:
 	set
