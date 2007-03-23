@@ -830,7 +830,7 @@ keyboard: call text1
     mov  eax, keyc + loadaddr
     call color
     mov dword ptr rm + loadaddr, hc*iw
-    mov dword ptr lm + loadaddr, hp-((9*iw)+3)
+    mov dword ptr lm + loadaddr, hp-9*iw+3
     mov dword ptr xy + loadaddr, (hp-9*iw+3)*0x10000+vp-4*ih+3
     call eight
     call eight
