@@ -62,13 +62,18 @@ fixed: ;# at compile time, take a text float and convert to fixed-point
  tenshift ebx ;# shift left one decimal point, same as 2* + 8*
  add ebx, eax ;# add the number
  jmp 0b
-4: ;# now we finalize the number, which is returned on the stack (in EAX)
- mov eax, ebx
+4: ;# now we finalize the number
+ drop ;# get rid of the 0 on the data stack
+ mov eax, ebx ;# get the number out of EBX
  mov ebx, 0x10000000 / 1000 ;# bit 28 is where the decimal point is
  push edx ;# save EDX so we don't lose counts
  mul ebx ;# multiply, clobbering EDX
  pop edx ;# restore EDX from stack
- sub cl, dh ;# total number of digits minus those to left of decimal point
+ sub cl, dh ;# number of digits to the right of decimal point
+ ;# in the case of "1.2", this leaves 1; "1.25", 2; ".125", 3
+ ;# we need to shift all numbers as if there were 3 digits to right of d.p.
+ neg cl  ;# we want a positive number
+ add cl, 3 ;# anything from 0 to 3
  jz 6f ;# Z bit set means we don't have to shift
 5: ;# shift to the left of the decimal point if necessary
  tenshift eax ;# multiply by 10
