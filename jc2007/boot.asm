@@ -41,11 +41,12 @@ gdt_end:
 start0:
     call textmode
     call loading
-    zero es
     call relocate
 init: ;# label used by relocate to calculate start address
     zero ss
     mov  sp, loadaddr  ;# stack pointer starts just below this code
+    mov  eax, 99
+    call numbershow
     xor  eax, eax
     mov  ax, ds
     shl  eax, 4
@@ -170,10 +171,13 @@ textshow:
 relocate:  ;# move code from where DOS or BIOS put it, to where we want it
     pop  si  ;# just using return address for calculation...
     ;# we know to where to 'return'
+    push es
+    zero es
     sub  si, offset init-offset start  ;# locate where 'start' actually is
     mov  edi, loadaddr ;# destination of relocation
     mov  cx, 512/4 ;# 128 longwords
     addr32 rep movsd
+    pop  es ;# restore extra segment register
     jmp  0: (offset init) + loadaddr
 
 protected_mode:

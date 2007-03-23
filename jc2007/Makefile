@@ -130,10 +130,10 @@ errors:
 	$(GAS) color.asm 2>&1 | ./show_error_lines.sh
 errorcount:
 	$(GAS) color.asm 2>&1 | wc -l
-rcsdiff:
-	cvs diff
-ci:
-	cvs commit
+cvsdiff:
+	cd .. && cvs diff
+commit:
+	cd ../ && cvs commit
 /tmp/color.xxd: ../color.com
 	xxd $< > $@
 /tmp/gas_color.xxd: color.com

@@ -1,4 +1,4 @@
-In an attempt to simplify the colorForth bootcode, I am attempting the
+In an attempt to simplify the colorForth bootcode, I am making the
 following changes:
 
 * using unreal mode to allow BIOS calls while having use of 32-bit registers
@@ -10,9 +10,9 @@ following changes:
 
 This will hopefully, eventually, eliminate the weirdness that causes the 
 binaries to fail on QEMU, Bochs, and VMWare. As of this version, there are
-still problems with VMWare at least. I'd like to hear from anyone who has
-tested this version under QEMU or natively on a real desktop computer using
-a boot floppy created from the image file.
+still problems with VMWare at least. I've gotten this version to run on QEMU,
+and it does so very fast. I haven't gotten it to boot natively on a desktop
+from a floppy, and would appreciate any feedback from others who attempt this.
 
 Programmer's notes:
 
@@ -25,6 +25,23 @@ Programmer's notes:
   the "vp", "hp", "iw", and "ih" constants now available in high-level Forth.
 
 * to make programs compatible with the load offset, which in this version is
-  no longer 0, use "off" (in 32-bit words) or "off 4 *" in bytes.
+  no longer 0, use "off" (in 32-bit words) or "off 4 *" (in bytes).
+
+* when you see executable words in the sources other than 'macro', 'forth',
+  'load', and the like, you may wonder what happens to what they put on the
+  stack. for example, 'cf2ansi color.com | grep "1;33"' will show you several
+  such words, including 'wc 18 blks ;', where the 18 and blks are both
+  yellow (executed). what happens to the number pushed onto the stack? it
+  is compiled as a literal. when the 'load' loop reaches the semicolon, it
+  sees it's compiled (since the tagbits are 4), and calls qcompile. the first
+  thing qcompile does is to call [lit], which calls alit, which falls into
+  literal, which compiles 'mov eax, N', with N being the number pulled off
+  the stack. if you need more than one such number compiled in a row, use a
+  compiled 'nop' between them, such as you see in the source for 'pad'.
+
+* register usage: ebp, ebx, ecx, edx are normally safe to use. edi is used as
+  a word pointer into the sources when compiling with 'load'. esi is the data
+  stack pointer, and eax contains the top element of the stack (see above).
+  esp of course is the return stack pointer.
 
 jcATunternet.net

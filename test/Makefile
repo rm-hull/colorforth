@@ -53,6 +53,6 @@ qemu: cfqemu.bat b.img
 clean: vmclean
 	rm -f new*.txt old*.txt *.img
 vmclean:
-	rm -f cf.{vmss,vmsd} *.log *.vmem *.vmem.lck *.nvram *.dbg
+	rm -f cf.{vmss,vmsd} *.log *.vmem *.lck *.nvram *.dbg
 set:
 	set
