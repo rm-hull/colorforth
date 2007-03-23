@@ -28,6 +28,11 @@ hc_: highlevel hc ;# horizontal characters
 vc_: highlevel vc ;# vertical characters
 vframe: highlevel frame+loadaddr ;# needed for low-level graphic stuff
 
+cells: ;# (n-n) return number of bytes in a number of cells
+ ;# ONLY WORKS for cell in [2, 4]
+ shl eax, (cell / 2)
+ ret
+
 fixed: ;# at compile time, take a text float and convert to fixed-point
  ;# use like this: [white] 1.25 [yellow] fixed
  ;# don't try any more than 4 characters in the number including the point;
