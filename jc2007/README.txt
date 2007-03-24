@@ -39,9 +39,11 @@ Programmer's notes:
   the stack. if you need more than one such number compiled in a row, use a
   compiled 'nop' between them, such as you see in the source for 'pad'.
 
-* register usage: ebp, ebx, ecx, edx are normally safe to use. edi is used as
+* register usage: ebp, and ebx are normally safe to use. edi is used as
   a word pointer into the sources when compiling with 'load'. esi is the data
   stack pointer, and eax contains the top element of the stack (see above).
-  esp of course is the return stack pointer.
+  esp of course is the return stack pointer. edx is used as an address
+  register, whatever that means, not sure when/if it's ever safe to use without
+  saving it. ecx is sometimes safe but it may be wise to save that too.
 
 jcATunternet.net

@@ -3,13 +3,17 @@ FORTH [TEXTCAPITALIZED], mandelbrot, [TEXT], display, [EXECUTE], empty, [EXECUTE
 FORTH allot, [TEXT], n-a, here, swap, for, 0, ",", next, ";", [VARIABLE], z, [BINARY], 0, [EXECUTE], hp, [EXECUTE], vp, [EXECUTE], "*", [EXECUTE], dup, [EXECUTE], "+", [EXECUTE], allot, [EXECUTE], z, [EXECUTE], "!"
 FORTH x, [EXECUTE], xnow, @, ";"
 FORTH y, [EXECUTE], ynow, @, ";"
-FORTH pnext, x, [COMPILESHORT], 1, +, hp, mod,
+FORTH xval, x, [COMPILELONGHEX], 10000000, hp, */, ;# scale to A(3,28) fixed
+ FORTH [EXECUTE], xspan, @, fx*, [EXECUTE], xl, @, +, ";"
+FORTH yval, y, [COMPILELONGHEX], 10000000, vp, */, ;# make fixed-point number
+ FORTH [EXECUTE], yspan, @, fx*, negate, [EXECUTE], yt, @, +, ";"
+FORTH check, over, over, ;# leave two items on the stack
+ FORTH [COMPILESHORT], 3, [COMPILESHORT], 200, at, h., space, h., ";"
+FORTH pnext, xval, yval, check, drop, drop, x, [COMPILESHORT], 1, +, hp, mod,
  FORTH [EXECUTE], xnow, "!", ;# increment x
- FORTH [COMPILEWORD], x, if, drop, ";", # done if x nonzero
+ FORTH [COMPILEWORD], x, 0, or, drop, if, ";", # done if x nonzero
  FORTH [COMPILEWORD], then, y, [COMPILESHORT], 1, +, vp, mod, ;# increment y
  FORTH [EXECUTE], ynow, "!", ";"
-FORTH check, over, over, ;# leave two items on the stack
- FORTH [COMPILESHORT], 3, [COMPILESHORT], 200, h., space, h., ";"
 FORTH iter, ;# iterate through the array of complex numbers, updating
  ;# this does one pixel at a time
  FORTH [COMPILEWORD], x, y, hp, *, over, over, +, ;# locate pixel
@@ -18,7 +22,7 @@ FORTH iter, ;# iterate through the array of complex numbers, updating
  FORTH [COMPILEWORD], +, dup, vframe, +, !,  ;# store x+y in framebuffer
  FORTH [COMPILEWORD], pnext, ";"
 FORTH init, [TEXT], "-2.1", [EXECUTE], fixed, nop, [EXECUTE], xl, "!", [TEXT], "1.1", [EXECUTE], fixed, nop, [EXECUTE], xr, "!", [TEXT], "1.2", [EXECUTE], fixed, nop, [EXECUTE], yt, "!", [TEXT], "-1.2", [EXECUTE], fixed, nop, [EXECUTE], yb, "!", [EXECUTE], xr, "@", [EXECUTE], xl, "@", negate, "+", [EXECUTE], xspan, "!", [EXECUTE], yt, "@", [EXECUTE], yb, "@", negate, "+", [EXECUTE], yspan, "!", ";"
-FORTH ok, black, screen, show, keyboard, debug, iter, ";"
+FORTH ok, init, black, screen, show, black, screen, keyboard, debug, iter, ";"
 BLOCK 65
 FORTH [TEXT], xl, xr, yt, yb, are, the, start, limits, mapped, by, the, [TEXTCAPITALIZED], cartesian, "grid;", xspan, and, yspan, hold, the, x, and, y, ranges
 FORTH allot, grabs, space, at, [COMPILEWORD], here, and, returns, that, "address;", z, points, to, the, array, of, values, as, generated, by, "z**2+z0"
