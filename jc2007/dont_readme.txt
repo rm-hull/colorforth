@@ -13,6 +13,16 @@ bug that causes the bulk of high-level code to fail to load. wtf? yes, i could
 patch the binaries but they have other incompatibilities with my available 
 systems too.
 
+nothing similar to a bss segment, which is zeroed at boot and then used
+for variables and string space. having and using something like this would
+reduce the incidence of the "cylinder" bug, which skips loading the second
+cylinder on every colorforth binary i've found on the web. what happens is that
+the image contains a 1 in the 'cylinder' location; this 1 overwrites the 0
+that the bootloader had, when cylinder 0 loads over the running code. then
+the cylinder variable is incremented from 1 to 2, skipping cylinder 1, the
+second cylinder. this wouldn't be so bad except that's the cylinder that
+starts at block 18, which has the bulk of Forth source on it.
+
 coding in machine language. ugh. BIG step backwards.if no cF assembler yet,
 code the core words in the kernel using a good (open source or free) assembler.
 it's not cheating, really. if you want to later, write an assembler in cF to
