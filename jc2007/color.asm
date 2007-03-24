@@ -624,7 +624,8 @@ copy: cmp  eax, 12 ;# can't overwrite machine-code blocks...
 
 debug: ;# show current machine state
     ;# locate character output two lines above bottom
-    mov dword ptr xy + loadaddr, ((3*0x10000)+(((vc-2)*ih)+3))
+    push [xy + loadaddr]
+    mov  dword ptr [xy + loadaddr], 3*0x10000+(vc-2)*ih+3
     dup_
     mov  eax, god + loadaddr
     push [eax]
@@ -636,8 +637,10 @@ debug: ;# show current machine state
     mov  eax, main + loadaddr
     call dot
     dup_
-    mov  eax, esi
-    jmp  dot
+    mov  eax, esi ;# data stack pointer
+    call dot
+    pop  [xy + loadaddr]
+    ret
 
 .align 4 
 ;# in xy, x is the high 16 bits and y is the low 16 bits
@@ -843,6 +846,7 @@ keyboard: call text1
     mov  ecx, 3
     call four1
     mov  dword ptr lm + loadaddr, 3
+    ;# call debug ;# constantly shows machine state variables
     mov  word ptr xy + loadaddr + 2, 3
     call stack ;# draw stack picture
     mov  word ptr xy + loadaddr +2, hp-(11+9)*iw+3
