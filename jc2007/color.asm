@@ -371,6 +371,7 @@ variable: ;# compile a variable from preparsed source
     ret
 0:  call [lit + loadaddr]
     mov  eax, [loadaddr+4+macro0+ecx*4]
+    add  eax, loadaddr >> 2
     jmp  0f
 
 cnum: ;# compile number

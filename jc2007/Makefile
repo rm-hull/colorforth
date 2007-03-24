@@ -220,6 +220,12 @@ empty_block.dat:
 	sed -n 's/^..........\([0-9A-F]\+\).*/\1/p' "$<" | xxd -r -p > "$@"
 boot.blk: color.com
 	dd if=$< of=$@ bs=512 count=1
+disassembly: ../test/b.img
+	objdump --target binary \
+	 --architecture i386 \
+	 --disassemble-all \
+	 --disassembler-options=intel \
+	$<
 boot.dsm: boot.blk
 	objdump --target binary \
 	 --architecture i386 \

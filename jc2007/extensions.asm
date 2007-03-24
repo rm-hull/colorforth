@@ -26,7 +26,12 @@ iw_: highlevel iw ;# icon width including padding
 ih_: highlevel ih ;# icon height including padding
 hc_: highlevel hc ;# horizontal characters
 vc_: highlevel vc ;# vertical characters
-vframe: highlevel frame+loadaddr ;# needed for low-level graphic stuff
+
+vframe: ;# (-a) needed for low-level graphic stuff
+ dup_
+ mov eax, frame + loadaddr
+ shr eax, 2 ;# divide by 4 for word address
+ ret
 
 cells: ;# (n-n) return number of bytes in a number of cells
  ;# ONLY WORKS for cell in [2, 4]
