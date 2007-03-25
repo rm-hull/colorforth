@@ -1,6 +1,7 @@
 BLOCK 64
 FORTH [TEXTCAPITALIZED], mandelbrot, [TEXT], display, [EXECUTE], empty, [EXECUTE], forth, [VARIABLE], xl, [BINARY], 0, [VARIABLE], xr, [BINARY], 0, [VARIABLE], yt, [BINARY], 0, [VARIABLE], yb, [BINARY], 0, [VARIABLE], xspan, [BINARY], 0, [VARIABLE], yspan, [BINARY], 0, [VARIABLE], xnow, [BINARY], 0, [VARIABLE], ynow, [BINARY], 0
 FORTH allot, [TEXT], n-a, here, swap, for, 0, ",", next, ";", [VARIABLE], z, [BINARY], 0, [EXECUTE], hp, [EXECUTE], vp, [EXECUTE], "*", [EXECUTE], dup, [EXECUTE], "+", [EXECUTE], allot, [EXECUTE], z, [EXECUTE], "!"
+FORTH fixed, [EXECUTELONGHEX], 10000000, [EXECUTESHORT], 1000, [EXECUTE], /, *, ";"
 FORTH x, [EXECUTE], xnow, @, ";"
 FORTH y, [EXECUTE], ynow, @, ";"
 FORTH xval, x, [COMPILELONGHEX], 10000000, hp, */, ;# scale to A(3,28) fixed
@@ -21,7 +22,18 @@ FORTH iter, ;# iterate through the array of complex numbers, updating
  FORTH [EXECUTE], z, @, +, dup, !, ;# for now just store its own addr in it
  FORTH [COMPILEWORD], +, dup, vframe, +, !,  ;# store x+y in framebuffer
  FORTH [COMPILEWORD], pnext, ";"
-FORTH init, [TEXT], "-2.1", [EXECUTE], fixed, nop, [EXECUTE], xl, "!", [TEXT], "1.1", [EXECUTE], fixed, nop, [EXECUTE], xr, "!", [TEXT], "1.2", [EXECUTE], fixed, nop, [EXECUTE], yt, "!", [TEXT], "-1.2", [EXECUTE], fixed, nop, [EXECUTE], yb, "!", [EXECUTE], xr, "@", [EXECUTE], xl, "@", negate, "+", [EXECUTE], xspan, "!", [EXECUTE], yt, "@", [EXECUTE], yb, "@", negate, "+", [EXECUTE], yspan, "!", ";"
+FORTH init, [TEXT], -2.1, 
+ FORTH [EXECUTESHORT], -2100, [EXECUTE], fixed, nop, [EXECUTE], xl, "!",
+ FORTH [TEXT], "1.1",
+ FORTH [EXECUTESHORT], 1100, [EXECUTE], fixed, nop, [EXECUTE], xr, "!",
+ FORTH [TEXT], "1.2",
+ FORTH [EXECUTESHORT], 1200, [EXECUTE], fixed, nop, [EXECUTE], yt, "!",
+ FORTH [TEXT], "-1.2",
+ FORTH [EXECUTESHORT], -1200, [EXECUTE], fixed, nop, [EXECUTE], yb, "!",
+ FORTH [EXECUTE], xr, "@", [EXECUTE], xl, "@", negate, "+",
+ FORTH [EXECUTE], xspan, "!",
+ FORTH [EXECUTE], yt, "@", [EXECUTE], yb, "@", negate, "+",
+ FORTH [EXECUTE], yspan, "!", ";"
 FORTH ok, init, black, screen, show, black, screen, keyboard, debug, iter, ";"
 BLOCK 65
 FORTH [TEXT], xl, xr, yt, yb, are, the, start, limits, mapped, by, the, [TEXTCAPITALIZED], cartesian, "grid;", xspan, and, yspan, hold, the, x, and, y, ranges
