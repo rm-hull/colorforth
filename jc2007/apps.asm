@@ -17,21 +17,11 @@ FORTH pnext, ;# xval, yval, check, drop, drop,
  FORTH [COMPILEWORD], x, 0, or, drop, if, ";", # done if x nonzero
  FORTH [COMPILEWORD], then, y, [COMPILESHORT], 1, +, vp, mod, ;# increment y
  FORTH [EXECUTE], ynow, "!", ";"
-FORTH z**2, [TEXT], a-a, [EXECUTE], flag, 0, !, ;# clear overrun flag
- FORTH [COMPILEWORD], dup, dup, @, over, [COMPILESHORT], 1, +, @, ;# -axy
- FORTH [COMPILEWORD], over, dup, fx*, if, ;# too big to fit 3 bits
- FORTH [EXECUTE], flag, dup, !, then, ;# anything nonzero is a "yes"
- FORTH [COMPILEWORD], over, dup, fx*, if, 
- FORTH [EXECUTE], flag, dup, !, then,
- FORTH [COMPILEWORD], negate, +, push,
- FORTH [COMPILEWORD], fx*, 2*,
- FORTH [EXECUTE], flag, dup, !, then,
- FORTH [COMPILEWORD], swap, [COMPILESHORT], 1, !, pop, swap, !, ";"
-FORTH [EXECUTESHORT], 66, [EXECUTE], load
+;#FORTH [EXECUTESHORT], 66, [EXECUTE], load
 
 BLOCK 65
-FORTH [TEXT], xl, xr, yt, yb, are, the, start, limits, mapped, by, the, [TEXTCAPITALIZED], cartesian, "grid;", xspan, and, yspan, hold, the, x, and, y, ranges
 FORTH allot, grabs, space, at, [COMPILEWORD], here, and, returns, that, "address;", z, points, to, the, array, of, values, as, generated, by, "z**2+z0"
+FORTH [TEXT], xl, xr, yt, yb, are, the, start, limits, mapped, by, the, [TEXTCAPITALIZED], cartesian, "grid;", xspan, and, yspan, hold, the, x, and, y, ranges
 FORTH z0, we, left, an, extra, space, at, end, of, [COMPILEWORD], z, array, for, z0, [TEXTALLCAPS], aka, c, in, z**2+c
 FORTH z**2, the, square, of, complex, number, "a,", "b", is,  a**2, -, b**2, ",", 2a*b
 FORTH iter, iterates, over, the, array, updating, continuously
@@ -39,15 +29,27 @@ FORTH init, initializes, variables
 FORTH ok, sets, the, display, and, starts, the, generator
 
 BLOCK 66
-FORTH z+, [TEXT], aa-, over, [COMPILESHORT], 1, +, @,
- FORTH [COMPILEWORD], over, [COMPILESHORT], 1, +, @, over, !,
- FORTH [COMPILEWORD], @, swap, @, +, swap, !, ";"
+FORTH z**2, [TEXT], a-a, [EXECUTE], flag, 0, !, ;# clear overrun flag
+ FORTH [COMPILEWORD], dup, dup, @, over, [COMPILESHORT], 1, +, @, ;# -axy
+ FORTH [COMPILEWORD], over, dup, fx*, if, ;# too big to fit 3 bits
+ FORTH [EXECUTE], flag, dup, !, then, ;# anything nonzero is a "yes"
+ FORTH [COMPILEWORD], over, dup, fx*, if, 
+ FORTH [EXECUTE], flag, dup, !, then,
+ FORTH [COMPILEWORD], negate, +, push,
+ FORTH [COMPILEWORD], fx*, if,
+ FORTH [EXECUTE], flag, dup, !, then, 2*,
+ FORTH [COMPILEWORD], swap, [COMPILESHORT], 1, +, !, pop, swap, !, ";"
+FORTH z+, [TEXT], aa-, ;# add two complex numbers, storing result in first
+ FORTH [COMPILEWORD], over, [COMPILESHORT], 1, +, @, ;# -aav
+ FORTH [COMPILEWORD], over, [COMPILESHORT], 1, +, @, ;# -aavv
+ FORTH [COMPILEWORD], +, push, over, pop, swap, [COMPILESHORT], 1, +, !,
+ FORTH [COMPILEWORD], @, over, @, +, swap, !, ";"
 FORTH iter, ;# iterate through the array of complex numbers, updating
  ;# this does one pixel at a time
  FORTH [COMPILEWORD], xval, z0, !, yval, z0, [COMPILESHORT], 1, +, !,
  FORTH [COMPILEWORD], x, y, hp, *, +, dup, ;# locate pixel
  FORTH [COMPILESHORT], -1, +, 2*, ;# zero-base index into 'z' table
- FORTH [EXECUTE], z, @, +, z**2, z0, z+, ;# z is now z**2+z0
+ FORTH [EXECUTE], z, @, +, z**2, z0, swap, z+, ;# z is now z**2+z0
  FORTH [COMPILEWORD], vframe, +, [COMPILESHORT], -8, swap, +!, ;# bump color
  FORTH [COMPILEWORD], pnext, ";"
 FORTH init, /* [TEXT], -2.1, */

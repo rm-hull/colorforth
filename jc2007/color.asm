@@ -756,11 +756,11 @@ cr: ;# insert a carriage return (drop to next line)
     mov  xy + loadaddr, ecx ;# update xy
 0:  ret
 
-lms: mov  lm + loadaddr, eax
+lms: mov  lm + loadaddr, eax ;# set left margin
     drop
     ret
 
-rms: mov  rm + loadaddr, eax
+rms: mov  rm + loadaddr, eax ;# set right margin
     drop
     ret
 
@@ -1334,7 +1334,7 @@ sw: mov  edx, [loadaddr-4+edi*4]
     jmp  nw1
 
 ;# normal (32 bits) yellow (executable) word
-nw: mov  edx, [edi*4]
+nw: mov  edx, [loadaddr+edi*4]
     inc  edi
 nw1: dup_
     mov  eax, yellow
