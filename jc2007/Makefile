@@ -174,7 +174,7 @@ chars.asm: charmap.asm
 	 grep -v '{block [0-9]\+}' >> $@
 appcode.asm: forth.asm apps.asm
 	cat $+ > $@
-newcode.asm: forth.asm  # it is now in repository, don't make
+newcode.asm:  # it is now in repository, don't make
 	cat $< > $@
 	./cf2text ../color.com | sed -n '/{block 18}/,$$p' | \
 	 sed \

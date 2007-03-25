@@ -2,6 +2,7 @@
 
 ;# pad to block boundary
 .macro BLOCK number
+ .nolist
  .ifb \number
   .print "compiling next block"
   .equ blocknumber, blocknumber + 1
@@ -16,6 +17,7 @@
   .equ blockstart, blockstart + 1024
  .endif
  SET_DEFAULT_TYPETAG
+ .list
 .endm
 
 .macro SET_DEFAULT_TYPETAG
@@ -27,6 +29,7 @@
 .endm
 
 .macro SETTYPE word
+ .nolist
  .equ type, 0
  .irp function [EXTENSION], [EXECUTE], [EXECUTELONG], [DEFINE], [COMPILEWORD]
   NEXTTYPE "\word", "\function"
@@ -43,9 +46,11 @@
  .irp function [COMPILESHORTHEX], [], [EXECUTESHORTHEX], [SKIP], [BINARY]
   NEXTTYPE "\word", "\function"
  .endr
+ .list
 .endm
 
 .macro NEXTTYPE word, function
+ .nolist
  .ifdef DEBUG_FORTH
   ;#.print "comparing \"\word\" with \"\function\""
  .endif
@@ -54,10 +59,12 @@
  .else
   .equ type, type + 1
  .endif
+ .list
 .endm
 
 ;# compile Forth words with Huffman coding
 .macro FORTH words:vararg
+ .nolist
  .equ wordcount, 0
  .irp word, \words
  .ifeq wordcount
@@ -69,9 +76,11 @@
  COMPILETYPE "\word"
  .equ wordcount, wordcount + 1
  .endr
+ .list
 .endm
 
 .macro COMPILETYPE word
+ .nolist
  .ifeq type - 27  ;# means the SETTYPE macro didn't find a match
   SET_DEFAULT_TYPETAG
   .if typetag == 2 || typetag == 5
@@ -90,9 +99,11 @@
    FORTHWORD "\word"
   .endif
  .endif
+ .list
 .endm
 
 .macro FORTHWORD word
+ .nolist
  .equ packed, 0; .equ bits, 28
  ;# only 28 bits are used for a word, the low 4 bits are for the type tag
  .irpc letter, "\word"
@@ -114,6 +125,7 @@
  .ifne packed
   .long (packed << (bits + 4)) | typetag
  .endif
+ .list
 .endm
 
 .macro GETCODE letter
