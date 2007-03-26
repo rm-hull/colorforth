@@ -39,14 +39,14 @@ gdt0: .word 0, 0, 0, 0 ;# start of table must be a null entry
 gdt_end:
 .code16
 start0:
+    debugout 9
     call textmode
     call loading
     call relocate
 init: ;# label used by relocate to calculate start address
+    debugout 8
     zero ss
     mov  sp, loadaddr  ;# stack pointer starts just below this code
-    mov  eax, 99
-    call numbershow
     xor  eax, eax
     mov  ax, ds
     shl  eax, 4
@@ -88,7 +88,6 @@ cold:
     pop  cx
     loop 0b
     call loaded
-    call graphicsmode
     data32 call protected_mode
 .code32
     mov esi, godd
@@ -99,19 +98,6 @@ textmode:
     mov  ax, 0x4f02 ;# set video mode
     mov  bx, 1 ;# CGA 40 x 25 text mode, closest to CM2001 graphic mode text
     int  0x10
-    ret
-
-graphicsmode:
-    mov  ax, 0x4f01 ;# get video mode info
-    mov  cx, vesa ;# a 16-bit color linear video mode (5:6:5 rgb)
-    mov  di, iobuffer ;# use floppy buffer, not during floppy I/O!
-    int  0x10
-    mov  ax, 0x4f02 ;# set video mode
-    mov  bx, cx ;# vesa mode
-    int  0x10
-    mov  ebx, iobuffer + 0x28 ;# linear frame buffer address
-    mov  eax, [ebx]
-    mov  [displ + loadaddr], eax
     ret
 
 read:
@@ -156,6 +142,17 @@ numbershow:
     mov  cx, 2 ;# write the 2-byte string to the console
     int  0x10
     pop  ax  ;#clean up stack before returning
+    ret
+
+debugshow: ;# like numbershow but using direct access to video RAM
+    aam  10  ;# split byte into BCD
+    add  al, 0x30
+    mov  ah, 1 ;# dark blue to make it not so noticeable
+    push es
+    mov  bx, 0xb800
+    mov  es, bx
+    mov  es:[78], ax ;# put character in upper right-hand corner of screen
+    pop  es
     ret
 
 textshow:
@@ -253,6 +250,19 @@ write:
     int  0x13  ;# let BIOS handle the nitty-gritty floppy I/O
     ret
 
+graphicsmode:
+    mov  ax, 0x4f01 ;# get video mode info
+    mov  cx, vesa ;# a 16-bit color linear video mode (5:6:5 rgb)
+    mov  di, iobuffer ;# use floppy buffer, not during floppy I/O!
+    int  0x10
+    mov  ax, 0x4f02 ;# set video mode
+    mov  bx, cx ;# vesa mode
+    int  0x10
+    mov  ebx, iobuffer + 0x28 ;# linear frame buffer address
+    mov  eax, [ebx]
+    mov  [displ + loadaddr], eax
+    ret
+
 .code32 ;# these routines called from high-level Forth (protected mode)
 readf:
     mov  cylinder + loadaddr, al
@@ -301,6 +311,14 @@ off:  ;# return loadaddr expressed in words
 ;# this is the offset in RAM to where block 0 is loaded
     dup_
     mov  eax, loadaddr >> 2
+    ret
+
+setgraphics:
+    call unreal_mode
+.code16
+    call graphicsmode
+    data32 call protected_mode
+.code32
     ret
 
 ;# these must be defined elsewhere before use

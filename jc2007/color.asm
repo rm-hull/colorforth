@@ -18,6 +18,13 @@
     lodsd
 .endm
 
+.macro debugout digit ;# digit between 0 and 9 only
+.ifdef DEBUGGING
+    mov al, \digit
+    call debugshow
+.endif
+.endm
+
 ;# compile Forth words with Huffman coding
 .macro packword words:vararg
  .irp word, \words
@@ -132,6 +139,7 @@
 .code32 ;# protected-mode code from here on out
 warm: dup_
 start1:
+    call setgraphics
     call show0 ;# set up 'main' task to draw screen
 ;# number of Forth words and number of macros
     mov  dword ptr forths + loadaddr, offset ((forth1-forth0)/4) 
