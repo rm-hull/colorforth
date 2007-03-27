@@ -6,8 +6,8 @@
     jnz  \adr
 .endm
 
-;# save contents of eax on data stack
-;# (eax is already a copy of top of data stack)
+;# make a copy of top stack element
+;# (eax is the top of data stack)
 .macro dup_
     lea  esi, [esi-4]
     mov  [esi], eax
@@ -558,37 +558,6 @@ class: .long 0
 list: .long 0, 0
 macros: .long 0
 forths: .long 0
-
-macro0:
-    packword ";", dup, ?dup, drop, then, begin
-macro1:
-    .rept 128 - ((.-macro1)/4) .long 0; .endr ;# room for new macros
-forth0:
-    packword boot, warm, pause, macro, forth, c, stop, read, write, nc
-    packword command, seek, ready, act, show, load, here, ?lit, "3,", "2,"
-    packword "1,", ",", less, jump, accept, pad, erase, copy, mark, empt
-    packword emit, digit, 2emit, ., h., h.n, cr, space, down, edit
-    packword e, lm, rm, graphic, text, keyboard, debug, at, +at, xy
-    packword fov, fifo, box, line, color, octant, sp, last, unpack, vframe
-    packword buffer, off, rgb, hp, vp, iw, ih, hc, vc, fx*
-    packword cells, nan
-forth1:
-    .rept 512 - ((.-forth1)/4) .long 0; .endr
-macro2:
-    long semi, cdup, qdup, cdrop, then, begin
-0:
-    .rept 128 - ((.-0b)/4) .long 0; .endr
-forth2:
-    long boot, warm, pause, macro_, forth, c_, stop, readf, writef, nc_
-    long cmdf, seekf, readyf, act, show, load, here, qlit, comma3, comma2
-    long comma1, comma, less, jump, accept, pad, erase, copy, mark, empty
-    long emit, edig, emit2, dot10, hdot, hdotn, cr, space, down, edit
-    long e, lms, rms, graphic, text1, keyboard, debug, at, pat, xy_
-    long fov_, fifof, box, line, color, octant, sps, last_, unpack, vframe
-    long buffer, off, rgb, hp_, vp_, iw_, ih_, hc_, vc_, fx_mul
-    long cells, nan_
-0:
-    .rept 512 - ((.-0b)/4) .long 0; .endr ;# room for new definitions
 
 boot: mov  al, 0x0fe ;# reset
     out  0x64, al
@@ -1686,6 +1655,40 @@ pad:
     jmp  0b  ;# loop until "accept" code reached, which exits program
 
 .include "extensions.asm" ;# things added to colorForth by jc and others
+;# put the macro and forth tables at the end;
+;# that way, if you overflow the definitions you'll see the characters
+;# start to look funny, then you'll know
+macro0:
+    packword ";", dup, ?dup, drop, then, begin
+macro1:
+    .rept 128 - ((.-macro1)/4) .long 0; .endr ;# room for new macros
+forth0:
+    packword boot, warm, pause, macro, forth, c, stop, read, write, nc
+    packword command, seek, ready, act, show, load, here, ?lit, "3,", "2,"
+    packword "1,", ",", less, jump, accept, pad, erase, copy, mark, empt
+    packword emit, digit, 2emit, ., h., h.n, cr, space, down, edit
+    packword e, lm, rm, graphic, text, keyboard, debug, at, +at, xy
+    packword fov, fifo, box, line, color, octant, sp, last, unpack, vframe
+    packword buffer, off, rgb, hp, vp, iw, ih, hc, vc, fx*
+    packword cells, nan
+forth1:
+    .rept 512 - ((.-forth1)/4) .long 0; .endr
+macro2:
+    long semi, cdup, qdup, cdrop, then, begin
+0:
+    .rept 128 - ((.-0b)/4) .long 0; .endr
+forth2:
+    long boot, warm, pause, macro_, forth, c_, stop, readf, writef, nc_
+    long cmdf, seekf, readyf, act, show, load, here, qlit, comma3, comma2
+    long comma1, comma, less, jump, accept, pad, erase, copy, mark, empty
+    long emit, edig, emit2, dot10, hdot, hdotn, cr, space, down, edit
+    long e, lms, rms, graphic, text1, keyboard, debug, at, pat, xy_
+    long fov_, fifof, box, line, color, octant, sps, last_, unpack, vframe
+    long buffer, off, rgb, hp_, vp_, iw_, ih_, hc_, vc_, fx_mul
+    long cells, nan_
+0:
+    ;# .rept 512 - ((.-0b)/4) .long 0; .endr ;# room for new definitions
+
 ;# now load in the character maps
 .include "chars.asm"
 ;# finally load in compiled high-level code

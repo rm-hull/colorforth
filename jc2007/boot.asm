@@ -151,7 +151,7 @@ debugshow: ;# like numbershow but using direct access to video RAM
     push es
     mov  bx, 0xb800
     mov  es, bx
-    mov  es:[78], ax ;# put character in upper right-hand corner of screen
+    mov  es:[158], ax ;# put character in upper right-hand corner of screen
     pop  es
     ret
 
