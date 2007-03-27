@@ -2,6 +2,9 @@
 ;# 0x000-0x400 is BIOS interrupt table
 ;# 0x400-0x500 is BIOS system information area
 ;# we can use starting at 0x500
+
+.equ upper_right, 158 ;# address of upper-right corner of screen
+
 .org 0 ;# actually 0x7c00, where the BIOS loads the bootsector
 start: jmp  start0
     nop
@@ -30,8 +33,6 @@ gdt0: .word 0, 0, 0, 0 ;# start of table must be a null entry
     .word 0xffff, 0, 0x9a00, 0xcf ;# 32-bit protected-mode code
     .equ data32p, . - gdt0
     .word 0xffff, 0, 0x9200, 0xcf ;# 32-bit protected-mode data
-    .equ dos32p, . - gdt0
-    .word 0xffff, 0, 0x9200, 0xcf ;# same but overwrite offset for MS-DOS load
     .equ code16r, . - gdt0
     .word 0xffff, 0, 0x9a00, 0x00 ;# 16-bit real-mode code
     .equ data16r, . - gdt0
@@ -39,32 +40,22 @@ gdt0: .word 0, 0, 0, 0 ;# start of table must be a null entry
 gdt_end:
 .code16
 start0:
-    debugout 9
-    call textmode
-    call loading
+    cli
+    push 0xb800 ;# video display RAM
+    pop  es
+    call settrap
+    mov  edx, '\' << 24 | '-' << 16 | '/' << 8 | '|' ;# progress indicator
+    call progress
     call relocate
-init: ;# label used by relocate to calculate start address
-    debugout 8
+    call progress
     zero ss
     mov  sp, loadaddr  ;# stack pointer starts just below this code
-    xor  eax, eax
-    mov  ax, ds
-    shl  eax, 4
-    mov  [loadaddr + gdt0 + dos32p + 2], ax
-    shr  eax, 16
-    mov  [loadaddr + gdt0 + dos32p + 4], al
     zero ds
     data32 call protected_mode
 .code32
     call a20 ;# set A20 gate to enable access to addresses with 1xxxxx
     cmp  si, 0x7e00 ;# boot from floppy?
     jz   0f  ;# continue if so...
-    push ds
-    mov  eax, dos32p
-    mov  ds, eax
-    mov  ecx, 63*0x100-0x80 ;# ... otherwise relocate color.com
-    rep  movsd
-    pop  ds
     mov  esi, offset godd ;# set up data stack pointer for 'god' task
     jmp  start1
 0:  call unreal_mode
@@ -77,33 +68,37 @@ cold:
     ;# overwritten, 'cylinder' will be changed, and cylinders will be skipped
     ;# in loading, making the bootblock unusable
     call read
-    call loaded_next
+    call progress
     inc  byte ptr cylinder + loadaddr
     mov  cx, nc + loadaddr ;# number of cylinders used
     dec  cx
 0:  push cx
     call read
-    call loaded_next
+    call progress
     inc  byte ptr cylinder + loadaddr
     pop  cx
     loop 0b
-    call loaded
     data32 call protected_mode
 .code32
     mov esi, godd
     jmp start1 ;# start1 is outside of bootsector
 
 .code16
-textmode:
-    mov  ax, 0x4f02 ;# set video mode
-    mov  bx, 1 ;# CGA 40 x 25 text mode, closest to CM2001 graphic mode text
-    int  0x10
+settrap: ;# catch pseudo-GPF
+    pop  ax ;# get return address
+    push ax ;# we still need to return to it
+    ;# note: the following only works if settrap called from first 256 bytes
+    and  ax, 0xff00 ;# clear low 8 bits of address
+    add  ax, offset trap - offset start
+    mov  [fs:0x0d * 4 + 2], cs ;# FS assumed to be 0
+    mov  [fs:0x0d * 4], ax
     ret
 
 read:
 ;# about to read 0x4800, or 18432 bytes
 ;# total of 165888 (0x28800) bytes in 9 cylinders, 1.44 MB in 80 cylinders
 ;# (low 8 bits of) cylinder number is in CH, (6 bit) sector number in CL
+    push edx  ;# used for debugging during boot
     mov  ebx, iobuffer
     push ebx
     mov  ax, (2 << 8) + 36  ;# 18 sectors per head, 2 heads
@@ -116,66 +111,58 @@ read:
     mov  ecx, 512*18*2/4
     addr32 rep movsd ;# move to ES:EDI location preloaded by caller
     mov  esi, ebp  ;# restore parameter stack pointer
-    ret
-loading: ;# show "colorForth loading..."
-    call textshow
-    .word (1f - 0f) / 2
-0:  display "c", green
-    display "F", red
-    display " ", white
-1:  ;# end display
-
-loaded_next:
-    mov  al, cylinder + loadaddr
-    ;# fall through to numbershow
-
-numbershow:
-    aam  10  ;# split byte into BCD
-    xchg ah, al ;# put high byte first
-    add  ax, 0x3030 ;# make it into an ASCII number
-    push ax
-    mov  bp, sp
-    mov  bx, 0x0000 | white ;# video page 0, white characters
-    mov  ax, 0x0300 ;# get cursor position
-    int  0x10 ;# sets row/column in DX
-    mov  ax, 0x1300 ;# leave cursor where it is, attributes in BL
-    mov  cx, 2 ;# write the 2-byte string to the console
-    int  0x10
-    pop  ax  ;#clean up stack before returning
+    pop  edx
     ret
 
-debugshow: ;# like numbershow but using direct access to video RAM
-    aam  10  ;# split byte into BCD
-    add  al, 0x30
-    mov  ah, 1 ;# dark blue to make it not so noticeable
-    push es
-    mov  bx, 0xb800
-    mov  es, bx
-    mov  es:[158], ax ;# put character in upper right-hand corner of screen
-    pop  es
+progress: ;# show rotating progress indicator
+    mov  bx, upper_right ;# corner of screen
+    mov  [es:bx], dl ;# assumes ES=0xb800, text mode 3 video RAM
+    ror  edx, 8 ;# next character in rotator
     ret
 
-textshow:
-    pop  bp ;# pointer to length of string
-    mov  bx, 0x0000 ;# video page
-    xor  dx, dx  ;# show at top of screen (row=0, column=0)
-    mov  cx, [bp]
-    add  bp, 2  ;# now point to string itself
-    mov  ax, 0x1303 ;# move cursor, attributes in-line
-    int  0x10
-    ret  ;# to caller of caller
+trap:  ;# handle interrupt 0xd, the "pseudo GPF"
+    pop  bx
+0:  inc  bx
+    cmp  byte ptr [bx], 0x90 ;# check for nop
+    jnz  0b
+    push bx
+    iret
 
 relocate:  ;# move code from where DOS or BIOS put it, to where we want it
-    pop  si  ;# just using return address for calculation...
-    ;# we know to where to 'return'
+    pop  ax ;# get return address, we'll need to munge it
     push es
     zero es
-    sub  si, offset init-offset start  ;# locate where 'start' actually is
     mov  edi, loadaddr ;# destination of relocation
+    and  ax, 0xff ;# must be called from first 256 bytes!
+    add  ax, di ;# correct offset to destination
+    mov  bx, [es:0x0d * 4] ;# get trap address
+    sub  bx, offset trap - offset start
+    xor  esi, esi ;# clear upper 16 bits to avoid GPF and/or wrong location
+    mov  si, bx ;# source address
+    cmp  bx, 0x7c00 ;# is this bootup from floppy?
+    jne  5f  ;# nope, color.com launched from MS-DOS
     mov  cx, 512/4 ;# 128 longwords
-    addr32 rep movsd
-    pop  es ;# restore extra segment register
-    jmp  0: (offset init) + loadaddr
+4:  addr32 rep movsd
+    jmp  9f
+5:  ;# relocate 64K color.com
+    shr  bx, 4 ;# match shift of segment address
+    add  bx, [es:0x0d * 4 + 2] ;# complete address, shifted 4 right
+    cmp  bx, loadaddr >> 4 ;# see where we are relative to where we want to be
+    je   9f ;# same place? done
+    mov  cx, 0x10000 / 4 ;# 64K in longwords
+    jc   7f ;# we're lower, need to move up
+    std  ;# otherwise we're higher, and we move downwards to destination
+    jmp  4b
+7:  push ax
+    mov  ax, ds ;# we need to point to the end of both blocks
+    add  ax, 0x1000
+    mov  ds, ax
+    dec  si
+    pop  ax ;# THIS ISN'T DONE, MUST FIX DS, ES, SI, DI
+9:  pop  es ;# restore extra segment register
+    push ax
+    cld  ;# in case we changed direction
+    ret
 
 protected_mode:
     cli  ;# we're not set up to handle interrupts in protected mode
@@ -228,15 +215,6 @@ a20:
     .word 0x0aa55 ;# mark boot sector
     ;# end of boot sector
     .long 0x44444444 ;# mark color.com
-
-loaded: ;# "colorForth code loaded" to screen
-    call textshow
-    .word (1f - 0f) / 2
-0:  display "color", green; display "Forth", red
-    display " code", white
-    display " loaded", white
-    display ""
-1:  ;# end display
 
 write:
     mov  edi, iobuffer ;# destination address

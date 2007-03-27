@@ -18,13 +18,6 @@
     lodsd
 .endm
 
-.macro debugout digit ;# digit between 0 and 9 only
-.ifdef DEBUGGING
-    mov al, \digit
-    call debugshow
-.endif
-.endm
-
 ;# compile Forth words with Huffman coding
 .macro packword words:vararg
  .irp word, \words
