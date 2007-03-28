@@ -41,6 +41,8 @@ gdt_end:
 .code16
 start0:
     cli
+    push cs ;# need to set DS=CS, especially on VMWare, DS was 0x40
+    pop  ds
     call whereami
     call progress
     call relocate
@@ -160,8 +162,8 @@ relocate:  ;# move code from where DOS or BIOS put it, to where we want it
     mov  si, bp ;# source address
     cmp  ebp, 0x7c00 ;# is this bootup from floppy?
     jne  5f  ;# nope, color.com launched from MS-DOS
-    mov  cx, 512/4 ;# 128 longwords
-4:  addr32 rep movsd
+    mov  cx, 512 ;# 128 longwords (movsd) or 512 bytes (movsb)
+4:  rep  movsb
     jmp  9f
 5:  ;# relocate 64K color.com
     cmp  ebp, loadaddr ;# see where we are relative to where we want to be
@@ -181,8 +183,7 @@ relocate:  ;# move code from where DOS or BIOS put it, to where we want it
     and  ax, 0xff ;# this routine must be called from first 256 bytes!
     add  ax, loadaddr
     cld  ;# in case we changed direction
-    call progress
-    push fs ;# assumed to be 0
+    push 0 ;# return with CS=0
     push ax
     call progress
     lret

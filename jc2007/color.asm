@@ -69,7 +69,7 @@
 .endm
 
 .macro zero register
-    push fs ;# assumes FS to be zero
+    push 0 ;# was using FS but VMWare had FS=0xebea
     pop \register
 .endm
 
