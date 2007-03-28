@@ -41,11 +41,8 @@ gdt_end:
 .code16
 start0:
     cli
-    push 0xb800 ;# video display RAM
-    pop  es
     call settrap
     mov  edx, '\\' << 24 | '-' << 16 | '/' << 8 | '|' ;# progress indicator
-    call progress
     call relocate
     zero ss
     mov  sp, loadaddr  ;# stack pointer starts just below this code
@@ -67,13 +64,11 @@ cold:
     ;# overwritten, 'cylinder' will be changed, and cylinders will be skipped
     ;# in loading, making the bootblock unusable
     call read
-    ;#call progress
     inc  byte ptr cylinder + loadaddr
     mov  cx, nc + loadaddr ;# number of cylinders used
     dec  cx
 0:  push cx
     call read
-    ;#call progress
     inc  byte ptr cylinder + loadaddr
     pop  cx
     loop 0b
@@ -115,9 +110,13 @@ read:
 
 progress: ;# show rotating progress indicator
     push bx
+    push es
+    push 0xb800 ;# video display RAM
+    pop  es
     mov  bx, upper_right ;# corner of screen
     mov  [es:bx], dl ;# assumes ES=0xb800, text mode 3 video RAM
     ror  edx, 8 ;# next character in rotator
+    pop  es
     pop  bx
     ret
 
@@ -132,15 +131,10 @@ trap:  ;# handle interrupt 0xd, the "pseudo GPF"
 relocate:  ;# move code from where DOS or BIOS put it, to where we want it
     pop  ax ;# get return address, we'll need to munge it
     push es
-    call progress
-    xor  bx, bx
-    call progress
     ;# clearing ES unnecessary in Bochs, it's already 0 on bootup
-    ;# if you don't clear it booting in QEMU you get a text
-    ;#  screen of beautiful garbage
-    ;# if you attempt to clear it in VMWare,
-    ;#  the display freezes with no log message
-    mov  es, bx ;# should only be necessary when booting from MSDOS
+    call progress
+    zero es ;# should only be necessary when booting from MSDOS
+    call progress
     ;#hlt ;# shows up if you grep halt vmware.log
     mov  edi, loadaddr ;# destination of relocation
     and  ax, 0xff ;# must be called from first 256 bytes!
@@ -149,14 +143,13 @@ relocate:  ;# move code from where DOS or BIOS put it, to where we want it
     sub  bx, offset trap - offset start
     xor  esi, esi ;# clear upper 16 bits to avoid GPF and/or wrong location
     mov  si, bx ;# source address
+    call progress
     cmp  bx, 0x7c00 ;# is this bootup from floppy?
-    ;#call progress ;# VMWare makes it this far without the mov to ES above
     jne  5f  ;# nope, color.com launched from MS-DOS
     mov  cx, 512/4 ;# 128 longwords
 4:  addr32 rep movsd
     jmp  9f
 5:  ;# relocate 64K color.com
-    call progress
     shr  bx, 4 ;# match shift of segment address
     add  bx, [es:0x0d * 4 + 2] ;# complete address, shifted 4 right
     cmp  bx, loadaddr >> 4 ;# see where we are relative to where we want to be
