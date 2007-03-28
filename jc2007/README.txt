@@ -49,4 +49,7 @@ Programmer's notes:
 * after running 'make qemu', remember that the b.img you modified with 'save'
   is the one in /cygdrive/c/Program\ Files/QEMU/.
 
+* inserting a 'hlt' into bootcode will enable you to see if VMWare reached it,
+  'grep halt ../test/vmware.log'
+
 jcATunternet.net

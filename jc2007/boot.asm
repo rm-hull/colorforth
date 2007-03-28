@@ -41,7 +41,7 @@ gdt_end:
 .code16
 start0:
     cli
-    call settrap
+    call whereami
     call relocate
     zero ss
     mov  sp, loadaddr  ;# stack pointer starts just below this code
@@ -77,7 +77,7 @@ cold:
     jmp start1 ;# start1 is outside of bootsector
 
 .code16
-settrap: ;# catch pseudo-GPF, and set EBP as PC-relative pointer
+whereami: ;# set EBP as PC-relative pointer
     xor  ebp, ebp ;# clear first or this might not work
     mov  bp, cs ;# get CS segment register
     shl  ebp, 4 ;# shift segment to where it belongs in 32-bit absolute addr
@@ -86,9 +86,6 @@ settrap: ;# catch pseudo-GPF, and set EBP as PC-relative pointer
     ;# note: the following only works if this called from first 256 bytes
     and  ax, 0xff00 ;# clear low 8 bits of address
     mov  bp, ax ;# EBP now contains 32-bit absolute address of 'start'
-    add  ax, offset trap - offset start
-    mov  [fs:0x0d * 4 + 2], cs ;# FS assumed to be 0
-    mov  [fs:0x0d * 4], ax
     ret
 
 read:
@@ -141,6 +138,7 @@ shownumber: ;# alternate entry point, preload DX register
     ret
 digits: .ascii "0123456789abcdef"
 
+/* this shouldn't be necessary if we're careful coding
 trap:  ;# handle interrupt 0xd, the "pseudo GPF"
     pop  bx
 0:  inc  bx
@@ -148,32 +146,26 @@ trap:  ;# handle interrupt 0xd, the "pseudo GPF"
     jnz  0b
     push bx
     iret
+*/
 
 relocate:  ;# move code from where DOS or BIOS put it, to where we want it
     pop  ax ;# get return address, we'll need to munge it
     push es
-    ;# clearing ES unnecessary in Bochs, it's already 0 on bootup
-    call progress
     zero es ;# should only be necessary when booting from MSDOS
-    call progress
-    ;#hlt ;# shows up if you grep halt vmware.log
     mov  edi, loadaddr ;# destination of relocation
     and  ax, 0xff ;# must be called from first 256 bytes!
     add  ax, di ;# correct offset to destination
-    mov  bx, [es:0x0d * 4] ;# get trap address
-    sub  bx, offset trap - offset start
     xor  esi, esi ;# clear upper 16 bits to avoid GPF and/or wrong location
-    mov  si, bx ;# source address
-    call progress
-    cmp  bx, 0x7c00 ;# is this bootup from floppy?
+    mov  si, bp ;# source address
+    cmp  ebp, 0x7c00 ;# is this bootup from floppy?
     jne  5f  ;# nope, color.com launched from MS-DOS
+    call progress
     mov  cx, 512/4 ;# 128 longwords
 4:  addr32 rep movsd
     jmp  9f
 5:  ;# relocate 64K color.com
-    shr  bx, 4 ;# match shift of segment address
-    add  bx, [es:0x0d * 4 + 2] ;# complete address, shifted 4 right
-    cmp  bx, loadaddr >> 4 ;# see where we are relative to where we want to be
+    call progress
+    cmp  ebp, loadaddr ;# see where we are relative to where we want to be
     je   9f ;# same place? done
     mov  cx, 0x10000 / 4 ;# 64K in longwords
     jc   7f ;# we're lower, need to move up
