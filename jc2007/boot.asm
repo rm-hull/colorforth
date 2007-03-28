@@ -42,10 +42,14 @@ gdt_end:
 start0:
     cli
     call whereami
+    call progress
     call relocate
+    call whereami
+    call progress
     zero ss
     mov  sp, loadaddr  ;# stack pointer starts just below this code
     zero ds
+    call progress
     data32 call protected_mode
 .code32
     call a20 ;# set A20 gate to enable access to addresses with 1xxxxx
@@ -149,22 +153,17 @@ trap:  ;# handle interrupt 0xd, the "pseudo GPF"
 */
 
 relocate:  ;# move code from where DOS or BIOS put it, to where we want it
-    pop  ax ;# get return address, we'll need to munge it
     push es
     zero es ;# should only be necessary when booting from MSDOS
     mov  edi, loadaddr ;# destination of relocation
-    and  ax, 0xff ;# must be called from first 256 bytes!
-    add  ax, di ;# correct offset to destination
     xor  esi, esi ;# clear upper 16 bits to avoid GPF and/or wrong location
     mov  si, bp ;# source address
     cmp  ebp, 0x7c00 ;# is this bootup from floppy?
     jne  5f  ;# nope, color.com launched from MS-DOS
-    call progress
     mov  cx, 512/4 ;# 128 longwords
 4:  addr32 rep movsd
     jmp  9f
 5:  ;# relocate 64K color.com
-    call progress
     cmp  ebp, loadaddr ;# see where we are relative to where we want to be
     je   9f ;# same place? done
     mov  cx, 0x10000 / 4 ;# 64K in longwords
@@ -178,9 +177,15 @@ relocate:  ;# move code from where DOS or BIOS put it, to where we want it
     dec  si
     pop  ax ;# THIS ISN'T DONE, MUST FIX DS, ES, SI, DI
 9:  pop  es ;# restore extra segment register
-    push ax
+    pop  ax ;# get return address, but we want to "ret" to its new address
+    and  ax, 0xff ;# this routine must be called from first 256 bytes!
+    add  ax, loadaddr
     cld  ;# in case we changed direction
-    ret
+    call progress
+    push fs ;# assumed to be 0
+    push ax
+    call progress
+    lret
 
 protected_mode:
     cli  ;# we're not set up to handle interrupts in protected mode
