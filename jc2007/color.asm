@@ -69,7 +69,7 @@
 .endm
 
 .macro zero register
-    push 0
+    push fs ;# assumes FS to be zero
     pop \register
 .endm
 
