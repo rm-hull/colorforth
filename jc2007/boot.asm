@@ -42,7 +42,6 @@ gdt_end:
 start0:
     cli
     call settrap
-    mov  edx, '\\' << 24 | '-' << 16 | '/' << 8 | '|' ;# progress indicator
     call relocate
     zero ss
     mov  sp, loadaddr  ;# stack pointer starts just below this code
@@ -78,11 +77,15 @@ cold:
     jmp start1 ;# start1 is outside of bootsector
 
 .code16
-settrap: ;# catch pseudo-GPF
+settrap: ;# catch pseudo-GPF, and set EBP as PC-relative pointer
+    xor  ebp, ebp ;# clear first or this might not work
+    mov  bp, cs ;# get CS segment register
+    shl  ebp, 4 ;# shift segment to where it belongs in 32-bit absolute addr
     pop  ax ;# get return address
     push ax ;# we still need to return to it
-    ;# note: the following only works if settrap called from first 256 bytes
+    ;# note: the following only works if this called from first 256 bytes
     and  ax, 0xff00 ;# clear low 8 bits of address
+    mov  bp, ax ;# EBP now contains 32-bit absolute address of 'start'
     add  ax, offset trap - offset start
     mov  [fs:0x0d * 4 + 2], cs ;# FS assumed to be 0
     mov  [fs:0x0d * 4], ax
@@ -100,25 +103,43 @@ read:
     mov  ch, [cylinder + loadaddr]
     mov  cl, 1  ;# sector number is 1-based, and we always read from first
     int  0x13
-    mov  ebp, esi  ;# temporarily store parameter stack pointer in BP
+    mov  edx, esi  ;# temporarily store parameter stack pointer in EDX
     pop  esi  ;# load iobuffer
     mov  ecx, 512*18*2/4
     addr32 rep movsd ;# move to ES:EDI location preloaded by caller
-    mov  esi, ebp  ;# restore parameter stack pointer
+    mov  esi, edx  ;# restore parameter stack pointer
     pop  edx
     ret
 
-progress: ;# show rotating progress indicator
+progress: ;# show progress indicator
+    pop  dx  ;# grab return address
+    push dx  ;# and put back on stack
+shownumber: ;# alternate entry point, preload DX register
+    push ax
     push bx
+    push cx
     push es
     push 0xb800 ;# video display RAM
     pop  es
+    mov  cx, 4  ;# four digit address to display
     mov  bx, upper_right ;# corner of screen
-    mov  [es:bx], dl ;# assumes ES=0xb800, text mode 3 video RAM
-    ror  edx, 8 ;# next character in rotator
-    pop  es
+    xor  ax, ax ;# zero AX
+0:  mov  al, dl ;# get number as hex digit
+    and  al, 0xf
+    push bp
+    add  bp, ax
+    mov  al, cs:[digits + bp]
+    pop  bp
+    mov  [es:bx], al ;# assumes ES=0xb800, text mode 3 video RAM
+    shr  dx, 4 ;# next higher hex digit
+    sub  bx, 2 ;# move to previous screen position
+    loop 0b
+    pop  es ;# restore registers except dx and bp
+    pop  cx
     pop  bx
+    pop  ax
     ret
+digits: .ascii "0123456789abcdef"
 
 trap:  ;# handle interrupt 0xd, the "pseudo GPF"
     pop  bx

@@ -46,4 +46,7 @@ Programmer's notes:
   register, whatever that means, not sure when/if it's ever safe to use without
   saving it. ecx is sometimes safe but it may be wise to save that too.
 
+* after running 'make qemu', remember that the b.img you modified with 'save'
+  is the one in /cygdrive/c/Program\ Files/QEMU/.
+
 jcATunternet.net
