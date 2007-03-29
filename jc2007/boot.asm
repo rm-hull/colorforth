@@ -52,7 +52,6 @@ start0:
     zero ss ;# set stack to something low and out of the way
     mov  esp, iobuffer + 0x1000
     call whereami ;# set EBP to load location
-    call progress
     call relocate ;# move past BIOS stuff and buffer space
     mov  esp, gods ;# stack pointer now where it really belongs
     call whereami ;# set EBP to where we relocated
@@ -79,10 +78,12 @@ cold:
     dec  cx
 0:  push cx
     call read
-    call progress
+    mov  edx, dword ptr cylinder + loadaddr
+    call shownumber
     inc  byte ptr cylinder + loadaddr
     pop  cx
     loop 0b
+    call progress
     data32 call protected_mode
 .code32
     jmp  9b
