@@ -50,14 +50,11 @@ start0:
     push cs ;# need to set DS=CS, especially on VMWare, DS was 0x40
     pop  ds
     call whereami ;# set EBP to load location
-    call progress
     call relocate ;# move past BIOS stuff and buffer space
     call whereami ;# set EBP to where we relocated
-    call progress
     zero ss
     mov  sp, loadaddr  ;# stack pointer starts just below this code
     zero ds
-    call progress
     data32 call protected_mode
 .code32
     call a20 ;# set A20 gate to enable access to addresses with 1xxxxx
@@ -67,7 +64,6 @@ start0:
     jmp  start1
 0:  call unreal_mode
 .code16
-    call progress
     ;# fall through to cold-start routine
 cold:
     mov  edi, loadaddr  ;# start by overwriting this code
@@ -76,13 +72,11 @@ cold:
     ;# overwritten, 'cylinder' will be changed, and cylinders will be skipped
     ;# in loading, making the bootblock unusable
     call read
-    call progress
     inc  byte ptr cylinder + loadaddr
     mov  cx, nc + loadaddr ;# number of cylinders used
     dec  cx
 0:  push cx
     call read
-    call progress
     inc  byte ptr cylinder + loadaddr
     pop  cx
     loop 0b
@@ -169,31 +163,43 @@ trap:  ;# handle interrupt 0xd, the "pseudo GPF"
 */
 
 relocate:  ;# move code from where DOS or BIOS put it, to where we want it
-    mov  ax, loadaddr >> 4 ;# segment address of relocation
+;# it would seem to be trivial, but in cases where the 64K span of source
+;# and destination overlap, we overwrite this code and crash. it happened.
+;# so now we move everything to end of 640K base RAM and then move back
+;# to its final destination.
+    mov  ax, (0xa0000 - 0x10000) >> 4 ;# segment address of relocation
     mov  es, ax
     mov  eax, ebp ;# get source address
     shr  eax, 4
     mov  ds, eax
-    xor  cx, cx ;# zero both source and destination pointers
-    mov  si, cx
-    mov  di, cx
     mov  cx, 0x10000 >> 1 ;# moving 64K in words
-    cmp  ebp, loadaddr ;# are we below or above destination?
-    jz   9f  ;# already there? cool, skip it
-    jnc  4f  ;# above? move from start
-    ;# otherwise we're below destination, move from end
-    dec  si
-    dec  si
+    mov  si, 0xfffe
     mov  di, si
+    push cx
     std  ;# move words from 0xfffe to 0
-4:  rep  movsw
-9:  mov  ax, cs
-    mov  ds, ax ;# restore segment registers
+    rep  movsw
+;# now we need to do a tricky jump from here to where the relocated code is,
+;# otherwise we still run the risk of a code overwrite.
+    mov  ax, (offset 5f - offset start)
+    push es
+    push ax
+    lret ;# "return" to following address, in the relocated segment
+5:  pop  cx
+    xor  si, si ;# now move from 0 
+    mov  di, si
+    push es ;# destination now becomes source
+    pop  ds
+    mov  ax, loadaddr >> 4
+    mov  es, ax
+    cld
+    rep  movsw
+9:  xor  ax, ax ;# now all segments are 0
+    mov  ds, ax
     mov  es, ax
     pop  ax ;# get return address, but we want to "ret" to its new address
     and  ax, 0xff ;# this routine must be called from first 256 bytes!
     add  ax, loadaddr
-    cld  ;# in case we changed direction
+    cld  ;# revert to forward direction
     push 0 ;# return with CS=0
     push ax
     lret
