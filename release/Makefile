@@ -24,7 +24,7 @@ clean:
 %.exe:
 	cp -f $(BOCHS_SRC)/$@ .
 upload: cfbochs-jc2007.exe a.img.gz
-	for file in "$+"; do \
+	for file in $+; do \
 	 ncftpput -C upload.sourceforge.net $$file \
 	  incoming/$(TIMESTAMP)-$$file; \
 	done

@@ -6,8 +6,11 @@
 .equ upper_right, 158 ;# address of upper-right corner of screen
 
 .org 0 ;# actually 0x7c00, where the BIOS loads the bootsector
-start: jmp  start0
-    nop
+start:
+    jmp  start0
+msdos: ;# this byte after the short jmp above is normally just padding
+;# we will use it to indicate a startup from MS-DOS
+    .byte 0 ;# pad to offset 3
     .ascii "cmcf 1.0"
     .word 512     ;# bytes/sector
     .byte 1       ;# sector/cluster
@@ -40,13 +43,16 @@ gdt0: .word 0, 0, 0, 0 ;# start of table must be a null entry
 gdt_end:
 .code16
 start0:
-    cli
+    cmp  word ptr cs:0, 0x20cd ;# INT 20h at start of .com program header
+    jnz  0f
+    inc  byte ptr msdos
+0:  cli
     push cs ;# need to set DS=CS, especially on VMWare, DS was 0x40
     pop  ds
-    call whereami
+    call whereami ;# set EBP to load location
     call progress
-    call relocate
-    call whereami
+    call relocate ;# move past BIOS stuff and buffer space
+    call whereami ;# set EBP to where we relocated
     call progress
     zero ss
     mov  sp, loadaddr  ;# stack pointer starts just below this code
@@ -55,12 +61,13 @@ start0:
     data32 call protected_mode
 .code32
     call a20 ;# set A20 gate to enable access to addresses with 1xxxxx
-    cmp  si, 0x7e00 ;# boot from floppy?
+    test byte ptr msdos + loadaddr, 0xff ;# boot from floppy?
     jz   0f  ;# continue if so...
     mov  esi, offset godd ;# set up data stack pointer for 'god' task
     jmp  start1
 0:  call unreal_mode
 .code16
+    call progress
     ;# fall through to cold-start routine
 cold:
     mov  edi, loadaddr  ;# start by overwriting this code
@@ -69,11 +76,13 @@ cold:
     ;# overwritten, 'cylinder' will be changed, and cylinders will be skipped
     ;# in loading, making the bootblock unusable
     call read
+    call progress
     inc  byte ptr cylinder + loadaddr
     mov  cx, nc + loadaddr ;# number of cylinders used
     dec  cx
 0:  push cx
     call read
+    call progress
     inc  byte ptr cylinder + loadaddr
     pop  cx
     loop 0b
@@ -85,13 +94,14 @@ cold:
 .code16
 whereami: ;# set EBP as PC-relative pointer
     xor  ebp, ebp ;# clear first or this might not work
+    mov  eax, ebp
     mov  bp, cs ;# get CS segment register
     shl  ebp, 4 ;# shift segment to where it belongs in 32-bit absolute addr
     pop  ax ;# get return address
     push ax ;# we still need to return to it
     ;# note: the following only works if this called from first 256 bytes
     and  ax, 0xff00 ;# clear low 8 bits of address
-    mov  bp, ax ;# EBP now contains 32-bit absolute address of 'start'
+    add  ebp, eax ;# EBP now contains 32-bit absolute address of 'start'
     ret
 
 read:
@@ -155,37 +165,33 @@ trap:  ;# handle interrupt 0xd, the "pseudo GPF"
 */
 
 relocate:  ;# move code from where DOS or BIOS put it, to where we want it
-    push es
-    zero es ;# should only be necessary when booting from MSDOS
-    mov  edi, loadaddr ;# destination of relocation
-    xor  esi, esi ;# clear upper 16 bits to avoid GPF and/or wrong location
-    mov  si, bp ;# source address
-    cmp  ebp, 0x7c00 ;# is this bootup from floppy?
-    jne  5f  ;# nope, color.com launched from MS-DOS
-    mov  cx, 512 ;# 128 longwords (movsd) or 512 bytes (movsb)
-4:  rep  movsb
-    jmp  9f
-5:  ;# relocate 64K color.com
-    cmp  ebp, loadaddr ;# see where we are relative to where we want to be
-    je   9f ;# same place? done
-    mov  cx, 0x10000 / 4 ;# 64K in longwords
-    jc   7f ;# we're lower, need to move up
-    std  ;# otherwise we're higher, and we move downwards to destination
-    jmp  4b
-7:  push ax
-    mov  ax, ds ;# we need to point to the end of both blocks
-    add  ax, 0x1000
-    mov  ds, ax
+    mov  ax, loadaddr >> 4 ;# segment address of relocation
+    mov  es, ax
+    mov  eax, ebp ;# get source address
+    shr  eax, 4
+    mov  ds, eax
+    xor  cx, cx ;# zero both source and destination pointers
+    mov  si, cx
+    mov  di, cx
+    mov  cx, 0x10000 >> 1 ;# moving 64K in words
+    cmp  ebp, loadaddr ;# are we below or above destination?
+    jz   9f  ;# already there? cool, skip it
+    jnc  4f  ;# above? move from start
+    ;# otherwise we're below destination, move from end
     dec  si
-    pop  ax ;# THIS ISN'T DONE, MUST FIX DS, ES, SI, DI
-9:  pop  es ;# restore extra segment register
+    dec  si
+    mov  di, si
+    std  ;# move words from 0xfffe to 0
+4:  rep  movsw
+9:  mov  ax, cs
+    mov  ds, ax ;# restore segment registers
+    mov  es, ax
     pop  ax ;# get return address, but we want to "ret" to its new address
     and  ax, 0xff ;# this routine must be called from first 256 bytes!
     add  ax, loadaddr
     cld  ;# in case we changed direction
     push 0 ;# return with CS=0
     push ax
-    call progress
     lret
 
 protected_mode:
