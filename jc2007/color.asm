@@ -1689,7 +1689,7 @@ forth2:
  .incbin "newcode.dat" ;# blocks 18-63 are CM's code
  .incbin "appcode.dat" ;# blocks 64+ for colorForth community applications
 .else
- .incbin "color.dat" ;# some things including "icons" won't work with this
+ .incbin "oldcolor.dat" ;# some things including "icons" won't work with this
 .endif
 ;# from CM's "user.htm" file:
 ;#  I'll be changing blocks 0-62. So to allow updates,

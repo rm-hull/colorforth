@@ -256,7 +256,6 @@ a20:
     .org 0x1fe + start
     .word 0x0aa55 ;# mark boot sector
     ;# end of boot sector
-    .long 0x44444444 ;# mark color.com
 
 write:
     mov  edi, iobuffer ;# destination address

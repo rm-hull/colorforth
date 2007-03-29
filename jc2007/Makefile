@@ -1,5 +1,4 @@
-original := $(wildcard ../masm/*.asm)
-sources := $(notdir $(original))
+sources := $(wildcard *.asm)
 ftpfiles := $(foreach file, $(sources), \
  $(shell echo $(notdir $(file)) | tr 'a-z' 'A-Z'))
 # sed recipes (commands) for converting MASM code to GNU 'as' assembler
@@ -51,14 +50,12 @@ COLINUX := /cygdrive/c/Program\ Files/coLinux
 JC2007 := $(shell cygpath -w $(PWD))
 export
 default: small bochs23
-color.com: $(sources) chars.asm color.dat
+color.com: $(sources)
 ifdef I_HAVE_AT_LEAST_1GB_RAM
 	$(MAKE) newcode.dat
 endif
-	$(GAS) $(foreach definition,$(DEFINES),\
-	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
-	 -ahlns=color.lst --listing-cont-lines=10 -o color.o color.asm
-	objcopy color.o -O binary $@
+	$(MAKE) color.dat
+	dd if=color.dat of=$@ bs=1024 count=64
 %.dat:	%.asm
 	$(GAS) $(foreach definition,$(DEFINES),\
 	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
@@ -80,11 +77,6 @@ cm2001: color.asm
 	$(MAKE) CM2001=1 color.com
 jf2005: color.asm
 	$(MAKE) DMA=1 AGP=1 E1_STROBE=1 QUESTIONABLE=1 color.com
-$(sources): $(original)
-	for file in $+; do \
-	 $(sed) $$file | sed $(code16) | \
-	 ./as_macro1.py > $$(basename $$file) \
-	;done
 /tmp/color.dsm: ../color.com
 	objdump --target binary \
 	 --architecture i386 \
@@ -107,25 +99,8 @@ set:
 	set
 %.txt:	%.com cf2text
 	cf2text $< > $@
-diff:	sources.txt original.txt
-	-diff -W180 -y $+
-sources.txt: $(sources)
-	cat $+ > $@
-original.txt: $(original)
-	cat $+ > $@
 clean:
-	rm -f sources.txt original.txt *.{o,bin,out,dmp,lst}
-download: $(original) # in case we accidentally overwrote them (shit happens)
-	for file in $+; do \
-	fetch=$$(echo $$(basename $$file) | tr 'a-z' 'A-Z') && \
-	 wget -O $$file http://ftp.ultratechnology.com/$$fetch \
-	 ;done
-	sed -i 's/\r//' $+ # get rid of embedded CRs from DOS
-regex:
-	@echo Use as follows: 'make REGEX="directives offset" regex'
-	@echo Full list of recipes: $(recipes)
-	@echo Remember that some depend on others to run first!
-	[ "$(REGEX)" ] && $(regex_test) $(original)
+	rm -f *.{o,bin,out,dmp,lst}
 errors:
 	$(GAS) color.asm 2>&1 | ./show_error_lines.sh
 errorcount:
@@ -187,7 +162,7 @@ newcode.asm:  # it is now in repository, don't make
 	 >> $@
 	echo BLOCK >> $@
 	echo BLOCK >> $@  # pad out one more block for even number
-color.dat: ../color.com empty_block.dat
+oldcolor.dat: ../color.com empty_block.dat
 	dd if=$< of=$@ bs=1024 skip=18
 	if [ "$$(expr $$(du $@ | awk '{print $$1}') % 2)" = "0" ]; then \
 	 cat $(word 2, $+) >> $@; \
@@ -233,11 +208,16 @@ boot.dsm: boot.blk
 	 --no-show-raw-insn \
 	 --disassembler-options=intel \
 	 $< > $@
-../test/b.img: color.com
+../test/b.img: color.dat
 	dd if=/dev/zero of=$@ bs=1024 count=1440
 	dd if=$< of=$@ conv=notrunc
 freedos: color.com
-	cd $(COLINUX) && colinux-daemon @"$(JC2007)"\\copy_to_freedos.conf
-	~/src/freedos.sh
+	@echo Login as root and execute the colorupdate.sh script
+	colinux.sh
+	@while [ color.com -nt \
+	 /cygdrive/c/Program\ Files/Bochs-2.3/freedos/b.img ]; \
+	 sleep 5; \
+	elihw
+	freedos.sh
 pctest: color.com
 	scp $< root@192.168.3.4:/tmp/
