@@ -49,7 +49,8 @@ b.img:	$(CF_SRC)/colorforth/as/color.com
 vmware: cf.vmx b.img
 	$(VMWARE)/vmplayer.exe cf.vmx
 qemu: cfqemu.bat b.img
-	cp $+ "$(QEMU)/" && cd "$(QEMU)" && cmd /c cfqemu.bat
+	-cp $+ "$(QEMU)/" && cd "$(QEMU)" && cmd /c $<
+	cp "$(QEMU)/b.img" .
 clean: vmclean
 	rm -f new*.txt old*.txt *.img
 vmclean:

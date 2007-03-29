@@ -49,11 +49,12 @@ start0:
 0:  cli
     push cs ;# need to set DS=CS, especially on VMWare, DS was 0x40
     pop  ds
+    zero ss ;# set stack to something low and out of the way
+    mov  esp, iobuffer + 0x1000
     call whereami ;# set EBP to load location
     call relocate ;# move past BIOS stuff and buffer space
+    mov  esp, gods ;# stack pointer now where it really belongs
     call whereami ;# set EBP to where we relocated
-    zero ss
-    mov  sp, loadaddr  ;# stack pointer starts just below this code
     zero ds
     data32 call protected_mode
 .code32
@@ -66,6 +67,7 @@ start0:
 .code16
     ;# fall through to cold-start routine
 cold:
+    call progress
     mov  edi, loadaddr  ;# start by overwriting this code
     ;# that's why it's so critical that 'cylinder' be reset to zero before
     ;# saving the image; if it's anything but that, when this block is
@@ -199,7 +201,6 @@ relocate:  ;# move code from where DOS or BIOS put it, to where we want it
     pop  ax ;# get return address, but we want to "ret" to its new address
     and  ax, 0xff ;# this routine must be called from first 256 bytes!
     add  ax, loadaddr
-    cld  ;# revert to forward direction
     push 0 ;# return with CS=0
     push ax
     lret
