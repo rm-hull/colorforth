@@ -131,23 +131,27 @@ shownumber: ;# alternate entry point, preload DX register
     push ax
     push bx
     push cx
-    push es
+    push si
     push 0xb800 ;# video display RAM
     pop  es
+    mov  eax, ebp ;# get current address for locating digits string
+    shr  eax, 4
+    mov  ds, ax
     mov  cx, 4  ;# four digit address to display
     mov  bx, upper_right ;# corner of screen
     xor  ax, ax ;# zero AX
 0:  mov  al, dl ;# get number as hex digit
     and  al, 0xf
-    push bp
-    add  bp, ax
-    mov  al, cs:[digits + bp]
-    pop  bp
+    mov  si, ax
+    mov  al, [digits + si]
     mov  [es:bx], al ;# assumes ES=0xb800, text mode 3 video RAM
     shr  dx, 4 ;# next higher hex digit
     sub  bx, 2 ;# move to previous screen position
     loop 0b
-    pop  es ;# restore registers except dx and bp
+    mov  ax, cs ;# restore segment registers
+    mov  es, ax
+    mov  ds, ax
+    pop  si ;# restore registers
     pop  cx
     pop  bx
     pop  ax
