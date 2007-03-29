@@ -5,10 +5,15 @@ FORTH fixed, [EXECUTELONGHEX], 10000000, [EXECUTESHORT], 1000, [EXECUTE], /, *, 
 FORTH x, [EXECUTE], xnow, @, ";"
 FORTH y, [EXECUTE], ynow, @, ";"
 FORTH abs, 0, or, -if, negate, then, ";"
-FORTH ge4, [TEXT], a-, dup, @, abs, 
- FORTH [COMPILESHORT], -4, +, -if, drop, drop, ";", then,
- FORTH [COMPILEWORD], dup, [COMPILESHORT], 1, +, @, abs,
- FORTH [COMPILESHORT], -4, +, -if, drop, drop, ";", then,
+FORTH ge4, [TEXT], n-,
+ FORTH [COMPILESHORT], [EXECUTESHORT], -4000, [EXECUTE], fixed,
+ FORTH [COMPILEWORD], +, drop, -if, ";", then,
+ FORTH [EXECUTE], flag, dup, !, ";"
+FORTH zge4, [TEXT], a-,
+ FORTH [COMPILEWORD], dup, @, ge4, dup, [COMPILESHORT], 1, +, @, ge4,
+ FORTH [COMPILEWORD], dup, @, dup, fx*, dup, ge4,
+ FORTH [COMPILESHORT], 1, +, @, dup, fx*, dup, ge4,
+ FORTH [COMPILEWORD], fx*, ge4, ";"
 FORTH z0, [TEXT], -a, [EXECUTE], z, @, vp, hp, *, dup, +, +, ";"
 FORTH xval, x, [COMPILELONGHEX], 10000000, hp, "*/", ;# scale to A(3,28) fixed
  FORTH [EXECUTE], xspan, @, fx*, [EXECUTE], xl, @, +, ";"
@@ -60,7 +65,7 @@ FORTH iter, ;# iterate through the array of complex numbers, updating
  FORTH [COMPILEWORD], x, y, hp, *, +, ;# 0-based pixel
  FORTH [COMPILEWORD], dup, 2*, ;# doubled for z-table, single for display
  FORTH [COMPILEWORD], pnext,
- FORTH [EXECUTE], z, @, +, z**2,
+ FORTH [EXECUTE], z, @, +, dup, zge4, dup, z**2, zge4,
  FORTH [EXECUTE], flag, @, 0, +, drop, if, 0, [EXECUTE], dark, !,
  FORTH [COMPILEWORD], then, z0, z+, ;# z is now z**2+z0
  FORTH [COMPILEWORD], 2/, vframe, +, [EXECUTE], dark, @, swap, +!, ";"
