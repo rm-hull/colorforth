@@ -52,22 +52,22 @@ start0:
     zero ss ;# set stack to something low and out of the way
     mov  esp, iobuffer + 0x1000
     call whereami ;# set EBP to load location
+    call progress
     call relocate ;# move past BIOS stuff and buffer space
     mov  esp, gods ;# stack pointer now where it really belongs
     call whereami ;# set EBP to where we relocated
-    zero ds
+    call progress
     data32 call protected_mode
 .code32
     call a20 ;# set A20 gate to enable access to addresses with 1xxxxx
     test byte ptr msdos + loadaddr, 0xff ;# boot from floppy?
     jz   0f  ;# continue if so...
-    mov  esi, offset godd ;# set up data stack pointer for 'god' task
+9:  mov  esi, godd ;# set up data stack pointer for 'god' task
     jmp  start1
 0:  call unreal_mode
 .code16
     ;# fall through to cold-start routine
 cold:
-    call progress
     mov  edi, loadaddr  ;# start by overwriting this code
     ;# that's why it's so critical that 'cylinder' be reset to zero before
     ;# saving the image; if it's anything but that, when this block is
@@ -79,13 +79,13 @@ cold:
     dec  cx
 0:  push cx
     call read
+    call progress
     inc  byte ptr cylinder + loadaddr
     pop  cx
     loop 0b
     data32 call protected_mode
 .code32
-    mov esi, godd
-    jmp start1 ;# start1 is outside of bootsector
+    jmp  9b
 
 .code16
 whereami: ;# set EBP as PC-relative pointer

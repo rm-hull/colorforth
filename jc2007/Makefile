@@ -239,3 +239,5 @@ boot.dsm: boot.blk
 freedos: color.com
 	cd $(COLINUX) && colinux-daemon @"$(JC2007)"\\copy_to_freedos.conf
 	~/src/freedos.sh
+pctest: color.com
+	scp $< root@192.168.3.4:/tmp/
