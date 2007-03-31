@@ -60,16 +60,15 @@ FORTH init, [TEXT], -2.1,
  FORTH [EXECUTE], yspan, !,
  FORTH [COMPILESHORT], -8, [EXECUTE], dark, !
  FORTH [COMPILEWORD], ";"
-FORTH wait, [TEXT], n-, for, next, ";"
 FORTH update, [TEXT], n-, dup, four, if, drop, ";", then,
  FORTH [COMPILEWORD], dup, z2+c, dup, four, if, drop, ";", then,
  FORTH [COMPILEWORD], 2/, vframe, +, [EXECUTE], dark, @, swap, +!, ";"
-FORTH u, [EXECUTESHORT], 300, [EXECUTE], hp, [EXECUTE], *, [COMPILESHORT], 10,
- FORTH [COMPILEWORD], for, over, +, update, next, ";"
-;# put "show" before "blue, screen" for debugging; after for raster graphics
-FORTH ok, init, blue, screen, show, keyboard, debug,
+FORTH iter, ;# have to find a more efficient way of doing this
+ FORTH [COMPILESHORT], 10000, for,
  FORTH [EXECUTE], pixel, @, update,
- FORTH [EXECUTE], pixel, @, z@, swap, check, drop, drop,
+ FORTH [EXECUTE], ;# pixel, @, z@, swap, check, drop, drop,
  FORTH [EXECUTE], pixel, @, 1+, [EXECUTE], hp, [EXECUTE], vp, [EXECUTE], *,
- FORTH [COMPILEWORD], mod, [EXECUTE], pixel, !, ";"
+ FORTH [COMPILEWORD], mod, [EXECUTE], pixel, !, next, ";"
+;# put "show" before "blue, screen" for debugging; after for raster graphics
+FORTH ok, init, blue, screen, show, iter, keyboard, ";"
 BLOCK
