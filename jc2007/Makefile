@@ -55,7 +55,7 @@ ifdef I_HAVE_AT_LEAST_1GB_RAM
 	$(MAKE) newcode.dat
 endif
 	$(MAKE) color.dat
-	dd if=color.dat of=$@ bs=1024 count=64
+	dd if=color.dat of=$@ bs=1024 count=63
 %.dat:	%.asm
 	$(GAS) $(foreach definition,$(DEFINES),\
 	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
@@ -211,13 +211,5 @@ boot.dsm: boot.blk
 ../test/b.img: color.dat
 	dd if=/dev/zero of=$@ bs=1024 count=1440
 	dd if=$< of=$@ conv=notrunc
-freedos: color.com
-	@echo Login as root and execute the colorupdate.sh script
-	colinux.sh
-	@while [ color.com -nt \
-	 /cygdrive/c/Program\ Files/Bochs-2.3/freedos/b.img ]; \
-	 sleep 5; \
-	elihw
-	freedos.sh
 pctest: color.com
 	scp $< root@192.168.3.4:/tmp/
