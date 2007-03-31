@@ -71,5 +71,26 @@ fx_mul: ;# fixed-point A(3,28) multiplication
  inc ebx ;# was it -1?
  jz 9f ;# if so, still OK
  mov eax, nan  ;# Not a Number
-9: ;# done, for better or worse
+9: ;# done, for better or worse; Z flag and NaN both can be used to check
+ ret
+
+oneplus:
+ inc eax
+ ret
+
+oneless:
+ dec eax
+ ret
+
+;# don't use the following where flags matter
+one:
+ dup_
+ xor eax, eax
+ inc eax
+ ret
+
+minus1:
+ dup_
+ xor eax, eax
+ dec eax
  ret

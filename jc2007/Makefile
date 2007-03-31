@@ -59,7 +59,7 @@ endif
 %.dat:	%.asm
 	$(GAS) $(foreach definition,$(DEFINES),\
 	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
-	 -ahlmns=$*.lst --listing-cont-lines=10 \
+	 -ahlns=$*.lst --listing-cont-lines=10 \
 	 --reduce-memory-overheads \
 	 -o $*.o $<
 	objcopy $*.o -O binary $@
@@ -185,7 +185,7 @@ mandelbrot.blk: /usr/src/howerd/MarkSlicker/accept.blk
 new_%.blk: new_%.dsm
 	$(GAS) $(foreach definition,$(DEFINES),\
 	 $(if $($(definition)),--defsym $(definition)=$($(definition)))) \
-	 -ahlmns=$*.lst --listing-cont-lines=10 \
+	 -ahlns=$*.lst --listing-cont-lines=10 \
 	 --reduce-memory-overheads \
 	 -o $*.o $<
 	objcopy $*.o -O binary $@
