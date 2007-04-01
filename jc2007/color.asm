@@ -1663,7 +1663,7 @@ forth0:
     packword e, lm, rm, graphic, text, keyboard, debug, at, +at, xy
     packword fov, fifo, box, line, color, octant, sp, last, unpack, vframe
     packword buffer, off, rgb, hp, vp, iw, ih, hc, vc, fx*
-    packword cells, nan, 1-, 1+, 1, -1
+    packword cells, nan, 1-, 1+, 1, -1, w@, w!, +w!
 forth1:
     .rept 512 - ((.-forth1)/4) .long 0; .endr
 macro2:
@@ -1678,7 +1678,7 @@ forth2:
     long e, lms, rms, graphic, text1, keyboard, debug, at, pat, xy_
     long fov_, fifof, box, line, color, octant, sps, last_, unpack, vframe
     long buffer, off, rgb, hp_, vp_, iw_, ih_, hc_, vc_, fx_mul
-    long cells, nan_, oneless, oneplus, one, minus1
+    long cells, nan_, oneless, oneplus, one, minus1, wat, wstore, pwstore
 0:
     ;# .rept 512 - ((.-0b)/4) .long 0; .endr ;# room for new definitions
 

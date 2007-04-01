@@ -3,6 +3,8 @@ FORTH [TEXTCAPITALIZED], mandelbrot, [TEXT], display, [EXECUTE], empty, [EXECUTE
 FORTH allot, [TEXT], n-a, here, [COMPILESHORT], 3, +, [COMPILESHORT], 4, /, swap, for, 0, ",", next, ";", [VARIABLE], z, [BINARY], 0, [EXECUTE], hp, [EXECUTE], vp, [EXECUTE], "*", [EXECUTE], [EXECUTESHORT], 1, [EXECUTE], +, [EXECUTE], dup, [EXECUTE], "+", [EXECUTE], allot, [EXECUTE], z, [EXECUTE], "!" 
 FORTH fixed, [EXECUTELONGHEX], 10000000, [EXECUTESHORT], 1000, [EXECUTE], /, *, ";", [EXECUTE], macro
 FORTH abs, 0, or, -if, negate, then, ";", [EXECUTE], forth
+FORTH fb, [TEXT], -a, [TEXT], framebuffer, [EXECUTE], vframe,
+ FORTH [EXECUTESHORT], 4, [EXECUTE], *, ";"
 ;#FORTH fx*, [COMPILELONGHEX], 10000000, */, ";" ;# works 1st iter, then locks
 FORTH z@, [TEXT], i-nn, 2*, [EXECUTE], z, @, +, dup, @, swap, 1+, @, ";"
 FORTH ge4, [TEXT], n-f, ;# sets Z flag if abs(n) > 4
@@ -16,6 +18,9 @@ FORTH four, [TEXT], n-, dup, z@, ge4, if, drop, drop, ";",
  FORTH [COMPILEWORD], then, z@, dup, fx*, swap, dup, fx*, +, ge4, ";"
 ;#FORTH f, four, if, 1, ";", then, 0, ";" ;# test word
 FORTH z!, [TEXT], nni-, 2*, [EXECUTE], z, @, +, dup, push, 1+, !, pop, !, ";"
+FORTH z0, [TEXT], -a, [EXECUTE], z, [EXECUTE], @,
+ FORTH [EXECUTE], vp, [EXECUTE], hp, [EXECUTE], *, [EXECUTE], dup,
+ FORTH [EXECUTE], +, [EXECUTE], +, ";"
 FORTH [EXECUTESHORT], 66, [EXECUTE], load
 
 BLOCK 65
@@ -28,9 +33,6 @@ FORTH init, initializes, variables
 FORTH ok, sets, the, display, and, starts, the, generator
 
 BLOCK 66
-FORTH z0, [TEXT], -a, [EXECUTE], z, [EXECUTE], @,
- FORTH [EXECUTE], vp, [EXECUTE], hp, [EXECUTE], *, [EXECUTE], dup,
- FORTH [EXECUTE], +, [EXECUTE], +, ";"
 FORTH x0, [COMPILELONGHEX], 10000000, hp, */, ;# scale to A(3,28) fixed
  FORTH [EXECUTE], xspan, @, fx*, [EXECUTE], xl, @, +, ";"
 FORTH y0, [COMPILELONGHEX], 10000000, vp, */, ;# make fixed-point number
@@ -59,19 +61,20 @@ FORTH init, [TEXT], -2.1,
  FORTH [EXECUTE], xspan, !,
  FORTH [EXECUTE], yt, @, [EXECUTE], yb, @, negate, +,
  FORTH [EXECUTE], yspan, !,
- FORTH [COMPILESHORT], -8, [EXECUTE], dark, !
+ FORTH [COMPILESHORT], -1, [EXECUTE], dark, !
  FORTH [COMPILESHORT], 5000, [EXECUTE], count, !
  FORTH [COMPILEWORD], ";"
+FORTH darker, [TEXT], n-, 2*, fb, +, dup, w@, 0, +, drop, if,
+ FORTH [EXECUTE], dark, @, swap, +w!, ";", then, drop, ";"
 FORTH update, [TEXT], n-, dup, four, if, drop, ";", then,
- FORTH [COMPILEWORD], dup, z2+c, dup, four, if, drop, ";", then,
- FORTH [COMPILEWORD], 2/, vframe, +, [EXECUTE], dark, @, over, +!,
- FORTH [COMPILEWORD], -if, 0, swap, !, ";", then, drop, ";"
+ FORTH [COMPILEWORD], dup, z2+c, dup, four, if, drop, ";", then, darker, ";"
 FORTH iter,
  FORTH [EXECUTE], count, @, for,
  FORTH [EXECUTE], pixel, @, update,
  ;#FORTH [EXECUTE], pixel, @, z@, swap, check, drop, drop,
  FORTH [EXECUTE], pixel, @, 1+, [EXECUTE], hp, [EXECUTE], vp, [EXECUTE], *,
  FORTH [COMPILEWORD], mod, [EXECUTE], pixel, !, next, ";"
+FORTH t, 0, darker, ";" ;# test word
 ;# put "show" before "blue, screen" for debugging; after for raster graphics
 FORTH ok, init, blue, screen, show, iter, keyboard, ";"
 BLOCK

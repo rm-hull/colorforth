@@ -43,6 +43,7 @@ nan_: highlevel nan ;# Not a Number for use in fixed-point arithmetic
 
 fx_mul: ;# fixed-point A(3,28) multiplication
  ;# for notation, see http://home.earthlink.net/~yatescr/fp.pdf
+ ;# FIXME, get rid of this, make */ set flags for overrun instead
  push ecx ;# save registers which CM indicates have special uses
  push edx
  xor ebx, ebx ;# clear EBX register, use it for testing
@@ -93,4 +94,24 @@ minus1:
  dup_
  xor eax, eax
  dec eax
+ ret
+
+wat: ;# word at
+ mov edx, eax
+ xor eax, eax
+ mov ax, [edx]
+ ret
+
+wstore: ;# word store
+ mov edx, eax
+ drop
+ mov [edx], ax
+ drop
+ ret
+
+pwstore: ;# plus word store
+ mov edx, eax
+ drop
+ add [edx], ax
+ drop
  ret
