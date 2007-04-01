@@ -4,7 +4,7 @@ FORTH allot, [TEXT], n-a, here, [COMPILESHORT], 3, +, [COMPILESHORT], 4, /, swap
 FORTH fixed, [EXECUTELONGHEX], 10000000, [EXECUTESHORT], 1000, [EXECUTE], /, *, ";", [EXECUTE], macro
 FORTH abs, 0, or, -if, negate, then, ";", [EXECUTE], forth
 ;#FORTH fx*, [COMPILELONGHEX], 10000000, */, ";" ;# works 1st iter, then locks
-FORTH z@, [TEXT], i-nn, [EXECUTE], z, @, +, dup, @, swap, 1+, @, ";"
+FORTH z@, [TEXT], i-nn, 2*, [EXECUTE], z, @, +, dup, @, swap, 1+, @, ";"
 FORTH ge4, [TEXT], n-f, ;# sets Z flag if abs(n) > 4
  FORTH [COMPILEMACRO], abs, [EXECUTESHORT], -4000, [EXECUTE], fixed,
  FORTH [COMPILEWORD], +, drop, -if, 0, drop, then, ";"
@@ -15,7 +15,7 @@ FORTH four, [TEXT], n-, dup, z@, ge4, if, drop, drop, ";",
  FORTH [COMPILEWORD], then, dup, fx*, ge4, if, drop, ";"
  FORTH [COMPILEWORD], then, z@, dup, fx*, swap, dup, fx*, +, ge4, ";"
 ;#FORTH f, four, if, 1, ";", then, 0, ";" ;# test word
-FORTH z!, [TEXT], nni-, [EXECUTE], z, @, +, dup, push, 1+, !, pop, !, ";"
+FORTH z!, [TEXT], nni-, 2*, [EXECUTE], z, @, +, dup, push, 1+, !, pop, !, ";"
 FORTH [EXECUTESHORT], 66, [EXECUTE], load
 
 BLOCK 65
