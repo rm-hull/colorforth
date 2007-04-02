@@ -8,6 +8,8 @@ FORTH allot, [TEXT], n-a, align, here, dup, push, +, here!, pop, ";"
  FORTH [EXECUTE], z, [EXECUTE], !
 FORTH abs, 0, or, -if, negate, then, ";"
 FORTH fixed, [EXECUTELONGHEX], 10000000, [EXECUTESHORT], 10000, [EXECUTE], /, *, ";"
+FORTH clear, blue, screen, zlen, [EXECUTE], z, @, zero, 0,
+ FORTH [EXECUTE], pixel, !, ";"
 FORTH reinit,
  FORTH [EXECUTE], xr, @, [EXECUTE], xl, @, negate, +,
  FORTH [EXECUTE], xspan, !,
@@ -24,7 +26,7 @@ FORTH init, [TEXT], -2.1,
  FORTH [EXECUTESHORT], -12000, [EXECUTE], fixed, nop, [EXECUTE], yb, "!",
  FORTH [COMPILESHORT], -1, [EXECUTE], dark, !
  FORTH [COMPILESHORT], 5000, [EXECUTE], count, !
- FORTH [COMPILEWORD], reinit, ";"
+ FORTH [COMPILEWORD], ";"
 FORTH fb, [TEXT], -a, [TEXT], framebuffer, [EXECUTE], vframe,
  FORTH [EXECUTESHORT], 4, [EXECUTE], *, ";"
 FORTH darker, [TEXT], n-, 2*, fb, +, dup, w@, 0, +, drop, if,
@@ -40,7 +42,7 @@ FORTH four, [TEXT], n-, dup, z@, ge4, if, drop, drop, ";",
  FORTH [COMPILEWORD], then, z@, dup, fx*, swap, dup, fx*, +, ge4, ";"
 FORTH [EXECUTESHORT], 2, [EXECUTE], +load,
  FORTH [EXECUTESHORT], 4, [EXECUTE], +load
- ;#FORTH [EXECUTE], ok, [EXECUTE], h
+ FORTH [EXECUTE], ok, [EXECUTE], h
 BLOCK 65
 FORTH allot, grabs, space, at, [COMPILEWORD], here, and, returns, that, "address;", z, points, to, the, array, of, values, as, generated, by, "z**2+z0"
 FORTH [TEXT], xl, xr, yt, yb, are, the, start, limits, mapped, by, the, [TEXTCAPITALIZED], cartesian, "grid;", xspan, and, yspan, hold, the, x, and, y, ranges
@@ -76,33 +78,40 @@ FORTH iter,
  FORTH [COMPILEWORD], mod, [EXECUTE], pixel, !, next, ";"
 BLOCK 67
 BLOCK 68
-FORTH clear, blue, screen, zlen, [EXECUTE], z, @, zero, 0,
- FORTH [EXECUTE], pixel, !, ";"
 FORTH +zoom, [EXECUTE], xl, @, 2/, [EXECUTE], xl, !,
  FORTH [EXECUTE], xr, @, 2/, [EXECUTE], xr, !, 
  FORTH [EXECUTE], yb, @, 2/, [EXECUTE], yb, !,
- FORTH [EXECUTE], yt, @, 2/, [EXECUTE], yt, !, reinit, clear, ";"
-FORTH -zoom, ";"
+ FORTH [EXECUTE], yt, @, 2/, [EXECUTE], yt, !, 0, [EXECUTE], xspan, !, ";"
+FORTH -zoom, [EXECUTE], xl, @, 2*, [EXECUTE], xl, !,
+ FORTH [EXECUTE], xr, @, 2*, [EXECUTE], xr, !,
+ FORTH [EXECUTE], yb, @, 2*, [EXECUTE], yb, !,
+ FORTH [EXECUTE], yt, @, 2*, [EXECUTE], yt, !, 0, [EXECUTE], xspan, !, ";"
 FORTH left, [EXECUTE], xspan, @, [COMPILESHORT], 10, /, negate, dup,
  FORTH [EXECUTE], xl, @, +, ge4, if, drop, drop, ";", then, dup,
- FORTH [EXECUTE], xl, +!, [EXECUTE], xr, +!, reinit, clear, ";"
-FORTH right, ";"
+ FORTH [EXECUTE], xl, +!, [EXECUTE], xr, +!, 0, [EXECUTE], xspan, !, ";"
+FORTH right, [EXECUTE], xspan, @, [COMPILESHORT], 10, /, dup,
+ FORTH [EXECUTE], xr, @, +, ge4, if, drop, drop, ";", then, dup,
+ FORTH [EXECUTE], xl, +!, [EXECUTE], xr, +!, 0, [EXECUTE], xspan, !, ";"
+FORTH up, ";"
+FORTH down, ";"
 FORTH nul, ";"
-FORTH h, pad, nul, nul, accept, nul,
+FORTH h, pad, nul, accept, -zoom, +zoom,
  FORTH [COMPILEWORD], nul, nul, nul, nul,  nul, nul, nul, nul,
- FORTH [COMPILEWORD], -zoom, left, right, +zoom,  nul, nul, nul, nul,
+ FORTH [COMPILEWORD], left, up, down, right, nul, nul, nul, nul,
  FORTH [COMPILEWORD], nul, nul, nul, nul,  nul, nul, nul, nul,
- FORTH [EXECUTESHORTHEX], 250000 [EXECUTE], ",",
+ FORTH [EXECUTESHORTHEX], 2b2325 [EXECUTE], ",",
  FORTH [EXECUTESHORT], 0, [EXECUTE], ","
  FORTH [EXECUTESHORT], 0, [EXECUTE], ",",
- FORTH [EXECUTELONGHEX], 2b0d0123, [EXECUTE], ","
+ FORTH [EXECUTELONGHEX], 110160c, [EXECUTE], ","
  FORTH [EXECUTESHORT], 0, [EXECUTE], ",",
  FORTH [EXECUTESHORT], 0, [EXECUTE], ","
  FORTH [EXECUTESHORT], 0, [EXECUTE], ","
 ;# put "show" before "blue, screen" for debugging; after for raster graphics
-FORTH ok, init, blue, screen, show, iter, keyboard, ";"
+;# actually, the latter doesn't work with vmware when "ok'd" from source
+FORTH  ok, init, show, [EXECUTE], xspan, @, -1, +, drop, -if,
+ FORTH [COMPILEWORD], reinit, clear, then, iter, keyboard, ";"
 BLOCK 69
-FORTH clear, wipes, out, the, [COMPILEWORD], z, array
+FORTH clear, wipes, out, the, [COMPILEWORD], z, array, and, clears, screen
 FORTH +zoom, zooms, in, 2, times, closer
 FORTH h, sets, up, keypad
 BLOCK
