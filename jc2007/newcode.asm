@@ -157,7 +157,9 @@ FORTH "icons",  "[COMPILESHORT]", "34",  "load",  ";"
 FORTH "print",  "[COMPILESHORT]", "38",  "load",  ";"
 FORTH "file",  "[COMPILESHORT]", "44",  "load",  ";"
 FORTH "north",  "[COMPILESHORT]", "46",  "load",  ";"
-FORTH "colors",  "[COMPILESHORT]", "56",  "load",  ";",  "[EXECUTE]", "mark",  "[EXECUTE]", "empty"
+FORTH "colors",  "[COMPILESHORT]", "56",  "load",  ";",
+FORTH mandelbrot, [COMPILESHORT], 64, load, ";"
+FORTH  "[EXECUTE]", "mark",  "[EXECUTE]", "empty"
 BLOCK 19
 BLOCK 20
 BLOCK 21

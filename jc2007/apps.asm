@@ -33,7 +33,7 @@ FORTH darker, [TEXT], n-, 2*, fb, +, dup, w@, 0, +, drop, if,
  FORTH [EXECUTE], dark, @, swap, +w!, ";", then, drop, ";"
 FORTH z@, [TEXT], i-nn, 2*, [EXECUTE], z, @, +, dup, @, swap, 1+, @, ";"
 FORTH ge4, [TEXT], n-f, ;# sets Z flag if abs(n) > 4
- FORTH [COMPILEWORD], abs, [EXECUTESHORT], -40001, [EXECUTE], fixed,
+ FORTH [COMPILEWORD], abs, [EXECUTESHORT], -40000, [EXECUTE], fixed,
  FORTH [COMPILEWORD], +, drop, -if, 0, drop, then, ";"
 FORTH four, [TEXT], n-, dup, z@, ge4, if, drop, drop, ";",
  FORTH [COMPILEWORD], then, ge4, if, drop, ";",
@@ -87,13 +87,17 @@ FORTH -zoom, [EXECUTE], xl, @, 2*, [EXECUTE], xl, !,
  FORTH [EXECUTE], yb, @, 2*, [EXECUTE], yb, !,
  FORTH [EXECUTE], yt, @, 2*, [EXECUTE], yt, !, 0, [EXECUTE], xspan, !, ";"
 FORTH left, [EXECUTE], xspan, @, [COMPILESHORT], 10, /, negate, dup,
- FORTH [EXECUTE], xl, @, +, ge4, if, drop, drop, ";", then, dup,
+ FORTH [EXECUTE], xl, @, +, ge4, if, drop, ";", then, dup,
  FORTH [EXECUTE], xl, +!, [EXECUTE], xr, +!, 0, [EXECUTE], xspan, !, ";"
 FORTH right, [EXECUTE], xspan, @, [COMPILESHORT], 10, /, dup,
- FORTH [EXECUTE], xr, @, +, ge4, if, drop, drop, ";", then, dup,
+ FORTH [EXECUTE], xr, @, +, ge4, if, drop, ";", then, dup,
  FORTH [EXECUTE], xl, +!, [EXECUTE], xr, +!, 0, [EXECUTE], xspan, !, ";"
-FORTH up, ";"
-FORTH down, ";"
+FORTH up, [EXECUTE], yspan, @, [COMPILESHORT], 10, /, dup,
+ FORTH [EXECUTE], yt, @, +, ge4, if, drop, ";", then, dup,
+ FORTH [EXECUTE], yt, +!, [EXECUTE], yb, +!, 0, [EXECUTE], xspan, !, ";"
+FORTH down, [EXECUTE], yspan, @, [COMPILESHORT], 10, /, negate, dup,
+ FORTH [EXECUTE], yb, @, +, ge4, if, drop, ";", then, dup,
+ FORTH [EXECUTE], yt, +!, [EXECUTE], yb, +!, 0, [EXECUTE], xspan, !, ";"
 FORTH nul, ";"
 FORTH h, pad, nul, accept, -zoom, +zoom,
  FORTH [COMPILEWORD], nul, nul, nul, nul,  nul, nul, nul, nul,
