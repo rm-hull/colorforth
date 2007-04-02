@@ -40,22 +40,28 @@ FORTH four, [TEXT], n-, dup, z@, ge4, if, drop, drop, ";",
  FORTH [COMPILEWORD], then, dup, z@, dup, fx*, ge4, if, drop, drop, ";"
  FORTH [COMPILEWORD], then, dup, fx*, ge4, if, drop, ";"
  FORTH [COMPILEWORD], then, z@, dup, fx*, swap, dup, fx*, +, ge4, ";"
+FORTH z!, [TEXT], nni-, 2*, [EXECUTE], z, @, +, dup, push, 1+, !, pop, !, ";"
+FORTH x0, [COMPILELONGHEX], 10000000, hp, */, ;# scale to A(3,28) fixed
+ FORTH [EXECUTE], xspan, @, fx*, [EXECUTE], xl, @, +, ";"
 FORTH [EXECUTESHORT], 2, [EXECUTE], +load,
  FORTH [EXECUTESHORT], 4, [EXECUTE], +load
  FORTH [EXECUTE], ok, [EXECUTE], h
 BLOCK 65
+FORTH zlen, helper, word, returns, length, of, z, array
 FORTH allot, grabs, space, at, [COMPILEWORD], here, and, returns, that, "address;", z, points, to, the, array, of, values, as, generated, by, "z**2+z0"
-FORTH [TEXT], xl, xr, yt, yb, are, the, start, limits, mapped, by, the, [TEXTCAPITALIZED], cartesian, "grid;", xspan, and, yspan, hold, the, x, and, y, ranges
-FORTH z0, we, left, an, extra, space, at, end, of, [COMPILEWORD], z, array, for, z0, [TEXTALLCAPS], aka, c, in, z**2+c
-FORTH z**2, the, square, of, complex, number, "a,", "b", is,  a**2, -, b**2, ",", 2a*b
-FORTH iter, iterates, over, the, array, updating, continuously
-FORTH init, initializes, variables
-FORTH ok, sets, the, display, and, starts, the, generator
-
+FORTH abs, absolute, value
+FORTH fixed, convert, to, fixed, point
+FORTH clear, wipes, out, the, [COMPILEWORD], z, array, and, clears, screen
+FORTH reinit, sets, [COMPILEWORD], xspan, and, [COMPILEWORD], yspan
+FORTH init, sets, screen, boundaries, based, on, zoom, and, pan, settings
+FORTH fb, returns, framebuffer, byte, address
+FORTH darker, changes, pixel, color
+FORTH z@, returns, complex, number, at, specified, index
+FORTH ge4, checks, if, fixed-point, number, above, 4
+FORTH four, check, if, complex, number, above, 4
+FORTH z!, stores, complex, number, at, specified, index
+FORTH x0, creates, real, part, of, complex, number, at, specified, index
 BLOCK 66
-FORTH z!, [TEXT], nni-, 2*, [EXECUTE], z, @, +, dup, push, 1+, !, pop, !, ";"
-FORTH x0, [COMPILELONGHEX], 10000000, hp, */, ;# scale to A(3,28) fixed
- FORTH [EXECUTE], xspan, @, fx*, [EXECUTE], xl, @, +, ";"
 FORTH y0, [COMPILELONGHEX], 10000000, vp, */, ;# make fixed-point number
  FORTH [EXECUTE], yspan, @, fx*, negate, [EXECUTE], yt, @, +, ";"
 FORTH z0, [TEXT], -a, [EXECUTE], z, [EXECUTE], @, [EXECUTE], zlen,
@@ -76,8 +82,6 @@ FORTH iter,
  FORTH [EXECUTE], pixel, @, update,
  FORTH [EXECUTE], pixel, @, 1+, [EXECUTE], hp, [EXECUTE], vp, [EXECUTE], *,
  FORTH [COMPILEWORD], mod, [EXECUTE], pixel, !, next, ";"
-BLOCK 67
-BLOCK 68
 FORTH +zoom, [EXECUTE], xl, @, 2/, [EXECUTE], xl, !,
  FORTH [EXECUTE], xr, @, 2/, [EXECUTE], xr, !, 
  FORTH [EXECUTE], yb, @, 2/, [EXECUTE], yb, !,
@@ -92,6 +96,19 @@ FORTH left, [EXECUTE], xspan, @, [COMPILESHORT], 10, /, negate, dup,
 FORTH right, [EXECUTE], xspan, @, [COMPILESHORT], 10, /, dup,
  FORTH [EXECUTE], xr, @, +, ge4, if, drop, ";", then, dup,
  FORTH [EXECUTE], xl, +!, [EXECUTE], xr, +!, 0, [EXECUTE], xspan, !, ";"
+BLOCK 67
+FORTH y0, creates, imaginary, part, of, complex, number, at, specified, index
+FORTH z0, returns, address, of, temporary, storage, for, z0, the, constant, value, for, this, index
+FORTH z0!, generate, complex, number, z0, [TEXTALLCAPS], aka, c, of, z2+c, for, this, index
+FORTH z**2, the, square, of, complex, number, "a,", "b", is,  a**2, -, b**2, ",", 2a*b
+FORTH z2+c, calculate, z**2, +, c
+FORTH update, z, and, pixel, if, not, already, past, the, limit
+FORTH iter, iterates, over, the, array, updating, continuously
+FORTH +zoom, zooms, in, 2, times, closer
+FORTH -zoom, zooms, out
+FORTH left, pans, left, 1/10, of, screen
+FORTH right, pans, right
+BLOCK 68
 FORTH up, [EXECUTE], yspan, @, [COMPILESHORT], 10, /, dup,
  FORTH [EXECUTE], yt, @, +, ge4, if, drop, ";", then, dup,
  FORTH [EXECUTE], yt, +!, [EXECUTE], yb, +!, 0, [EXECUTE], xspan, !, ";"
@@ -115,7 +132,8 @@ FORTH h, pad, nul, accept, -zoom, +zoom,
 FORTH  ok, init, show, [EXECUTE], xspan, @, -1, +, drop, -if,
  FORTH [COMPILEWORD], reinit, clear, then, iter, keyboard, ";"
 BLOCK 69
-FORTH clear, wipes, out, the, [COMPILEWORD], z, array, and, clears, screen
-FORTH +zoom, zooms, in, 2, times, closer
+FORTH up, pans, upwards
+FORTH down, pans, downwards
 FORTH h, sets, up, keypad
+FORTH ok, sets, the, display, and, starts, the, generator
 BLOCK
