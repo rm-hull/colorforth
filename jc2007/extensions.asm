@@ -115,3 +115,22 @@ pwstore: ;# plus word store
  add [edx], ax
  drop
  ret
+
+zero: ;# na- erase words of RAM
+ push edi
+ push ecx
+ mov edi, eax
+ shl edi, 2 ;# convert word address to byte address
+ drop
+ mov ecx, eax
+ xor eax, eax
+ rep stosd
+ drop
+ pop ecx
+ pop edi
+ ret
+
+herestore: ;# a- directly manipulate the 'here' pointer
+ mov h + loadaddr, eax
+ drop
+ ret

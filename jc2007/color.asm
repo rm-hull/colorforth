@@ -525,6 +525,10 @@ jump: pop  edx
     drop
     jmp  edx
 
+plusload:
+    mov  ebx, edi
+    shr  ebx, 10-2 ;# divide to make block offset
+    add  eax, ebx
 load: shl  eax, 10-2 ;# multiply by 256 longwords, same as 1024 bytes
     push edi ;# save EDI register, we need it for the inner interpreter loop
     mov  edi, eax
@@ -690,7 +694,7 @@ down: dup_
     mov  eax, edx
     add  edx, 3*0x10000+0x8000-ih+3
     mov  xy + loadaddr, edx
-zero: test eax, eax
+0:  test eax, eax ;# label never used, was 'ZERO' in MASM sources
     mov  eax, 0
     jnz  0f
     inc  eax
@@ -1662,8 +1666,10 @@ forth0:
     packword emit, digit, 2emit, ., h., h.n, cr, space, down, edit
     packword e, lm, rm, graphic, text, keyboard, debug, at, +at, xy
     packword fov, fifo, box, line, color, octant, sp, last, unpack, vframe
+    ;# look in extensions.asm for most of the following new words
     packword buffer, off, rgb, hp, vp, iw, ih, hc, vc, fx*
-    packword cells, nan, 1-, 1+, 1, -1, w@, w!, +w!
+    packword cells, nan, 1-, 1+, 1, -1, w@, w!, +w!, +load
+    packword here!, zero,
 forth1:
     .rept 512 - ((.-forth1)/4) .long 0; .endr
 macro2:
@@ -1677,8 +1683,10 @@ forth2:
     long emit, edig, emit2, dot10, hdot, hdotn, cr, space, down, edit
     long e, lms, rms, graphic, text1, keyboard, debug, at, pat, xy_
     long fov_, fifof, box, line, color, octant, sps, last_, unpack, vframe
+    ;# look in extensions.asm for most of the following new words
     long buffer, off, rgb, hp_, vp_, iw_, ih_, hc_, vc_, fx_mul
-    long cells, nan_, oneless, oneplus, one, minus1, wat, wstore, pwstore
+    long cells, nan_, oneless, oneplus, one, minus1,wat,wstore,pwstore,plusload
+    long herestore, zero
 0:
     ;# .rept 512 - ((.-0b)/4) .long 0; .endr ;# room for new definitions
 
