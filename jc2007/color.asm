@@ -132,6 +132,7 @@
 .code32 ;# protected-mode code from here on out
 warm: dup_
 start1:
+    mov  byte ptr [es: 0xb8000 | (upper_right - 8)], 'S'
     call setgraphics
     call show0 ;# set up 'main' task to draw screen
 ;# number of Forth words and number of macros

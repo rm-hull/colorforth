@@ -25,9 +25,10 @@ msdos: ;# this byte after the short jmp above is normally just padding
     .long 0       ;# hidden sectors
     .long 80*2*18 ;# sectors again
     .byte 0       ;# drive
+cylinder: .word 0
 .align 4
-cylinder: .long 0
-nc: .long 9 ;# forth+icons+blocks 24-161 ;# number of cylinders, 9 (out of 80)
+;# forth+icons+blocks 24-161 ;# number of cylinders, 9 (out of 80)
+nc:  .long 9 ;# needs to be on longword boundary, see nc_ in color.asm
 gdt: .word gdt_end - gdt0 - 1 ;# GDT limit
     .long gdt0 + loadaddr ;# pointer to start of table
 .align 8
@@ -45,7 +46,7 @@ gdt_end:
 start0:
     cmp  word ptr cs:0, 0x20cd ;# INT 20h at start of .com program header
     jnz  0f
-    inc  byte ptr msdos
+    dec  byte ptr [cs: msdos + 0x100]
 0:  cli
     push cs ;# need to set DS=CS, especially on VMWare, DS was 0x40
     pop  ds
@@ -59,7 +60,10 @@ start0:
     data32 call protected_mode
 .code32
     call a20 ;# set A20 gate to enable access to addresses with 1xxxxx
-    test byte ptr msdos + loadaddr, 0xff ;# boot from floppy?
+    mov  al, byte ptr msdos + loadaddr
+    mov  byte ptr [es: 0xb8000 | (upper_right - 8)], 'P'
+    add  byte ptr [es: 0xb8000 | (upper_right - 8)], al ;# makes it 'O' if DOS
+    or   al, al ;# boot from floppy?
     jz   0f  ;# continue if so...
 9:  mov  esi, godd ;# set up data stack pointer for 'god' task
     jmp  start1
@@ -74,13 +78,14 @@ cold:
     ;# in loading, making the bootblock unusable
     call read
     inc  byte ptr cylinder + loadaddr
-    mov  cx, nc + loadaddr ;# number of cylinders used
+    xor  cx, cx
+    mov  cl, nc + loadaddr ;# number of cylinders used
     dec  cx
 0:  push cx
     call read
-    mov  edx, dword ptr cylinder + loadaddr
-    call shownumber
     inc  byte ptr cylinder + loadaddr
+    mov  dx, word ptr cylinder + loadaddr
+    call shownumber
     pop  cx
     loop 0b
     call progress
@@ -128,32 +133,27 @@ shownumber: ;# alternate entry point, preload DX register
     push ax
     push bx
     push cx
-    push si
     push 0xb800 ;# video display RAM
     pop  es
-    mov  eax, ebp ;# get current address for locating digits string
-    shr  eax, 4
-    mov  ds, ax
     mov  cx, 4  ;# four digit address to display
     mov  bx, upper_right ;# corner of screen
-    xor  ax, ax ;# zero AX
 0:  mov  al, dl ;# get number as hex digit
     and  al, 0xf
-    mov  si, ax
-    mov  al, [digits + si]
+    add  al, (0x100 - 10) ;# will force a carry if > 9
+    jnc  1f
+    add  al, ('a' - '9' - 1)
+1:  add  al, ('9' + 1)
     mov  [es:bx], al ;# assumes ES=0xb800, text mode 3 video RAM
     shr  dx, 4 ;# next higher hex digit
     sub  bx, 2 ;# move to previous screen position
     loop 0b
     mov  ax, cs ;# restore segment registers
     mov  es, ax
-    mov  ds, ax
-    pop  si ;# restore registers
+    ;# restore registers
     pop  cx
     pop  bx
     pop  ax
     ret
-digits: .ascii "0123456789abcdef"
 
 /* this shouldn't be necessary if we're careful coding
 trap:  ;# handle interrupt 0xd, the "pseudo GPF"
