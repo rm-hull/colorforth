@@ -335,7 +335,9 @@ off:  ;# return loadaddr expressed in words
 setgraphics:
     call unreal_mode
 .code16
+    addr32 mov byte ptr [es: 0xb8000 | (upper_right - 8)], 'T'
     call graphicsmode
+    addr32 mov byte ptr [es: 0xb8000 | (upper_right - 8)], 'G'
     data32 call protected_mode
 .code32
     ret
