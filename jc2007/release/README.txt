@@ -1,15 +1,23 @@
-This is a demo of colorForth running under the Bochs-2.3 emulator. Install that
-first, downloading from bochs.sourceforge.net. This cfBochs installer assumes
-you've installed it under \Program Files\Bochs-2.3\.
+This is a demo of the latest colorForth using a linear VESA framebuffer and
+BIOS calls for floppy I/O. It includes a Mandelbrot set display application
+invoked as 'mandelbrot' from the startup screen.
 
-Because Bochs-2.3 doesn't have the same fullscreen support as the patched
-Bochs (that still comes in this package but is not used by the .bat file),
-this colorForth was built in 800x600 mode.
+You can download the floppy image, gzipped, or a Windows installer which
+creates desktop shortcuts for Bochs-2.3, QEMU 0.8.2, and VMware Player 1.0.3.
+The directories it assumes are, respectively, "\Program Files\Bochs-2.3",
+"\Program Files\QEMU\", and "\Program Files\VMware\VMware Player". If you
+chose other locations for your emulator installations, or don't have one or
+more of those, edit or delete the shortcuts as appropriate.
 
-Keystroke recognition is faster than under the patched Bochs in the cfBochs
-download, but still somewhat slow, so be patient. You might
-try changing the IPS (emulated instructions per second) in the bochsrc.bxrc
-file.
+For the floppy image, you can "burn" it to a floppy using:
+gunzip 1024x768.img.gz
+dd if=1024x768.img of=/dev/fd0  # from any GNU/Linux system including DSL
+
+The installer includes both screen sizes, 1024x768 and 800x600. The QEMU
+and WMware shortcuts use the 1024x768, and Bochs uses 800x600. You can, of
+course, edit the shortcuts or the cfbochs.bat files to change these defaults;
+be aware that Bochs may not be able to provide fullscreen mode for 1024x768
+and you will be missing part of the virtual screen.
 
 For documentation, see http://colorforth.com/ or search the web for 
 "colorforth tutorial".  No coordinated effort has really yet emerged, 
