@@ -2,34 +2,33 @@ BOCHS := /cygdrive/c/Program\ Files/Bochs-2.3
 BOCHS_SRC := /usr/src/bochs
 CF_SRC := ~/src
 BXSHARE := $(shell cygpath -w $(BOCHS))
-CFIMAGE := a.img
 TIMESTAMP := $(shell date +%Y%m%d%H%M)
 NSIS := /cygdrive/c/Program\ Files/NSIS/makensis.exe
 export
-cfbochs.zip: bochs.exe bochsdbg.exe a.img bochsrc.bxrc cfbochs.bat \
-	 README.txt a.img.gz
-	cp -f $+ cfBochs
-	zip -r $@ cfBochs
-a.img:	$(CF_SRC)/colorforth/jc2007/color.com
+cf_emu.exe: cf_emu.nsi LICENSE.rtf README.rtf 1024x768.ima 800x600.ima \
+ bochs.exe
+	$(NSIS) $<
+1024x768.ima: $(CF_SRC)/colorforth/jc2007/
+	cd $< && $(MAKE) newcode
 	dd if=/dev/zero of=$@ bs=1024 count=1440
-	dd if=$< of=$@ conv=notrunc
-a.img.gz: a.img
+	dd if=$</color.dat of=$@ conv=notrunc
+800x600.ima: $(CF_SRC)/colorforth/jc2007/
+	cd $< && $(MAKE) small
+	dd if=/dev/zero of=$@ bs=1024 count=1440
+	dd if=$</color.dat of=$@ conv=notrunc
+%.ima.gz: %.ima
 	gzip -c $< > $@
 set:
 	set
-test:	cfbochs.zip
-	cp $< /cygdrive/c/WINDOWS/Temp/
 clean:
-	rm -f *.exe a.img *.zip *.rtf cfBochs/* LICENSE.txt
+	rm -f *.exe a.ima *.zip *.rtf cfBochs/* LICENSE.txt *.zip
 %.exe:
 	cp -f $(BOCHS_SRC)/$@ .
-upload: cfbochs-jc2007.exe a.img.gz
+upload: cf_emu.exe 800x600.ima.gz 1024x768.ima.gz
 	for file in $+; do \
 	 ncftpput -C upload.sourceforge.net $$file \
 	  incoming/$(TIMESTAMP)-$$file; \
 	done
-cfbochs-jc2007.exe: cfbochs.nsi LICENSE.rtf README.rtf cfbochs.zip
-	$(NSIS) $<
 LICENSE.txt: NOLICENSE.txt /usr/src/bochs/COPYING
 	cat $+ > $@
 nsiscommands:

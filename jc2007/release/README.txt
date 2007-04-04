@@ -10,8 +10,8 @@ chose other locations for your emulator installations, or don't have one or
 more of those, edit or delete the shortcuts as appropriate.
 
 For the floppy image, you can "burn" it to a floppy using:
-gunzip 1024x768.img.gz
-dd if=1024x768.img of=/dev/fd0  # from any GNU/Linux system including DSL
+gunzip 1024x768.ima.gz
+dd if=1024x768.ima of=/dev/fd0  # from any GNU/Linux system including DSL
 
 The installer includes both screen sizes, 1024x768 and 800x600. The QEMU
 and WMware shortcuts use the 1024x768, and Bochs uses 800x600. You can, of

@@ -1,6 +1,6 @@
 ; pcdinst.nsi
 ;
-; Installer for cfBochs.
+; Installer for cfEmu.
 
 ;--------------------------------
 
@@ -14,10 +14,10 @@ SetCompress off
 
 ;--------------------------------
 
-Name "cfBochs"
+Name "cfEmu"
 Caption "colorForth in a Bochs"
 Icon "${NSISDIR}\Contrib\Graphics\Icons\nsis1-install.ico"
-OutFile "cfbochs-jc2007.exe"
+OutFile "cf_emu.exe"
 
 SetDateSave on
 SetDatablockOptimize on
@@ -60,16 +60,12 @@ ShowInstDetails show
 
 Section "" ; empty string makes it hidden, so would starting with -
 
-  IfFileExists $PROGRAMFILES\Bochs-2.3\BIOS-bochs-latest continue 0
-   MessageBox MB_OK "You need Bochs-2.3 to be installed in order to run cfBochs. Install it from http://sourceforge.net/projects/bochs/, then re-run this installer."
-   Quit
-  continue:
   ; write registry string
   WriteRegStr HKLM SOFTWARE\net\sourceforge\colorforth "Install_Dir" "$INSTDIR"
 
   ; write uninstall strings
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\cfBochs" "DisplayName" "cfBochs (remove only)"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\cfBochs" "UninstallString" '"$INSTDIR\unwise.exe"'
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\cfEmu" "DisplayName" "cfEmu (remove only)"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\cfEmu" "UninstallString" '"$INSTDIR\unwise.exe"'
 
   SetOutPath $INSTDIR
   CreateDirectory "$INSTDIR"
@@ -82,20 +78,22 @@ Section "Copy Files"
   SectionIn 1
 
   SetOutPath $INSTDIR
-  File /a "bochs.exe" "bochsrc.bxrc" "cfbochs.bat" "a.img" "LICENSE.rtf" "README.rtf"
+  File /a "bochs.exe" "bochsrc.bxrc" "800x600.bat" "1024x768.bat" "800x600.ima" "1024x768.ima" "LICENSE.rtf" "README.rtf" "cf.vmx" "cfqemu.bat"
 
 SectionEnd
 
 Section "Create Shortcuts"
   
   SectionIn 1
-  CreateDirectory "$SMPROGRAMS\cfBochs"
+  CreateDirectory "$SMPROGRAMS\cfEmu"
   SetOutPath $INSTDIR ; for working directory
-  CreateShortCut "$SMPROGRAMS\cfBochs\cfBochs.lnk" "$INSTDIR\cfbochs.bat" "" "$INSTDIR\bochs.exe" 0
-  CreateShortCut "$SMPROGRAMS\cfBochs\Uninstall cfBochs.lnk" "$INSTDIR\unwise.exe" ; use defaults for parameters, icon, etc.
-  CreateShortCut "$SMPROGRAMS\cfBochs\License.lnk" "$INSTDIR\LICENSE.rtf" "" "" 
-  CreateShortCut "$SMPROGRAMS\cfBochs\Readme.lnk" "$INSTDIR\README.rtf" "" "" 
-  CreateShortCut "$DESKTOP\cfBochs.lnk" "$INSTDIR\cfbochs.bat" "" "$INSTDIR\bochs.exe" 0
+  CreateShortCut "$DESKTOP\cfBochs.lnk" "$INSTDIR\800x600.bat" "" "$INSTDIR\bochs.exe" 0
+  CreateShortCut "$DESKTOP\cfBochs fullscreen.lnk" "$INSTDIR\1024x768.bat" "" "$INSTDIR\bochs.exe" 0
+  CreateShortCut "$DESKTOP\colorforth on VMware.lnk" "$INSTDIR\cf.vmx" "" "\Program Files\VMware\VMware Player\vmplayer.exe" 0
+  CreateShortCut "$DESKTOP\colorForth on QEMU.lnk" "$INSTDIR\cfqemu.bat" "" "\Program Files\QEMU\qemu.exe" 0
+  CreateShortCut "$SMPROGRAMS\cfEmu\Uninstall cfEmu.lnk" "$INSTDIR\unwise.exe" ; use defaults for parameters, icon, etc.
+  CreateShortCut "$SMPROGRAMS\cfEmu\License.lnk" "$INSTDIR\LICENSE.rtf" "" "" 
+  CreateShortCut "$SMPROGRAMS\cfEmu\Readme.lnk" "$INSTDIR\README.rtf" "" "" 
 
 SectionEnd
 
@@ -103,7 +101,7 @@ SectionEnd
 
 ; Uninstaller
 
-UninstallText "This will uninstall cfBochs. Hit next to continue."
+UninstallText "This will uninstall cfEmu. Hit next to continue."
 UninstallIcon "${NSISDIR}\Contrib\Graphics\Icons\nsis1-uninstall.ico"
 
 Section "Uninstall"
@@ -111,19 +109,26 @@ Section "Uninstall"
   DeleteRegKey HKLM "SOFTWARE\net\sourceforge\colorforth"
   Delete "$INSTDIR\unwise.exe"
   Delete "$INSTDIR\bochs.exe"
-  Delete "$INSTDIR\cfbochs.bat"
+  Delete "$INSTDIR\800x600.bat"
+  Delete "$INSTDIR\1024x768.bat"
   Delete "$INSTDIR\bochsrc.bxrc"
-  Delete "$INSTDIR\a.img"
+  Delete "$INSTDIR\800x600.ima"
+  Delete "$INSTDIR\1024x768.ima"
   Delete "$INSTDIR\README.rtf"
   Delete "$INSTDIR\LICENSE.rtf"
   Delete "$INSTDIR\cfBochs.log"
+  Delete "$INSTDIR\cf.vmx"
+  Delete "$INSTDIR\cfqemu.bat"
   Delete "$DESKTOP\cfBochs.lnk"
-  Delete "$SMPROGRAMS\cfBochs\Uninstall cfBochs.lnk"
-  Delete "$SMPROGRAMS\cfBochs\cfBochs.lnk"
-  Delete "$SMPROGRAMS\cfBochs\License.lnk"
-  Delete "$SMPROGRAMS\cfBochs\Readme.lnk"
-  RMDir "$SMPROGRAMS\cfBochs"
+  Delete "$DESKTOP\cfBochs fullscreen.lnk"
+  Delete "$DESKTOP\cf on VMware.lnk"
+  Delete "$DESKTOP\cf on QEMU.lnk"
+  Delete "$SMPROGRAMS\cfEmu\Uninstall cfEmu.lnk"
+  Delete "$SMPROGRAMS\cfEmu\cfBochs.lnk"
+  Delete "$SMPROGRAMS\cfEmu\License.lnk"
+  Delete "$SMPROGRAMS\cfEmu\Readme.lnk"
+  RMDir "$SMPROGRAMS\cfEmu"
   RMDir "$INSTDIR"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\cfBochs"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\cfEmu"
 
 SectionEnd
