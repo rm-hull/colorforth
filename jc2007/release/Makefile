@@ -21,7 +21,7 @@ cf_emu.exe: cf_emu.nsi LICENSE.rtf README.rtf 1024x768.ima 800x600.ima \
 set:
 	set
 clean:
-	rm -f *.exe a.ima *.zip *.rtf cfBochs/* LICENSE.txt *.zip
+	rm -f *.exe *.ima *.zip *.rtf cfBochs/* LICENSE.txt *.zip
 %.exe:
 	cp -f $(BOCHS_SRC)/$@ .
 upload: cf_emu.exe 800x600.ima.gz 1024x768.ima.gz

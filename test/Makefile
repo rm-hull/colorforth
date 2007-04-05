@@ -52,7 +52,7 @@ qemu: cfqemu.bat b.img
 	-cp $+ "$(QEMU)/" && cd "$(QEMU)" && cmd /c $<
 	cp "$(QEMU)/b.img" .
 clean: vmclean
-	rm -f new*.txt old*.txt *.img
+	rm -f new*.txt old*.txt *.img *-core.gz
 vmclean:
 	rm -f cf.{vmss,vmsd} *.log *.vmem *.lck *.nvram *.dbg
 set:

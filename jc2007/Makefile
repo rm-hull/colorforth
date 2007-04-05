@@ -101,6 +101,7 @@ set:
 	cf2text $< > $@
 clean:
 	rm -f *.{o,bin,out,dmp,lst}
+	cd release && $(MAKE) clean
 errors:
 	$(GAS) color.asm 2>&1 | ./show_error_lines.sh
 errorcount:
