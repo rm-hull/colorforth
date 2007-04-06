@@ -7,7 +7,7 @@ FORTH allot, [TEXT], n-a, align, here, dup, push, +, here!, pop, ";"
  FORTH [EXECUTE], allot, [EXECUTE], 1, [EXECUTE], cells, [EXECUTE], /,
  FORTH [EXECUTE], z, [EXECUTE], !
 FORTH abs, 0, or, -if, negate, then, ";"
-FORTH fixed, [EXECUTELONGHEX], 10000000, [EXECUTESHORT], 10000, [EXECUTE], /, *, ";"
+FORTH fixed, [COMPILELONGHEX], 10000000, [COMPILESHORT], 10000, */, ";"
 FORTH clear, blue, screen, zlen, [EXECUTE], z, @, zero, 0,
  FORTH [EXECUTE], pixel, !, ";"
 FORTH reinit,
