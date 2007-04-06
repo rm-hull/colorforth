@@ -85,17 +85,27 @@ FORTH iter,
  FORTH [COMPILEWORD], mod, [EXECUTE], pixel, !, next, ";"
 FORTH +zoom,
  FORTH [EXECUTE], zoom, @, 2*, [EXECUTE], zoom, !,
- FORTH [EXECUTE], xl, @, 2/, [EXECUTE], xl, !,
- FORTH [EXECUTE], xr, @, 2/, [EXECUTE], xr, !, 
- FORTH [EXECUTE], yb, @, 2/, [EXECUTE], yb, !,
- FORTH [EXECUTE], yt, @, 2/, [EXECUTE], yt, !, 0, [EXECUTE], xspan, !, ";"
+ FORTH [EXECUTE], xspan, @, [COMPILESHORT], 4, /,
+ FORTH [EXECUTE], xr, @, [EXECUTE], xl, @, +, 2/,
+ FORTH [COMPILEWORD], over, over, +, [EXECUTE], xr, !,
+ FORTH [COMPILEWORD], swap, negate, +, [EXECUTE], xl, !,
+ FORTH [EXECUTE], yspan, @, [COMPILESHORT], 4, /,
+ FORTH [EXECUTE], yt, @, [EXECUTE], yb, @, +, 2/,
+ FORTH [COMPILEWORD], over, over, +, [EXECUTE], yt, !,
+ FORTH [COMPILEWORD], swap, negate, +, [EXECUTE], yb, !,
+ FORTH [COMPILEWORD], 0, [EXECUTE], xspan, !, ;# force reinit
+ FORTH [COMPILEWORD], ";"
 FORTH -zoom,
  FORTH [EXECUTE], zoom, @, -1, +, drop, if,
  FORTH [EXECUTE], zoom, @, 2/, [EXECUTE], zoom, !,
- FORTH [EXECUTE], xl, @, 2*, [EXECUTE], xl, !,
- FORTH [EXECUTE], xr, @, 2*, [EXECUTE], xr, !,
- FORTH [EXECUTE], yb, @, 2*, [EXECUTE], yb, !,
- FORTH [EXECUTE], yt, @, 2*, [EXECUTE], yt, !,
+ FORTH [EXECUTE], xspan, @,  ;# expanding by two, so add it to both sides
+ FORTH [EXECUTE], xr, @, [EXECUTE], xl, @, +, 2/,
+ FORTH [COMPILEWORD], over, over, +, [EXECUTE], xr, !,
+ FORTH [COMPILEWORD], swap, negate, +, [EXECUTE], xl, !,
+ FORTH [EXECUTE], yspan, @,
+ FORTH [EXECUTE], yt, @, [EXECUTE], yb, @, +, 2/,
+ FORTH [COMPILEWORD], over, over, +, [EXECUTE], yt, !,
+ FORTH [COMPILEWORD], swap, negate, +, [EXECUTE], yb, !,
  FORTH [COMPILEWORD], 0, [EXECUTE], xspan, !, ";", then, ";"
 BLOCK 67
 FORTH y0, creates, imaginary, part, of, complex, number, at, specified, index
