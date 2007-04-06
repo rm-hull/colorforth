@@ -1,5 +1,5 @@
 BLOCK 64
-FORTH [TEXTCAPITALIZED], mandelbrot, [TEXT], display, [EXECUTE], empty, [EXECUTE], forth, [VARIABLE], xl, [BINARY], 0, [VARIABLE], xr, [BINARY], 0, [VARIABLE], yt, [BINARY], 0, [VARIABLE], yb, [BINARY], 0, [VARIABLE], xspan, [BINARY], 0, [VARIABLE], yspan, [BINARY], 0, [VARIABLE], dark, [BINARY], 0, [VARIABLE], pixel, [BINARY], 0, [VARIABLE], count, [BINARY], 0
+FORTH [TEXTCAPITALIZED], mandelbrot, [TEXT], display, [EXECUTE], empty, [EXECUTE], forth, [VARIABLE], xl, [BINARY], 0, [VARIABLE], xr, [BINARY], 0, [VARIABLE], yt, [BINARY], 0, [VARIABLE], yb, [BINARY], 0, [VARIABLE], xspan, [BINARY], 0, [VARIABLE], yspan, [BINARY], 0, [VARIABLE], dark, [BINARY], 0, [VARIABLE], pixel, [BINARY], 0, [VARIABLE], count, [BINARY], 0, [VARIABLE], zoom, [BINARY], 0
 FORTH zlen, [EXECUTE], hp, [EXECUTE], vp, [EXECUTE], *, [EXECUTE], 1+,
  FORTH [EXECUTE], dup, [EXECUTE], +, ";"
 FORTH allot, [TEXT], n-a, align, here, dup, push, +, here!, pop, ";"
@@ -26,6 +26,7 @@ FORTH init, [TEXT], -2.1,
  FORTH [EXECUTESHORT], -12000, [EXECUTE], fixed, nop, [EXECUTE], yb, "!",
  FORTH [COMPILESHORT], -1, [EXECUTE], dark, !
  FORTH [COMPILESHORT], 5000, [EXECUTE], count, !
+ FORTH [COMPILESHORT], 2, [EXECUTE], zoom, !
  FORTH [COMPILEWORD], ";"
 FORTH fb, [TEXT], -a, [TEXT], framebuffer, [EXECUTE], vframe,
  FORTH [EXECUTESHORT], 4, [EXECUTE], *, ";"
@@ -82,20 +83,20 @@ FORTH iter,
  FORTH [EXECUTE], pixel, @, update,
  FORTH [EXECUTE], pixel, @, 1+, [EXECUTE], hp, [EXECUTE], vp, [EXECUTE], *,
  FORTH [COMPILEWORD], mod, [EXECUTE], pixel, !, next, ";"
-FORTH +zoom, [EXECUTE], xl, @, 2/, [EXECUTE], xl, !,
+FORTH +zoom,
+ FORTH [EXECUTE], zoom, @, 2*, [EXECUTE], zoom, !,
+ FORTH [EXECUTE], xl, @, 2/, [EXECUTE], xl, !,
  FORTH [EXECUTE], xr, @, 2/, [EXECUTE], xr, !, 
  FORTH [EXECUTE], yb, @, 2/, [EXECUTE], yb, !,
  FORTH [EXECUTE], yt, @, 2/, [EXECUTE], yt, !, 0, [EXECUTE], xspan, !, ";"
-FORTH -zoom, [EXECUTE], xl, @, 2*, [EXECUTE], xl, !,
+FORTH -zoom,
+ FORTH [EXECUTE], zoom, @, -1, +, drop, if,
+ FORTH [EXECUTE], zoom, @, 2/, [EXECUTE], zoom, !,
+ FORTH [EXECUTE], xl, @, 2*, [EXECUTE], xl, !,
  FORTH [EXECUTE], xr, @, 2*, [EXECUTE], xr, !,
  FORTH [EXECUTE], yb, @, 2*, [EXECUTE], yb, !,
- FORTH [EXECUTE], yt, @, 2*, [EXECUTE], yt, !, 0, [EXECUTE], xspan, !, ";"
-FORTH left, [EXECUTE], xspan, @, [COMPILESHORT], 10, /, negate, dup,
- FORTH [EXECUTE], xl, @, +, ge4, if, drop, ";", then, dup,
- FORTH [EXECUTE], xl, +!, [EXECUTE], xr, +!, 0, [EXECUTE], xspan, !, ";"
-FORTH right, [EXECUTE], xspan, @, [COMPILESHORT], 10, /, dup,
- FORTH [EXECUTE], xr, @, +, ge4, if, drop, ";", then, dup,
- FORTH [EXECUTE], xl, +!, [EXECUTE], xr, +!, 0, [EXECUTE], xspan, !, ";"
+ FORTH [EXECUTE], yt, @, 2*, [EXECUTE], yt, !,
+ FORTH [COMPILEWORD], 0, [EXECUTE], xspan, !, ";", then, ";"
 BLOCK 67
 FORTH y0, creates, imaginary, part, of, complex, number, at, specified, index
 FORTH z0, returns, address, of, temporary, storage, for, z0, the, constant, value, for, this, index
@@ -106,9 +107,13 @@ FORTH update, z, and, pixel, if, not, already, past, the, limit
 FORTH iter, iterates, over, the, array, updating, continuously
 FORTH +zoom, zooms, in, 2, times, closer
 FORTH -zoom, zooms, out
-FORTH left, pans, left, 1/10, of, screen
-FORTH right, pans, right
 BLOCK 68
+FORTH left, [EXECUTE], xspan, @, [COMPILESHORT], 10, /, negate, dup,
+ FORTH [EXECUTE], xl, @, +, ge4, if, drop, ";", then, dup,
+ FORTH [EXECUTE], xl, +!, [EXECUTE], xr, +!, 0, [EXECUTE], xspan, !, ";"
+FORTH right, [EXECUTE], xspan, @, [COMPILESHORT], 10, /, dup,
+ FORTH [EXECUTE], xr, @, +, ge4, if, drop, ";", then, dup,
+ FORTH [EXECUTE], xl, +!, [EXECUTE], xr, +!, 0, [EXECUTE], xspan, !, ";"
 FORTH up, [EXECUTE], yspan, @, [COMPILESHORT], 10, /, dup,
  FORTH [EXECUTE], yt, @, +, ge4, if, drop, ";", then, dup,
  FORTH [EXECUTE], yt, +!, [EXECUTE], yb, +!, 0, [EXECUTE], xspan, !, ";"
@@ -132,6 +137,8 @@ FORTH h, pad, nul, nul, accept, nul,
 FORTH  ok, init, show, [EXECUTE], xspan, @, -1, +, drop, -if,
  FORTH [COMPILEWORD], reinit, clear, then, iter, keyboard, ";"
 BLOCK 69
+FORTH left, pans, left, 1/10, of, screen
+FORTH right, pans, right
 FORTH up, pans, upwards
 FORTH down, pans, downwards
 FORTH h, sets, up, keypad
