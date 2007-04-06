@@ -116,14 +116,14 @@ FORTH down, [EXECUTE], yspan, @, [COMPILESHORT], 10, /, negate, dup,
  FORTH [EXECUTE], yb, @, +, ge4, if, drop, ";", then, dup,
  FORTH [EXECUTE], yt, +!, [EXECUTE], yb, +!, 0, [EXECUTE], xspan, !, ";"
 FORTH nul, ";"
-FORTH h, pad, nul, accept, -zoom, +zoom,
+FORTH h, pad, nul, nul, accept, nul,
+ FORTH [COMPILEWORD], nul, nul, nul, nul,  left, up, down, right,
+ FORTH [COMPILEWORD], -zoom, nul, nul, +zoom, nul, nul, nul, nul,
  FORTH [COMPILEWORD], nul, nul, nul, nul,  nul, nul, nul, nul,
- FORTH [COMPILEWORD], left, up, down, right, nul, nul, nul, nul,
- FORTH [COMPILEWORD], nul, nul, nul, nul,  nul, nul, nul, nul,
- FORTH [EXECUTESHORTHEX], 2b2325 [EXECUTE], ",",
+ FORTH [EXECUTESHORTHEX], 250000 [EXECUTE], ",",
  FORTH [EXECUTESHORT], 0, [EXECUTE], ","
- FORTH [EXECUTESHORT], 0, [EXECUTE], ",",
  FORTH [EXECUTELONGHEX], 110160c, [EXECUTE], ","
+ FORTH [EXECUTELONGHEX], 2b000023, [EXECUTE], ","
  FORTH [EXECUTESHORT], 0, [EXECUTE], ",",
  FORTH [EXECUTESHORT], 0, [EXECUTE], ","
  FORTH [EXECUTESHORT], 0, [EXECUTE], ","
