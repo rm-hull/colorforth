@@ -142,6 +142,17 @@ FORTH h, pad, nul, nul, accept, nul,
  FORTH [EXECUTESHORT], 0, [EXECUTE], ",",
  FORTH [EXECUTESHORT], 0, [EXECUTE], ","
  FORTH [EXECUTESHORT], 0, [EXECUTE], ","
+FORTH 0., [TEXT], n-, [COMPILESHORTHEX], 18, +, emit, ";"
+FORTH fx., [TEXT], n-, ;# show fixed-point as float
+ FORTH [COMPILELONGHEX], -1, and, -if,
+ FORTH [COMPILESHORTHEX], 23, [TEXT], -, emit, negate, then,
+ FORTH [COMPILELONGHEX], 10000000, /mod, 0.,
+ FORTH [COMPILESHORTHEX], 25, [TEXT], ., emit,
+ FORTH [COMPILELONGHEX], 10000000, [COMPILESHORT], 5, for,
+ FORTH [COMPILESHORT], 5, +, [TEXT], round, [TEXT], up,
+ FORTH [COMPILESHORT], 10, /, swap,
+ FORTH [COMPILEWORD], over, /mod, 0., swap, next, drop, drop, space,
+ FORTH [COMPILEWORD], ";"
 ;# put "show" before "blue, screen" for debugging; after for raster graphics
 ;# actually, the latter doesn't work with vmware when "ok'd" from source
 FORTH  ok, init, show, [EXECUTE], xspan, @, -1, +, drop, -if,
@@ -149,6 +160,8 @@ FORTH  ok, init, show, [EXECUTE], xspan, @, -1, +, drop, -if,
  FORTH [COMPILEWORD], 0, [EXECUTE], vc, [EXECUTESHORT], -2, [EXECUTE], +,
  FORTH [EXECUTE], ih, [EXECUTE], *, at,
  FORTH [COMPILESHORT], 45, [TEXT], *, emit, [EXECUTE], zoom, @, .,
+ FORTH [EXECUTE], xr, @, [EXECUTE], xl, @, +, 2/, fx.,
+ FORTH [EXECUTE], yt, @, [EXECUTE], yb, @, +, 2/, fx.,
  FORTH [COMPILEWORD], ";"
 BLOCK 69
 FORTH left, pans, left, 1/10, of, screen
