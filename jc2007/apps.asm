@@ -145,7 +145,11 @@ FORTH h, pad, nul, nul, accept, nul,
 ;# put "show" before "blue, screen" for debugging; after for raster graphics
 ;# actually, the latter doesn't work with vmware when "ok'd" from source
 FORTH  ok, init, show, [EXECUTE], xspan, @, -1, +, drop, -if,
- FORTH [COMPILEWORD], reinit, clear, then, iter, keyboard, ";"
+ FORTH [COMPILEWORD], reinit, clear, then, iter, keyboard,
+ FORTH [COMPILEWORD], 0, [EXECUTE], vc, [EXECUTESHORT], -2, [EXECUTE], +,
+ FORTH [EXECUTE], ih, [EXECUTE], *, at,
+ FORTH [COMPILESHORT], 45, [TEXT], *, emit, [EXECUTE], zoom, @, .,
+ FORTH [COMPILEWORD], ";"
 BLOCK 69
 FORTH left, pans, left, 1/10, of, screen
 FORTH right, pans, right

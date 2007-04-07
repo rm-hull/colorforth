@@ -134,3 +134,22 @@ herestore: ;# a- directly manipulate the 'here' pointer
  mov h + loadaddr, eax
  drop
  ret
+
+trap: ;# this isn't working yet, don't use!
+ lidt [idt + loadaddr]
+ ;# we don't enable interrupts (cli) so we just get exceptions
+ ret
+
+divide_error:
+ hlt ;# obviously needs to be fleshed out a little more!
+
+idt:
+ .word idt_end - idt0 - 1
+ .long loadaddr + idt0
+idt0:
+ .word divide_error + loadaddr
+ .word code32p
+ .word 0
+ .byte 0x8e ;# 32-bit Ring 0 interrupt gate
+ .word 0
+idt_end:
