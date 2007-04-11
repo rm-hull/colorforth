@@ -41,40 +41,6 @@ cells: ;# (n-n) return number of bytes in a number of cells
 .equ nan, 0x80000000 ;# use minimum integer as NaN indicator
 nan_: highlevel nan ;# Not a Number for use in fixed-point arithmetic
 
-fx_mul: ;# fixed-point A(3,28) multiplication
- ;# for notation, see http://home.earthlink.net/~yatescr/fp.pdf
- ;# FIXME, get rid of this, make */ set flags for overrun instead
- push ecx ;# save registers which CM indicates have special uses
- push edx
- xor ebx, ebx ;# clear EBX register, use it for testing
- mov edx, eax ;# get multiplicand from TOS
- drop ;# now get multiplier
- imul edx ;# 64-bit signed multiplication
- ;# now the high-order 32 bits are in EDX, and the low-order in EAX
- ;# we need to shift the whole result right by 28 bits, which is
- ;# the same as rotating the top 4 bits of EAX into EDX
- mov ecx, 4
- test edx, edx
- jns 0f
- dec ebx ;# set EBX to -1 to check for overflow/carry
- ;# can't rely on processor flag bits for any of this; they are set based on
- ;# the low 32 bits of the result in EAX, hardly useful
-0: ;# set up loop to adjust result to fit
- rol eax
- rol edx
- rol ebx ;# any carry bit goes into EBX, which should still be same when done
- loop 0b
- test ebx, ebx ;# see if it's either 0 or -1; anything else indicates error
- mov eax, edx  ;# result must be returned in EAX (Top Of Stack)
- pop edx
- pop ecx
- jz 9f ;# successful, return with valid result in EAX
- inc ebx ;# was it -1?
- jz 9f ;# if so, still OK
- mov eax, nan  ;# Not a Number
-9: ;# done, for better or worse; Z flag and NaN both can be used to check
- ret
-
 oneplus:
  inc eax
  ret
