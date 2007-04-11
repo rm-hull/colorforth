@@ -135,21 +135,19 @@ herestore: ;# a- directly manipulate the 'here' pointer
  drop
  ret
 
-trap: ;# this isn't working yet, don't use!
- lidt [idt + loadaddr]
- ;# we don't enable interrupts (cli) so we just get exceptions
- ret
-
-divide_error:
- hlt ;# obviously needs to be fleshed out a little more!
-
-idt:
- .word idt_end - idt0 - 1
- .long loadaddr + idt0
-idt0:
- .word divide_error + loadaddr
- .word code32p
- .word 0
- .byte 0x8e ;# 32-bit Ring 0 interrupt gate
- .word 0
-idt_end:
+divide_error: ;# assuming 32-bit dividend, fix instruction to return NaN
+ xor eax, eax 
+ mov edx, [esp] ;# get pointer of instruction, div or idiv
+ mov ah, [edx + 1] ;# what we want is the modr/m byte following it
+ and ah, 0b11000111 ;# get rid of the nnn bits of the instruction
+ mov edx, 0xc30089 ;# "mov r/m, eax; ret"
+ or edx, eax ;# set the destination reg or memory, ASSUMING NO SIB
+ xor ah, ah ;# clear EAX again
+ inc eax  ;# set divisor to 1
+ push edx ;# push "subroutine" on stack, won't work from register
+ call esp ;# call the 3-byte "subroutine"
+ pop edx
+ xor edx, edx  ;# clear the high 32-bits of the dividend
+ dec edx  ;# now make it an extension of the NaN sign bit
+ mov eax, nan ;# "not a number"
+ iret ;# return to try division again... endless loop if we don't get it right
