@@ -79,10 +79,9 @@ FORTH z2+c, [TEXT], n-, dup, z**2, dup, four, if, drop, ";"
 FORTH update, [TEXT], n-, dup, four, if, drop, ";", then,
  FORTH [COMPILEWORD], dup, z2+c, dup, four, if, drop, ";", then, darker, ";"
 FORTH iter,
- FORTH [EXECUTE], count, @, for,
- FORTH [EXECUTE], pixel, @, update,
- FORTH [EXECUTE], pixel, @, 1+, [EXECUTE], hp, [EXECUTE], vp, [EXECUTE], *,
- FORTH [COMPILEWORD], mod, [EXECUTE], pixel, !, next, ";"
+ FORTH [EXECUTE], pixel, @, [EXECUTE], count, @, for, dup, update,
+ FORTH [COMPILEWORD], 1+, [EXECUTE], hp, [EXECUTE], vp, [EXECUTE], *, mod,
+ FORTH [COMPILEWORD], next, [EXECUTE], pixel, !, ";"
 FORTH zoom, [TEXT], nn-,
  FORTH [EXECUTE], xr, @, [EXECUTE], xl, @, +, 2/,
  FORTH [COMPILEWORD], over, over, +, [EXECUTE], xr, !,
