@@ -1,5 +1,5 @@
 BLOCK 64
-FORTH [TEXTCAPITALIZED], mandelbrot, [TEXT], display, [EXECUTE], empty, [EXECUTE], forth, [VARIABLE], xl, [BINARY], 0, [VARIABLE], xr, [BINARY], 0, [VARIABLE], yt, [BINARY], 0, [VARIABLE], yb, [BINARY], 0, [VARIABLE], xspan, [BINARY], 0, [VARIABLE], yspan, [BINARY], 0, [VARIABLE], dark, [BINARY], 0, [VARIABLE], pixel, [BINARY], 0, [VARIABLE], count, [BINARY], 0, [VARIABLE], level, [BINARY], 0
+FORTH [TEXTCAPITALIZED], mandelbrot, [TEXT], display, [EXECUTE], empty, [VARIABLE], xl, [BINARY], 0, [VARIABLE], xr, [BINARY], 0, [VARIABLE], yt, [BINARY], 0, [VARIABLE], yb, [BINARY], 0, [VARIABLE], xspan, [BINARY], 0, [VARIABLE], yspan, [BINARY], 0, [VARIABLE], dark, [BINARY], 0, [VARIABLE], pixel, [BINARY], 0, [VARIABLE], count, [BINARY], 0, [VARIABLE], level, [BINARY], 0
 FORTH zlen, [EXECUTE], hp, [EXECUTE], vp, [EXECUTE], *, [EXECUTE], 1+,
  FORTH [EXECUTE], dup, [EXECUTE], +, ";"
 FORTH allot, [TEXT], n-a, align, here, dup, push, +, here!, pop, ";"

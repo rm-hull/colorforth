@@ -4,8 +4,8 @@
 ;# we can use starting at 0x500
 
 .equ upper_right, 158 ;# address of upper-right corner of screen
-.macro showprogress; .ifdef DEBUGGING; call progress; .endif; .endm
-.macro shownumber; .ifdef DEBUGGING; call shownumber; .endif; .endm
+.macro showprogress; call progress; .endm
+.macro shownumber; call shownumber; .endm
 
 .org 0 ;# actually 0x7c00, where the BIOS loads the bootsector
 start:
@@ -44,21 +44,9 @@ gdt0: .word 0, 0, 0, 0 ;# start of table must be a null entry
     .equ data16r, . - gdt0
     .word 0xffff, 0, 0x9200, 0x00 ;# 16-bit real-mode data
 gdt_end:
-.ifndef DEBUGGING ;# no room for IDT with debugging code present
-idt:
-    .word idt_end - idt0 - 1
-    .long loadaddr + idt0
-idt0:
-    .word divide_error + loadaddr
-    .word code32p
-    .byte 0
-    .byte 0x8e ;# 32-bit Ring 0 interrupt gate
-    .word 0
-idt_end:
 real_mode_idt:
     .word 0xffff ;# limit
     .long 0 ;# base is that of BIOS interrupt table
-.endif ;# DEBUGGING
 .code16
 start0:
     cmp  word ptr cs:0, 0x20cd ;# INT 20h at start of .com program header
@@ -143,7 +131,6 @@ read:
     pop  edx
     ret
 
-.ifdef DEBUGGING
 progress: ;# show progress indicator
     pop  dx  ;# grab return address
     push dx  ;# and put back on stack
@@ -172,7 +159,6 @@ shownumber: ;# alternate entry point, preload DX register
     pop  bx
     pop  ax
     ret
-.endif
 
 relocate:  ;# move code from where DOS or BIOS put it, to where we want it
 ;# it would seem to be trivial, but in cases where the 64K span of source
@@ -218,10 +204,6 @@ relocate:  ;# move code from where DOS or BIOS put it, to where we want it
 protected_mode:
     cli  ;# we're not set up to handle interrupts in protected mode
     lgdt [gdt + loadaddr]
-    .ifndef DEBUGGING
-    lidt [idt + loadaddr]
-    .endif
-    ;# we don't enable interrupts (STI) so we just get exceptions
     mov  eax, cr0
     or   al, 1
     mov  cr0, eax
@@ -252,9 +234,7 @@ unreal:  ;# that far jump put us back to a realmode CS
     mov  ss, ax
     mov  ds, ax
     mov  es, ax
-    .ifndef DEBUGGING
     lidt [real_mode_idt + loadaddr]
-    .endif
     sti  ;# re-enable interrupts
     data32 ret ;# adjust stack appropriately for call from protected mode
 

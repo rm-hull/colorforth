@@ -134,6 +134,8 @@ warm: dup_
 start1:
     mov  byte ptr [es: 0xb8000 | (upper_right - 8)], 'S'
     call setgraphics
+    lidt [idt + loadaddr] ;# enable division-exception recovery
+    ;# we don't enable interrupts (STI) so we just get exceptions
     call show0 ;# set up 'main' task to draw screen
 ;# number of Forth words and number of macros
     mov  dword ptr forths + loadaddr, offset ((forth1-forth0)/4) 

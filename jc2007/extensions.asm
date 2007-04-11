@@ -101,6 +101,17 @@ herestore: ;# a- directly manipulate the 'here' pointer
  drop
  ret
 
+idt:
+ .word idt_end - idt0 - 1
+ .long loadaddr + idt0
+idt0:
+ .word divide_error + loadaddr
+ .word code32p
+ .byte 0
+ .byte 0x8e ;# 32-bit Ring 0 interrupt gate
+ .word 0
+idt_end:
+
 divide_error: ;# assuming 32-bit dividend, fix instruction to return NaN
  xor eax, eax 
  mov edx, [esp] ;# get pointer of instruction, div or idiv
