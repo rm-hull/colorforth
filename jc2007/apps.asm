@@ -1,5 +1,5 @@
 BLOCK 64
-FORTH [TEXTCAPITALIZED], mandelbrot, [TEXT], display, [EXECUTE], empty, [VARIABLE], xl, [BINARY], 0, [VARIABLE], xr, [BINARY], 0, [VARIABLE], yt, [BINARY], 0, [VARIABLE], yb, [BINARY], 0, [VARIABLE], xspan, [BINARY], 0, [VARIABLE], yspan, [BINARY], 0, [VARIABLE], dark, [BINARY], 0, [VARIABLE], pixel, [BINARY], 0, [VARIABLE], count, [BINARY], 0, [VARIABLE], level, [BINARY], 0
+FORTH [TEXTCAPITALIZED], mandelbrot, [TEXT], display, [EXECUTE], empty, [VARIABLE], xl, [BINARY], 0, [VARIABLE], xr, [BINARY], 0, [VARIABLE], yt, [BINARY], 0, [VARIABLE], yb, [BINARY], 0, [VARIABLE], xspan, [BINARY], 0, [VARIABLE], yspan, [BINARY], 0, [VARIABLE], dark, [BINARY], 0, [VARIABLE], pixel, [BINARY], 0, [VARIABLE], count, [BINARY], 0, [VARIABLE], level, [BINARY], 0,
 FORTH zlen, [EXECUTE], hp, [EXECUTE], vp, [EXECUTE], *, [EXECUTE], 1+,
  FORTH [EXECUTE], dup, [EXECUTE], +, ";"
 FORTH allot, [TEXT], n-a, align, here, dup, push, +, here!, pop, ";"
@@ -8,7 +8,7 @@ FORTH allot, [TEXT], n-a, align, here, dup, push, +, here!, pop, ";"
  FORTH [EXECUTE], z, [EXECUTE], !
 FORTH abs, 0, or, -if, negate, then, ";"
 FORTH fixed, [COMPILELONGHEX], 10000000, [COMPILESHORT], 10000, */, ";"
-FORTH clear, red, screen, zlen,
+FORTH clear, [COMPILESHORTHEX], ffff, color, screen, zlen,
  FORTH [EXECUTE], z, @, zero, 0,
  FORTH [EXECUTE], pixel, !, ";"
 FORTH reinit,
@@ -25,13 +25,14 @@ FORTH init, [TEXT], -2.1,
  FORTH [EXECUTESHORT], 12000, [EXECUTE], fixed, nop, [EXECUTE], yt, "!",
  FORTH [TEXT], -1.2,
  FORTH [EXECUTESHORT], -12000, [EXECUTE], fixed, nop, [EXECUTE], yb, "!",
- FORTH [COMPILESHORTHEX], -80, [EXECUTE], dark, !
+ FORTH [COMPILESHORT], -2, [EXECUTE], dark, !
  FORTH [COMPILESHORT], 5000, [EXECUTE], count, !
  FORTH [COMPILESHORT], 2, [EXECUTE], level, !
  FORTH [COMPILEWORD], ";"
 FORTH fb, [TEXT], -a, [TEXT], framebuffer, [EXECUTE], vframe,
  FORTH [EXECUTESHORT], 4, [EXECUTE], *, ";"
-FORTH darker, [TEXT], n-, 2*, fb, +, dup, w@, 0, +, drop, if,
+FORTH darker, [TEXT], n-, 2*, fb, +, dup, w@,
+ FORTH [COMPILEWORD], 0, +, drop, if,
  FORTH [EXECUTE], dark, @, swap, +w!, ";", then, drop, ";"
 FORTH z@, [TEXT], i-nn, 2*, [EXECUTE], z, @, +, dup, @, swap, 1+, @, ";"
 FORTH ge4, [TEXT], n-f, ;# 'if' tests true (nz) if abs(n) > 4
