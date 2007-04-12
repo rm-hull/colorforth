@@ -8,7 +8,8 @@ FORTH allot, [TEXT], n-a, align, here, dup, push, +, here!, pop, ";"
  FORTH [EXECUTE], z, [EXECUTE], !
 FORTH abs, 0, or, -if, negate, then, ";"
 FORTH fixed, [COMPILELONGHEX], 10000000, [COMPILESHORT], 10000, */, ";"
-FORTH clear, blue, screen, zlen, [EXECUTE], z, @, zero, 0,
+FORTH clear, red, screen, zlen,
+ FORTH [EXECUTE], z, @, zero, 0,
  FORTH [EXECUTE], pixel, !, ";"
 FORTH reinit,
  FORTH [EXECUTE], xr, @, [EXECUTE], xl, @, negate, +,
@@ -24,7 +25,7 @@ FORTH init, [TEXT], -2.1,
  FORTH [EXECUTESHORT], 12000, [EXECUTE], fixed, nop, [EXECUTE], yt, "!",
  FORTH [TEXT], -1.2,
  FORTH [EXECUTESHORT], -12000, [EXECUTE], fixed, nop, [EXECUTE], yb, "!",
- FORTH [COMPILESHORT], -1, [EXECUTE], dark, !
+ FORTH [COMPILESHORTHEX], -80, [EXECUTE], dark, !
  FORTH [COMPILESHORT], 5000, [EXECUTE], count, !
  FORTH [COMPILESHORT], 2, [EXECUTE], level, !
  FORTH [COMPILEWORD], ";"
@@ -33,9 +34,9 @@ FORTH fb, [TEXT], -a, [TEXT], framebuffer, [EXECUTE], vframe,
 FORTH darker, [TEXT], n-, 2*, fb, +, dup, w@, 0, +, drop, if,
  FORTH [EXECUTE], dark, @, swap, +w!, ";", then, drop, ";"
 FORTH z@, [TEXT], i-nn, 2*, [EXECUTE], z, @, +, dup, @, swap, 1+, @, ";"
-FORTH ge4, [TEXT], n-f, ;# sets Z flag if abs(n) > 4
+FORTH ge4, [TEXT], n-f, ;# 'if' tests true (nz) if abs(n) > 4
  FORTH [COMPILEWORD], abs, [EXECUTESHORT], -40000, [EXECUTE], fixed,
- FORTH [COMPILEWORD], +, drop, -if, 0, drop, then, ";"
+ FORTH [COMPILEWORD], +, drop, -if, 0, drop, ";", then, ";"
 FORTH fx*, [COMPILELONGHEX], 10000000, */, ";"
 FORTH four, [TEXT], n-, dup, z@, ge4, if, drop, drop, ";",
  FORTH [COMPILEWORD], then, ge4, if, drop, ";",
@@ -68,14 +69,15 @@ FORTH y0, [COMPILELONGHEX], 10000000, vp, */, ;# make fixed-point number
 FORTH z0, [TEXT], -a, [EXECUTE], z, [EXECUTE], @, [EXECUTE], zlen,
  FORTH [EXECUTESHORT], -2, [EXECUTE], +, [EXECUTE], +, ";"
 FORTH z0!, [TEXT], n-, hp, /mod, y0, z0, 1+, !, x0, z0, !, ";"
+FORTH z0@, [TEXT], -nn, [EXECUTE], z0, @, z0, 1+, @, ";"
+FORTH z+c, [TEXT], n-, dup, z0!, dup, push, z@, z0@, swap, push, +,
+ FORTH [COMPILEWORD], swap, pop, +, swap, pop, z!, ";"
 FORTH z**2, [TEXT], n-, dup, push, z@, dup, fx*, dup, ge4, swap, ;# b**2 a
  FORTH [COMPILEWORD], if, pop, z!, ";", then, dup, fx*, dup, ge4, swap,
  FORTH [COMPILEWORD], if, pop, z!, ";", then, negate, +,
  FORTH [COMPILEWORD], pop, dup, push, z@, fx*, dup, ge4,
  FORTH [COMPILEWORD], if, pop, z!, ";", then, 2*, pop, z!, ";"
-FORTH z2+c, [TEXT], n-, dup, z**2, dup, four, if, drop, ";"
- FORTH [COMPILEWORD], then, dup, dup, push, z0!, z@,
- FORTH [COMPILEWORD], z0, 1+, @, +, swap, z0, @, +, swap, pop, z!, ";"
+FORTH z2+c, [TEXT], n-, dup, z**2, z+c, ";"
 FORTH update, [TEXT], n-, dup, four, if, drop, ";", then,
  FORTH [COMPILEWORD], dup, z2+c, dup, four, if, drop, ";", then, darker, ";"
 FORTH iter,
@@ -149,8 +151,6 @@ FORTH fx., [TEXT], n-, ;# show fixed-point as float
  FORTH [COMPILESHORT], 10, /, swap,
  FORTH [COMPILEWORD], over, /mod, 0., swap, next, drop, drop, space,
  FORTH [COMPILEWORD], ";"
-;# put "show" before "blue, screen" for debugging; after for raster graphics
-;# actually, the latter doesn't work with vmware when "ok'd" from source
 FORTH  ok, init, show, [EXECUTE], xspan, @, -1, +, drop, -if,
  FORTH [COMPILEWORD], reinit, clear, then, iter, keyboard,
  FORTH [COMPILEWORD], 0, [EXECUTE], vc, [EXECUTESHORT], -2, [EXECUTE], +,
@@ -159,6 +159,9 @@ FORTH  ok, init, show, [EXECUTE], xspan, @, -1, +, drop, -if,
  FORTH [EXECUTE], xr, @, [EXECUTE], xl, @, +, 2/, fx.,
  FORTH [EXECUTE], yt, @, [EXECUTE], yb, @, +, 2/, fx.,
  FORTH [COMPILEWORD], ";"
+;# test words
+FORTH g, ge4, if, 1, ";", then, 0, ";"
+FORTH f, four, if, 1, ";", then, 0, ";"
 BLOCK 69
 FORTH left, pans, left, 1/10, of, screen
 FORTH right, pans, right
