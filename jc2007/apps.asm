@@ -60,7 +60,8 @@ FORTH fb, returns, framebuffer, byte, address
 FORTH darker, changes, pixel, color
 FORTH z@, returns, complex, number, at, specified, index
 FORTH ge4, checks, if, fixed-point, number, above, 4
-FORTH four, check, if, complex, number, above, 4
+FORTH fx*, multiplies, two, fixed-point, numbers
+FORTH four, checks, if, complex, number, above, 4
 FORTH z!, stores, complex, number, at, specified, index
 BLOCK 66
 FORTH x0, [COMPILELONGHEX], 10000000, hp, */, ;# scale to A(3,28) fixed
@@ -109,6 +110,8 @@ FORTH x0, creates, real, part, of, complex, number, at, specified, index
 FORTH y0, creates, imaginary, part, of, complex, number, at, specified, index
 FORTH z0, returns, address, of, temporary, storage, for, z0, the, constant, value, for, this, index
 FORTH z0!, generate, complex, number, z0, [TEXTALLCAPS], aka, c, of, z2+c, for, this, index
+FORTH z0@, returns, current, z0, on, stack
+FORTH z+c, adds, complex, number, at, specified, index, to, z0
 FORTH z**2, the, square, of, complex, number, "a,", "b", is,  a**2, -, b**2, ",", 2a*b
 FORTH z2+c, calculate, z**2, +, c
 FORTH update, z, and, pixel, if, not, already, past, the, limit
@@ -161,8 +164,8 @@ FORTH  ok, init, show, [EXECUTE], xspan, @, -1, +, drop, -if,
  FORTH [EXECUTE], yt, @, [EXECUTE], yb, @, +, 2/, fx.,
  FORTH [COMPILEWORD], ";"
 ;# test words
-FORTH g, ge4, if, 1, ";", then, 0, ";"
-FORTH f, four, if, 1, ";", then, 0, ";"
+;#FORTH g, ge4, if, 1, ";", then, 0, ";"
+;#FORTH f, four, if, 1, ";", then, 0, ";"
 BLOCK 69
 FORTH left, pans, left, 1/10, of, screen
 FORTH right, pans, right
