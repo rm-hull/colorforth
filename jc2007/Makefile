@@ -214,3 +214,12 @@ boot.dsm: boot.blk
 	dd if=$< of=$@ conv=notrunc
 pctest: color.com
 	scp $< root@192.168.3.4:/tmp/
+freedos.iso: ~/shared_documents/FDOEMCD.builder.zip color.com
+	rm -rf FDOEMCD
+	unzip $<
+	cd FDOEMCD && cp ../color.com .
+	echo 'color' >> FDOEMCD/CDROOT/AUTORUN.BAT
+	cp -f mkisofs.rc FDOEMCD/
+	chmod +x FDOEMCD/* FDOEMCD/*/* FDOEMCD/*/*/*
+	cd FDOEMCD && cmd /c makeiso.bat
+	mv FDOEMCD/FDOEM.ISO $@

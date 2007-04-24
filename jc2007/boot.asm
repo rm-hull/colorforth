@@ -22,10 +22,13 @@ msdos: ;# this byte after the short jmp above is normally just padding
     .word 80*2*18 ;# sectors
     .byte 0x0f0   ;# media
     .word 9       ;# sectors/fat
+spt:
     .word 18      ;# sectors/track
+heads:
     .word 2       ;# heads
     .long 0       ;# hidden sectors
     .long 80*2*18 ;# sectors again
+drive:
     .byte 0       ;# drive
 cylinder: .word 0
 .align 4
