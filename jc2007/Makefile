@@ -48,6 +48,9 @@ DEFINES := $(shell cat *.asm | grep '\.ifn\?def' | \
  awk '{print $$2}' | sort | uniq)
 COLINUX := /cygdrive/c/Program\ Files/coLinux
 JC2007 := $(shell cygpath -w $(PWD))
+BOCHS := /cygdrive/c/Program\ Files/Bochs-2.3
+VMWARE := /cygdrive/c/Program\ Files/VMWare/VMware\ Player
+BXSHARE := $(shell cygpath -w $(BOCHS))
 export
 default: small bochs23
 color.com: $(sources)
@@ -223,3 +226,5 @@ freedos.iso: ~/shared_documents/FDOEMCD.builder.zip color.com
 	chmod +x FDOEMCD/* FDOEMCD/*/* FDOEMCD/*/*/*
 	cd FDOEMCD && cmd /c makeiso.bat
 	mv FDOEMCD/FDOEM.ISO $@
+isotest: freedos.iso bochsrc
+	IMAGE=$@ $(BOCHS)/bochs -q
