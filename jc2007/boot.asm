@@ -32,8 +32,8 @@ drive:
     .byte 0       ;# drive
 cylinder: .word 0
 .align 4
-;# forth+icons+blocks 24-161 ;# number of cylinders, 9 (out of 80)
-nc:  .long 9 ;# needs to be on longword boundary, see nc_ in color.asm
+;# forth+icons+blocks 24-270 ;# number of cylinders, 15 (out of 80)
+nc:  .long 15 ;# needs to be on longword boundary, see nc_ in color.asm
 gdt: .word gdt_end - gdt0 - 1 ;# GDT limit
     .long gdt0 + loadaddr ;# pointer to start of table
 .align 8
