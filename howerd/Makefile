@@ -28,7 +28,7 @@ qemu:	../test/b.img
 vmware: ../test/b.img
 	cd ../test && $(MAKE) vmclean vmware
 clean:
-	rm -f *.ima.gz *.blk
+	rm -f *.ima.gz *.blk *.o *.dat *.pyc *.lst newcode.asm
 newcode.asm: ../jc2007/forth.asm
 	cat $< > $@
 	./cf2text cfdos4.blk | sed -n '/{block 18}/,$$p' | \

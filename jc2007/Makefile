@@ -51,6 +51,7 @@ JC2007 := $(shell cygpath -w $(PWD))
 BOCHS := /cygdrive/c/Program\ Files/Bochs-2.3
 VMWARE := /cygdrive/c/Program\ Files/VMWare/VMware\ Player
 BXSHARE := $(shell cygpath -w $(BOCHS))
+TIMESTAMP := $(shell date +%Y-%m-%d-%H:%M:%S)
 export
 default: small bochs23
 color.com: $(sources)
@@ -103,7 +104,8 @@ set:
 %.txt:	%.com cf2text
 	cf2text $< > $@
 clean:
-	rm -f *.{o,bin,out,dmp,lst}
+	rm -f *.{o,bin,out,dmp,lst,iso}
+	rm -rf FDOEMCD
 	cd release && $(MAKE) clean
 errors:
 	$(GAS) color.asm 2>&1 | ./show_error_lines.sh
@@ -227,4 +229,16 @@ freedos.iso: ~/shared_documents/FDOEMCD.builder.zip color.com
 	cd FDOEMCD && cmd /c makeiso.bat
 	mv FDOEMCD/FDOEM.ISO $@
 isotest: freedos.iso bochsrc
-	IMAGE=$@ $(BOCHS)/bochs -q
+	IMAGE=$< $(BOCHS)/bochs -q
+cfboot.iso: ../test/b.img freedos.iso  # latter only for mkisofs.exe
+	cp -f $< boot.img
+	FDOEMCD/mkisofs.exe -b boot.img \
+	 -sysid "colorForth $(TIMESTAMP)" \
+	 -V "colorForth $(TIMESTAMP)" \
+	 -m "./FDOEMCD*" \
+	 -o $@ \
+	 .
+cfisotest: cfboot.iso bochsrc
+	IMAGE=$< $(BOCHS)/bochs -q
+cdtest: bochsrc
+	IMAGE=D: $(BOCHS)/bochs -q

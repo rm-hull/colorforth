@@ -2,6 +2,8 @@ SUBDIRS := $(wildcard [a-z]*)
 CVSROOT := :ext:jcomeau_ictx@colorforth.cvs.sourceforge.net/cvsroot/colorforth
 CVS_RSH := ssh
 ARCHIVE := /usr/src/howerd
+ME := jcomeau_ictx@colorforth.sourceforge.net
+WWW := /home/groups/c/co/colorforth/htdocs
 export
 set:
 	set
@@ -10,7 +12,7 @@ clean:
 	 $(shell [ -d $(subdir) ] && cd $(subdir) && make clean))
 upload:
 #	$(MAKE) clean
-	rsync -Crvuz . jcomeau_ictx@colorforth.sourceforge.net:/home/groups/c/co/colorforth/htdocs/
+	rsync -Crvuz --delete . $(ME):$(WWW)/
 commit:
 	cvs commit
 bootfiles:
