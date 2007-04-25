@@ -492,7 +492,7 @@ def init():
  dump['dump_formats'] = [dump_normal, dump_tags, dump_color, dump_plain]
 
 def allzero(array):
- return not filter(long.__nonzero__, array)
+ return not filter(long.__nonzero__, map(long, array))
 
 def cfdump(filename):
  init()
