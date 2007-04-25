@@ -129,7 +129,9 @@ read:
     mov  edx, esi  ;# temporarily store parameter stack pointer in EDX
     pop  esi  ;# load iobuffer
     mov  ecx, 512*18*2/4
+    showprogress
     addr32 rep movsd ;# move to ES:EDI location preloaded by caller
+    showprogress
     mov  esi, edx  ;# restore parameter stack pointer
     pop  edx
     ret
