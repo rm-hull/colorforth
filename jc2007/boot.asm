@@ -69,9 +69,9 @@ start0:
 .code32
     call a20 ;# set A20 gate to enable access to addresses with 1xxxxx
     mov  al, byte ptr msdos + loadaddr
-    mov  byte ptr [es: 0xb8000 | (upper_right - 8)], 'P'
-    add  byte ptr [es: 0xb8000 | (upper_right - 8)], al ;# makes it 'O' if DOS
-    or   al, al ;# boot from floppy?
+    add  al, 'P'
+    mov  byte ptr [es: 0xb8000 | (upper_right - 8)], al
+    cmp  al, 'P' ;# boot from floppy?
     jz   0f  ;# continue if so...
 9:  mov  esi, godd ;# set up data stack pointer for 'god' task
     jmp  start1

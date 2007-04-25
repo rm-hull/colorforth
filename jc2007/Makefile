@@ -103,7 +103,9 @@ set:
 	set
 %.txt:	%.com cf2text
 	cf2text $< > $@
-clean:
+vmclean:
+	rm -f *.{log,vm??,lck,nvram}
+clean: vmclean
 	rm -f *.{o,bin,out,dmp,lst,iso}
 	rm -rf FDOEMCD
 	cd release && $(MAKE) clean
@@ -240,5 +242,6 @@ cfboot.iso: ../test/b.img freedos.iso  # latter only for mkisofs.exe
 	 .
 cfisotest: cfboot.iso bochsrc
 	IMAGE=$< $(BOCHS)/bochs -q
-cdtest: bochsrc
-	IMAGE=D: $(BOCHS)/bochs -q
+cdtest: bochsrc cf.vmx vmclean cfboot.iso
+	#IMAGE=cfboot.iso $(BOCHS)/bochs -q
+	$(VMWARE)/vmplayer.exe cf.vmx
