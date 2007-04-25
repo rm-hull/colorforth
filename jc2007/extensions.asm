@@ -30,7 +30,11 @@ vc_: highlevel vc ;# vertical characters
 vframe: ;# (-a) needed for low-level graphic stuff
  dup_
  mov eax, frame + loadaddr
- shr eax, 2 ;# divide by 4 for word address
+ ret
+
+vram: ;# (-a) the actual linear RAM of the video board
+ dup_
+ mov eax, [displ + loadaddr]
  ret
 
 cells: ;# (n-n) return number of bytes in a number of cells
