@@ -29,9 +29,7 @@ FORTH init, [TEXT], -2.1,
  FORTH [COMPILESHORT], 5000, [EXECUTE], count, !
  FORTH [COMPILESHORT], 2, [EXECUTE], level, !
  FORTH [COMPILEWORD], ";"
-FORTH fb, [TEXT], -a, [TEXT], framebuffer, [EXECUTE], vframe,
- FORTH [EXECUTESHORT], 4, [EXECUTE], *, ";"
-FORTH darker, [TEXT], n-, 2*, fb, +, dup, w@,
+FORTH darker, [TEXT], n-, 2*, vframe, +, dup, w@,
  FORTH [COMPILEWORD], 0, +, drop, if,
  FORTH [EXECUTE], dark, @, swap, +w!, ";", then, drop, ";"
 FORTH z@, [TEXT], i-nn, 2*, [EXECUTE], z, @, +, dup, @, swap, 1+, @, ";"
@@ -56,7 +54,6 @@ FORTH fixed, convert, to, fixed, point
 FORTH clear, wipes, out, the, [COMPILEWORD], z, array, and, clears, screen
 FORTH reinit, sets, [COMPILEWORD], xspan, and, [COMPILEWORD], yspan
 FORTH init, sets, screen, boundaries, based, on, zoom, and, pan, settings
-FORTH fb, returns, framebuffer, byte, address
 FORTH darker, changes, pixel, color
 FORTH z@, returns, complex, number, at, specified, index
 FORTH ge4, checks, if, fixed-point, number, above, 4
