@@ -221,17 +221,21 @@ boot.dsm: boot.blk
 	dd if=$< of=$@ conv=notrunc
 pctest: color.com
 	scp $< root@192.168.3.4:/tmp/
-freedos.iso: ~/shared_documents/FDOEMCD.builder.zip color.com
+freedos.iso: ~/shared_documents/FDOEMCD.builder.zip \
+	 ~/shared_documents/FDOEMCD.source.zip \
+	 color.com
 	rm -rf FDOEMCD
 	unzip $<
-	cp color.com FDOEMCD/CDROOT/COLOR.COM
+	cp $+ FDOEMCD/CDROOT/
 	echo 'COLOR.COM' >> FDOEMCD/CDROOT/AUTORUN.BAT
 	cp -f mkisofs.rc FDOEMCD/
 	chmod +x FDOEMCD/* FDOEMCD/*/* FDOEMCD/*/*/*
 	cd FDOEMCD && cmd /c makeiso.bat
 	mv FDOEMCD/FDOEM.ISO $@
-isotest: freedos.iso bochsrc
-	IMAGE=$< $(BOCHS)/bochs -q
+isotest: freedos.iso bochsrc cf.vmx
+	sed -i 's/^\(ide0:0.fileName = \).*/\1 "$<"/' cf.vmx
+	$(VMWARE)/vmplayer.exe cf.vmx
+	#IMAGE=$< $(BOCHS)/bochs -q
 cfboot.iso: ../test/b.img freedos.iso  # latter only for mkisofs.exe
 	cp -f $< boot.img
 	FDOEMCD/mkisofs.exe -b boot.img \
@@ -242,6 +246,7 @@ cfboot.iso: ../test/b.img freedos.iso  # latter only for mkisofs.exe
 	 .
 cfisotest: cfboot.iso bochsrc
 	IMAGE=$< $(BOCHS)/bochs -q
-cdtest: bochsrc cf.vmx vmclean cfboot.iso
+cdtest: cfboot.iso cf.vmx vmclean bochsrc
 	#IMAGE=cfboot.iso $(BOCHS)/bochs -q
+	sed -i 's/^\(ide0:0.fileName = \).*/\1 "$<"/' cf.vmx
 	$(VMWARE)/vmplayer.exe cf.vmx
