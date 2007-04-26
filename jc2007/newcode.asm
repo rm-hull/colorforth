@@ -154,11 +154,15 @@ BLOCK 18
 FORTH "[TEXT]", "colorforth",  "[TEXTCAPITALIZED]", "jul31",  "[TEXTCAPITALIZED]", "chuck",  "[TEXTCAPITALIZED]", "moore",  "[TEXTCAPITALIZED]", "public",  "[TEXTCAPITALIZED]", "domain",  "[EXECUTESHORT]", "24",  "[EXECUTE]", "load",  "[EXECUTESHORT]", "26",  "[EXECUTE]", "load",  "[EXECUTESHORT]", "28",  "[EXECUTE]", "load",  "[EXECUTESHORT]", "30",  "[EXECUTE]", "load"
 FORTH "dump",  "[COMPILESHORT]", "32",  "load",  ";"
 FORTH "icons",  "[COMPILESHORT]", "34",  "load",  ";"
+.ifdef FREEDOS_ISO
+FORTH mandelbrot, [COMPILESHORT], 38, load, ";"
+.else
 FORTH "print",  "[COMPILESHORT]", "38",  "load",  ";"
+FORTH mandelbrot, [COMPILESHORT], 64, load, ";"
+.endif
 FORTH "file",  "[COMPILESHORT]", "44",  "load",  ";"
 FORTH "north",  "[COMPILESHORT]", "46",  "load",  ";"
 FORTH "colors",  "[COMPILESHORT]", "56",  "load",  ";",
-FORTH mandelbrot, [COMPILESHORT], 64, load, ";"
 FORTH  "[EXECUTE]", "mark",  "[EXECUTE]", "empty"
 BLOCK 19
 BLOCK 20
@@ -395,6 +399,9 @@ FORTH "nul",  ";"
 FORTH "h",  "pad",  "nul",  "nul",  "accept",  "nul",  "tl",  "tu",  "td",  "tr",  "l",  "u",  "d",  "r",  "-ic",  "nul",  "nul",  "+ic",  "nul",  "nul",  "nul",  "nul",  "nul",  "nul",  "nul",  "nul",  "nul",  "nul",  "nul",  "nul",  "[EXECUTESHORTHEX]", "2500",  "[EXECUTE]", ",",  "[EXECUTESHORTHEX]", "110160c",  "[EXECUTE]", "dup",  "[EXECUTE]", ",",  "[EXECUTE]", ",",  "[EXECUTELONGHEX]", "2b000023",  "[EXECUTE]", ",",  "[EXECUTESHORT]", "0",  "[EXECUTE]", ",",  "[EXECUTESHORT]", "0",  "[EXECUTE]", ",",  "[EXECUTESHORT]", "0",  "[EXECUTE]", ","
 BLOCK 37
 FORTH "[TEXTCAPITALIZED]", "edit",  "icon"
+.ifdef FREEDOS_ISO
+ .include "apps.asm"
+.else
 BLOCK 38
 FORTH "[TEXTALLCAPS]", "png",  "[EXECUTE]", "empty",  "[VARIABLE]", "w", "[BINARY]", "36",  "[VARIABLE]", "h", "[BINARY]", "20",  "[VARIABLE]", "d", "[BINARY]", "4"
 FORTH "frame",  "[COMPILESHORTHEX]", "1e80000",  ";",  "[EXECUTE]", "file",  "[EXECUTESHORT]", "42",  "[EXECUTE]", "load",  "[EXECUTESHORT]", "40",  "[EXECUTE]", "load"
@@ -435,6 +442,7 @@ FORTH "+adl",  "[TEXT]", "n",  "[COMPILESHORTHEX]", "ff",  "and",  "[EXECUTE]", 
 FORTH "adl!",  "[EXECUTE]", "ad2",  "!",  "[EXECUTE]", "ad1",  "!",  ";"
 FORTH "+mod",  "[EXECUTE]", "ad1",  "@",  "[COMPILESHORT]", "65521",  "mod",  "[EXECUTE]", "ad2",  "@",  "[COMPILESHORT]", "65521",  "mod",  "adl!",  ";"
 BLOCK 43
+.endif
 BLOCK 44
 FORTH "[TEXTALLCAPS]", "dos",  "[TEXT]", "file"
 FORTH "blks",  "[COMPILESHORT]", "256",  "*",  ";"

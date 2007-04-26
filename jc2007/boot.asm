@@ -69,7 +69,7 @@ start0:
 .code32
     call a20 ;# set A20 gate to enable access to addresses with 1xxxxx
     mov  al, byte ptr msdos + loadaddr
-    add  al, 'P'
+    add  al, 'P' ;# makes it an 'O' if run from MSDOS
     mov  byte ptr [es: 0xb8000 | (upper_right - 8)], al
     cmp  al, 'P' ;# boot from floppy?
     jz   0f  ;# continue if so...

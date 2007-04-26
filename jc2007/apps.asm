@@ -1,4 +1,4 @@
-BLOCK 64
+BLOCK
 FORTH [TEXTCAPITALIZED], mandelbrot, [TEXT], display, [EXECUTE], empty, [VARIABLE], xl, [BINARY], 0, [VARIABLE], xr, [BINARY], 0, [VARIABLE], yt, [BINARY], 0, [VARIABLE], yb, [BINARY], 0, [VARIABLE], xspan, [BINARY], 0, [VARIABLE], yspan, [BINARY], 0, [VARIABLE], dark, [BINARY], 0, [VARIABLE], pixel, [BINARY], 0, [VARIABLE], count, [BINARY], 0, [VARIABLE], level, [BINARY], 0,
 FORTH zlen, [EXECUTE], hp, [EXECUTE], vp, [EXECUTE], *, [EXECUTE], 1+,
  FORTH [EXECUTE], dup, [EXECUTE], +, ";"
@@ -46,7 +46,7 @@ FORTH z!, [TEXT], nni-, 2*, [EXECUTE], z, @, +, dup, push, 1+, !, pop, !, ";"
 FORTH [EXECUTESHORT], 2, [EXECUTE], +load,
  FORTH [EXECUTESHORT], 4, [EXECUTE], +load
  FORTH [EXECUTE], ok, [EXECUTE], h
-BLOCK 65
+BLOCK
 FORTH zlen, helper, word, returns, length, of, z, array
 FORTH allot, grabs, space, at, [COMPILEWORD], here, and, returns, that, "address;", z, points, to, the, array, of, values, as, generated, by, "z**2+z0"
 FORTH abs, absolute, value
@@ -60,7 +60,7 @@ FORTH ge4, checks, if, fixed-point, number, above, 4
 FORTH fx*, multiplies, two, fixed-point, numbers
 FORTH four, checks, if, complex, number, above, 4
 FORTH z!, stores, complex, number, at, specified, index
-BLOCK 66
+BLOCK
 FORTH x0, [COMPILELONGHEX], 10000000, hp, */, ;# scale to A(3,28) fixed
  FORTH [EXECUTE], xspan, @, fx*, [EXECUTE], xl, @, +, ";"
 FORTH y0, [COMPILELONGHEX], 10000000, vp, */, ;# make fixed-point number
@@ -102,7 +102,7 @@ FORTH -zoom,
  FORTH [EXECUTE], yspan, @,
  FORTH [EXECUTE], xspan, @,  ;# expanding by two, so add it to both sides
  FORTH [COMPILEWORD], zoom, then, ";"
-BLOCK 67
+BLOCK
 FORTH x0, creates, real, part, of, complex, number, at, specified, index
 FORTH y0, creates, imaginary, part, of, complex, number, at, specified, index
 FORTH z0, returns, address, of, temporary, storage, for, z0, the, constant, value, for, this, index
@@ -116,7 +116,7 @@ FORTH iter, iterates, over, the, array, updating, continuously
 FORTH zoom, zooms, in, or, out
 FORTH +zoom, zooms, in, 2, times, closer
 FORTH -zoom, zooms, out
-BLOCK 68
+BLOCK
 FORTH left, [EXECUTE], xspan, @, [COMPILESHORT], 10, /, negate, dup,
  FORTH [EXECUTE], xl, @, +, ge4, if, drop, ";", then, dup,
  FORTH [EXECUTE], xl, +!, [EXECUTE], xr, +!, 0, [EXECUTE], xspan, !, ";"
@@ -163,7 +163,8 @@ FORTH  ok, init, show, [EXECUTE], xspan, @, -1, +, drop, -if,
 ;# test words
 ;#FORTH g, ge4, if, 1, ";", then, 0, ";"
 ;#FORTH f, four, if, 1, ";", then, 0, ";"
-BLOCK 69
+.ifndef FREEDOS_ISO ;# no room for this in the 5 blocks available to us
+BLOCK
 FORTH left, pans, left, 1/10, of, screen
 FORTH right, pans, right
 FORTH up, pans, upwards
@@ -171,3 +172,4 @@ FORTH down, pans, downwards
 FORTH h, sets, up, keypad
 FORTH ok, sets, the, display, and, starts, the, generator
 BLOCK
+.endif
