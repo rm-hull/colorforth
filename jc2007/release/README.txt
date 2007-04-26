@@ -1,8 +1,12 @@
 This is a demo of the latest colorForth using a linear VESA framebuffer and
 BIOS calls for floppy I/O. It includes a Mandelbrot set display application
-invoked as 'mandelbrot' from the startup screen.
+invoked as 'mandelbrot' from the startup screen. The included ISO image
+is an ISOLinux/FreeDOS boot disk which runs a modified COLOR.COM with the
+Mandelbrot application at block 38, overwriting the Print, PNG, and LZ77
+application code from Chuck Moore's 2001 image. The other included images have
+the Mandelbrot set in blocks 64 and above.
 
-You can download the floppy image, gzipped, or a Windows installer which
+You can download the floppy image, zipped, or a Windows installer which
 creates desktop shortcuts for Bochs-2.3, QEMU 0.8.2, and VMware Player 1.0.3.
 The directories it assumes are, respectively, "\Program Files\Bochs-2.3",
 "\Program Files\QEMU\", and "\Program Files\VMware\VMware Player". If you

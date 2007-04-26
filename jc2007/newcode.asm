@@ -442,8 +442,8 @@ FORTH "+adl",  "[TEXT]", "n",  "[COMPILESHORTHEX]", "ff",  "and",  "[EXECUTE]", 
 FORTH "adl!",  "[EXECUTE]", "ad2",  "!",  "[EXECUTE]", "ad1",  "!",  ";"
 FORTH "+mod",  "[EXECUTE]", "ad1",  "@",  "[COMPILESHORT]", "65521",  "mod",  "[EXECUTE]", "ad2",  "@",  "[COMPILESHORT]", "65521",  "mod",  "adl!",  ";"
 BLOCK 43
-.endif
 BLOCK 44
+.endif
 FORTH "[TEXTALLCAPS]", "dos",  "[TEXT]", "file"
 FORTH "blks",  "[COMPILESHORT]", "256",  "*",  ";"
 FORTH "w/c",  "[EXECUTESHORT]", "18",  "[EXECUTE]", "blks",  ";"

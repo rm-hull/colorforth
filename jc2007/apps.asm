@@ -163,7 +163,6 @@ FORTH  ok, init, show, [EXECUTE], xspan, @, -1, +, drop, -if,
 ;# test words
 ;#FORTH g, ge4, if, 1, ";", then, 0, ";"
 ;#FORTH f, four, if, 1, ";", then, 0, ";"
-.ifndef FREEDOS_ISO ;# no room for this in the 5 blocks available to us
 BLOCK
 FORTH left, pans, left, 1/10, of, screen
 FORTH right, pans, right
@@ -172,4 +171,3 @@ FORTH down, pans, downwards
 FORTH h, sets, up, keypad
 FORTH ok, sets, the, display, and, starts, the, generator
 BLOCK
-.endif

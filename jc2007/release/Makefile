@@ -4,6 +4,7 @@ CF_SRC := ~/src
 BXSHARE := $(shell cygpath -w $(BOCHS))
 TIMESTAMP := $(shell date +%Y%m%d%H%M)
 NSIS := /cygdrive/c/Program\ Files/NSIS/makensis.exe
+$(shell touch ../*.asm) # just to force builds
 export
 cf_emu.exe: cf_emu.nsi LICENSE.rtf README.rtf 1024x768.ima 800x600.ima \
  bochs.exe
@@ -16,19 +17,26 @@ cf_emu.exe: cf_emu.nsi LICENSE.rtf README.rtf 1024x768.ima 800x600.ima \
 	cd $< && $(MAKE) small
 	dd if=/dev/zero of=$@ bs=1024 count=1440
 	dd if=$</color.dat of=$@ conv=notrunc
-%.ima.gz: %.ima
-	gzip -c $< > $@
+%.zip:	%
+	zip $@ $<
 set:
 	set
 clean:
-	rm -f *.exe *.ima *.zip *.rtf cfBochs/* LICENSE.txt *.zip
+	rm -f *.exe *.ima *.rtf cfBochs/* LICENSE.txt *.zip
 %.exe:
 	cp -f $(BOCHS_SRC)/$@ .
-upload: cf_emu.exe 800x600.ima.gz 1024x768.ima.gz
+freedos.iso: ../color.asm
+	touch ../*.asm
+	cd .. && $(MAKE) FREEDOS_ISO=1 newcode freedos.iso
+	cp ../$@ .
+%.upload:
+	ncftpput -C upload.sourceforge.net $* incoming/$(TIMESTAMP)-$*
+upload: cf_emu.exe 800x600.ima.zip 1024x768.ima.zip freedos.iso.zip
 	for file in $+; do \
 	 ncftpput -C upload.sourceforge.net $$file \
 	  incoming/$(TIMESTAMP)-$$file; \
 	done
+	cp README.txt ~/shared_documents/
 LICENSE.txt: NOLICENSE.txt /usr/src/bochs/COPYING
 	cat $+ > $@
 nsiscommands:
