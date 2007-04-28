@@ -236,17 +236,28 @@ isotest: freedos.iso bochsrc cf.vmx
 	sed -i 's/^\(ide0:0.fileName = \).*/\1 "$<"/' cf.vmx
 	$(VMWARE)/vmplayer.exe cf.vmx
 	#IMAGE=$< $(BOCHS)/bochs -q
-cfboot.iso: ../test/b.img freedos.iso  # latter only for mkisofs.exe
+exclude: color.dat
+	find . -maxdepth 1 -type d > $@.lst
+	find . -mindepth 2 >> $@.lst
+	find . -maxdepth 1 -type f -name '*.iso' >> $@.lst
+	find . -maxdepth 1 -type f -name '*.ima' >> $@.lst
+	find . -maxdepth 1 -type f -name '*.lst' >> $@.lst
+	find . -maxdepth 1 -type f -name '*.dat' >> $@.lst
+	find . -maxdepth 1 -type f -name '*.o' >> $@.lst
+	find . -maxdepth 1 -type f -name '*.lnk' >> $@.lst
+	find . -maxdepth 1 -type f -name '*.pyc' >> $@.lst
+	find . -maxdepth 1 -type f -name '*.nvram' >> $@.lst
+	find . -maxdepth 1 -type f -name '*vm*' >> $@.lst
+cfboot.iso: ../test/b.img exclude color.com
 	cp -f $< boot.img
-	FDOEMCD/mkisofs.exe -b boot.img \
-	 -sysid "colorForth $(TIMESTAMP)" \
-	 -V "colorForth $(TIMESTAMP)" \
-	 -m "./FDOEMCD*" \
+	mkisofs -b boot.img \
+	 -c boot.catalog \
+	 --exclude-list=exclude.lst \
 	 -o $@ \
 	 .
 cfisotest: cfboot.iso bochsrc
 	IMAGE=$< $(BOCHS)/bochs -q
 cdtest: cfboot.iso cf.vmx vmclean bochsrc
-	#IMAGE=cfboot.iso $(BOCHS)/bochs -q
-	sed -i 's/^\(ide0:0.fileName = \).*/\1 "$<"/' cf.vmx
+	-IMAGE=cfboot.iso $(BOCHS)/bochs -q
+	sed -i 's/^\(ide0:0.fileName =\).*/\1 "$<"/' cf.vmx
 	$(VMWARE)/vmplayer.exe cf.vmx
