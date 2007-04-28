@@ -52,6 +52,8 @@ BOCHS := /cygdrive/c/Program\ Files/Bochs-2.3
 VMWARE := /cygdrive/c/Program\ Files/VMWare/VMware\ Player
 BXSHARE := $(shell cygpath -w $(BOCHS))
 TIMESTAMP := $(shell date +%Y-%m-%d-%H:%M:%S)
+DEBUGGING := 1
+CDBOOT := cfboot.iso
 export
 default: small bochs23
 color.com: $(sources)
@@ -248,16 +250,22 @@ exclude: color.dat
 	find . -maxdepth 1 -type f -name '*.pyc' >> $@.lst
 	find . -maxdepth 1 -type f -name '*.nvram' >> $@.lst
 	find . -maxdepth 1 -type f -name '*vm*' >> $@.lst
-cfboot.iso: ../test/b.img exclude color.com
-	cp -f $< boot.img
+cfboot.iso: boot.asm color.asm Makefile
+	$(MAKE) EL_TORITO_BOOT=1 newcode vmclean ../test/b.img exclude
+	cp -f ../test/b.img boot.img
 	mkisofs -b boot.img \
 	 -c boot.catalog \
+	 -no-emul-boot \
+	 -boot-load-seg=0x940 \
+	 -boot-load-size=0x800 \
 	 --exclude-list=exclude.lst \
 	 -o $@ \
 	 .
 cfisotest: cfboot.iso bochsrc
 	IMAGE=$< $(BOCHS)/bochs -q
-cdtest: cfboot.iso cf.vmx vmclean bochsrc
-	-IMAGE=cfboot.iso $(BOCHS)/bochs -q
+cdtest: $(CDBOOT)
+	if [ -z "$(CDBOOT)" ]; then \
+	 echo must define CDBOOT=cfboot.iso >&2; false; fi
+	-IMAGE=$< $(BOCHS)/bochs -q
 	sed -i 's/^\(ide0:0.fileName =\).*/\1 "$<"/' cf.vmx
 	$(VMWARE)/vmplayer.exe cf.vmx

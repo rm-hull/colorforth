@@ -4,16 +4,30 @@
 ;# we can use starting at 0x500
 
 .equ upper_right, 158 ;# address of upper-right corner of screen
-.macro showprogress; call progress; .endm
-.macro shownumber; call shownumber; .endm
+.macro showprogress
+  .ifdef DEBUGGING
+  call progress
+  .endif
+.endm
+.macro shownumber
+ .ifdef DEBUGGING
+ call shownumber
+ .endif
+.endm
 
 .org 0 ;# actually 0x7c00, where the BIOS loads the bootsector
 start:
     jmp  start0
-msdos: ;# this byte after the short jmp above is normally just padding
-;# we will use it to indicate a startup from MS-DOS
+bootmode: ;# this byte after the short jmp above is normally just padding
+;# we will use it to indicate a startup from MSDOS
+;# also to indicate El Torito boot
+.ifdef EL_TORITO_BOOT
+    .byte 0xfe ;# even number so we can use MSDOS check odd parity
+.else
     .byte 0 ;# pad to offset 3
+.endif
     .ascii "cmcf 1.0"
+bps:
     .word 512     ;# bytes/sector
     .byte 1       ;# sector/cluster
     .word 1       ;# sector reserved
@@ -54,7 +68,7 @@ real_mode_idt:
 start0:
     cmp  word ptr cs:0, 0x20cd ;# INT 20h at start of .com program header
     jnz  0f
-    dec  byte ptr [cs: msdos + 0x100]
+    dec  byte ptr [cs: bootmode + 0x100]
 0:  cli
     push cs ;# need to set DS=CS, especially on VMWare, DS was 0x40
     pop  ds
@@ -68,11 +82,11 @@ start0:
     data32 call protected_mode
 .code32
     call a20 ;# set A20 gate to enable access to addresses with 1xxxxx
-    mov  al, byte ptr msdos + loadaddr
-    add  al, 'P' ;# makes it an 'O' if run from MSDOS
+    mov  al, byte ptr bootmode + loadaddr
+    add  al, 'P' ;# makes it an 'O' if run from MSDOS, 'N' from CDROM
     mov  byte ptr [es: 0xb8000 | (upper_right - 8)], al
-    cmp  al, 'P' ;# boot from floppy?
-    jz   0f  ;# continue if so...
+    and  al, 1 ;# odd number means DOS
+    jz   0f  ;# done if started from MSDOS
 9:  mov  esi, godd ;# set up data stack pointer for 'god' task
     jmp  start1
 0:  call unreal_mode
@@ -122,20 +136,24 @@ read:
     mov  ebx, iobuffer
     push ebx
     mov  ax, (2 << 8) + 36  ;# 18 sectors per head, 2 heads
-    mov  dx, 0x0000 ;# head 0, drive 0
     mov  ch, [cylinder + loadaddr]
     mov  cl, 1  ;# sector number is 1-based, and we always read from first
+    ;#mov  dx, cx
+    ;#shownumber
+    mov  dx, 0x0000 ;# head 0, drive 0
     int  0x13
     mov  edx, esi  ;# temporarily store parameter stack pointer in EDX
     pop  esi  ;# load iobuffer
     mov  ecx, 512*18*2/4
-    showprogress
+    ;#showprogress
     addr32 rep movsd ;# move to ES:EDI location preloaded by caller
-    showprogress
+    ;#showprogress
     mov  esi, edx  ;# restore parameter stack pointer
     pop  edx
     ret
 
+.ifdef DEBUGGING
+.code16
 progress: ;# show progress indicator
     pop  dx  ;# grab return address
     push dx  ;# and put back on stack
@@ -164,12 +182,15 @@ shownumber: ;# alternate entry point, preload DX register
     pop  bx
     pop  ax
     ret
+.endif
 
 relocate:  ;# move code from where DOS or BIOS put it, to where we want it
 ;# it would seem to be trivial, but in cases where the 64K span of source
 ;# and destination overlap, we overwrite this code and crash. it happened.
 ;# so now we move everything to end of 640K base RAM and then move back
 ;# to its final destination.
+    cmp  byte ptr bootmode + loadaddr, 0xfe ;# already in correct place?
+    jz   9f  ;# if so, skip the difficult stuff
     mov  ax, (0xa0000 - 0x10000) >> 4 ;# segment address of relocation
     mov  es, ax
     mov  eax, ebp ;# get source address
