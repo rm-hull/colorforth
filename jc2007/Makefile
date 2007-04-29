@@ -54,6 +54,10 @@ BXSHARE := $(shell cygpath -w $(BOCHS))
 TIMESTAMP := $(shell date +%Y-%m-%d-%H:%M:%S)
 DEBUGGING := 1
 CDBOOT := cfboot.iso
+WIN98 := win98_img.IMA
+LARGEST_CF := /usr/src/howerd/cfdos4/CFDOS4.BLK
+LOADBLOCKS := $(shell du $(LARGEST_CF) | awk {'print $$1'})
+VIRTUAL_SECTORS := $(shell expr $(LOADBLOCKS) \* 2)
 export
 default: small bochs23
 color.com: $(sources)
@@ -257,10 +261,15 @@ cfboot.iso: boot.asm color.asm Makefile
 	 -c boot.catalog \
 	 -no-emul-boot \
 	 -boot-load-seg=0x940 \
-	 -boot-load-size=0x800 \
+	 -boot-load-size=$(VIRTUAL_SECTORS) \
 	 --exclude-list=exclude.lst \
 	 -o $@ \
 	 .
+win98.iso: $(WIN98)
+	mkdir -p cdboot
+	cp $< boot.img
+	echo 'test' > cdboot/README
+	mkisofs -b boot.img -c boot.catalog -o $@ cdboot
 cfisotest: cfboot.iso bochsrc
 	IMAGE=$< $(BOCHS)/bochs -q
 cdtest: $(CDBOOT)

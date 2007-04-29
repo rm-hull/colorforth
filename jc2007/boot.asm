@@ -4,6 +4,17 @@
 ;# we can use starting at 0x500
 
 .equ upper_right, 158 ;# address of upper-right corner of screen
+.ifdef LOADBLOCKS
+ ;# this 'ifdef' is only here to trigger the Makefile to include this number
+ ;# but let's use it to define other constants while we're at it
+ .equ HEADS, 2
+ .equ SECTORS_PER_TRACK, 18
+ .equ BYTES_PER_CYLINDER, 512 * HEADS * SECTORS_PER_TRACK
+ .equ LOAD_CYLINDERS, (LOADBLOCKS * 1024) / BYTES_PER_CYLINDER
+ .if (LOADBLOCKS * 1024) % BYTES_PER_CYLINDER > 0
+  .equ LOAD_CYLINDERS, LOAD_CYLINDERS + 1
+ .endif
+.endif
 .macro showprogress
   .ifdef DEBUGGING
   call progress
@@ -33,21 +44,22 @@ bps:
     .word 1       ;# sector reserved
     .byte 2       ;# fats
     .word 16*14   ;# root directory entries
-    .word 80*2*18 ;# sectors
+    .word 80 * HEADS * SECTORS_PER_TRACK ;# sectors
     .byte 0x0f0   ;# media
     .word 9       ;# sectors/fat
 spt:
-    .word 18      ;# sectors/track
+    .word SECTORS_PER_TRACK ;# sectors/track
 heads:
-    .word 2       ;# heads
+    .word HEADS   ;# heads
     .long 0       ;# hidden sectors
-    .long 80*2*18 ;# sectors again
+    .long 80 * HEADS * SECTORS_PER_TRACK ;# sectors again
 drive:
     .byte 0       ;# drive
 cylinder: .word 0
 .align 4
-;# forth+icons+blocks 24-270 ;# number of cylinders, 15 (out of 80)
-nc:  .long 15 ;# needs to be on longword boundary, see nc_ in color.asm
+;# forth+icons+blocks 24-LOADBLOCKS ;# number of cylinders to load (out of 80)
+;# needs to be on longword boundary, see nc_ in color.asm
+nc:  .long LOAD_CYLINDERS
 gdt: .word gdt_end - gdt0 - 1 ;# GDT limit
     .long gdt0 + loadaddr ;# pointer to start of table
 .align 8
