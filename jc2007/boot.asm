@@ -95,13 +95,12 @@ start0:
 .code32
     call a20 ;# set A20 gate to enable access to addresses with 1xxxxx
     mov  al, byte ptr bootmode + loadaddr
-    add  al, 'P' ;# makes it an 'O' if run from MSDOS, 'N' from CDROM
-    mov  byte ptr [es: 0xb8000 | (upper_right - 8)], al
-    and  al, 1 ;# odd number means DOS
-    jz   0f  ;# done if started from MSDOS
+    or   al, al  ;# negative if MSDOS-loaded or El Torito non-emulation mode
+    jz   0f ;# otherwise we need to load bootcode from floppy
 9:  mov  esi, godd ;# set up data stack pointer for 'god' task
     jmp  start1
-0:  call unreal_mode
+0:  mov  byte ptr [es: 0xb8000 | (upper_right - 8)], 'P'
+    call unreal_mode
 .code16
     ;# fall through to cold-start routine
 cold:
