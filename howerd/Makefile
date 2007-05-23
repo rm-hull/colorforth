@@ -86,9 +86,11 @@ cdtest: $(CDBOOT) vmclean
 	 echo must define CDBOOT=cfdos4.iso >&2; false; fi
 	sed -i 's/^\(ide0:0.fileName =\).*/\1 "$<"/' cf.vmx
 	$(MAKE) runcd
-runcd:
-	$(VMWARE)/vmplayer.exe cf.vmx
+runcd:	vmclean
+	$(VMWARE)/vmplayer.exe cf-cdrom.vmx
+runfloppy: vmclean
+	$(VMWARE)/vmplayer.exe cf-floppy.vmx
 vmclean:
-	rm -f cf.{vmss,vmsd} *.log *.vmem *.lck *.nvram *.dbg
+	rm -f *.{vmss,vmsd} *.log *.vmem *.lck *.nvram *.dbg
 %.gz:	%
 	gzip -c $< > $@
