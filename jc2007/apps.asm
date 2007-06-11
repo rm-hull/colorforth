@@ -2,8 +2,9 @@ BLOCK
 FORTH [TEXTCAPITALIZED], mandelbrot, [TEXT], display, [EXECUTE], empty, [VARIABLE], xl, [BINARY], 0, [VARIABLE], xr, [BINARY], 0, [VARIABLE], yt, [BINARY], 0, [VARIABLE], yb, [BINARY], 0, [VARIABLE], xspan, [BINARY], 0, [VARIABLE], yspan, [BINARY], 0, [VARIABLE], dark, [BINARY], 0, [VARIABLE], pixel, [BINARY], 0, [VARIABLE], count, [BINARY], 0, [VARIABLE], level, [BINARY], 0,
 FORTH zlen, [EXECUTE], hp, [EXECUTE], vp, [EXECUTE], *, [EXECUTE], 1+,
  FORTH [EXECUTE], dup, [EXECUTE], +, ";"
-FORTH allot, [TEXT], n-a, align, here, dup, push, +, here!, pop, ";"
- FORTH [VARIABLE], z, [BINARY], 0, [EXECUTE], zlen, [EXECUTE], cells,
+FORTH align, [COMPILEMACRO], align, ";"
+ FORTH [VARIABLE], z, [BINARY], 0, [EXECUTE], align, [EXECUTE], here,
+ FORTH [EXECUTE], zlen, [EXECUTE], cells,
  FORTH [EXECUTE], allot, [EXECUTE], 1, [EXECUTE], cells, [EXECUTE], /,
  FORTH [EXECUTE], z, [EXECUTE], !
 FORTH abs, 0, or, -if, negate, then, ";"

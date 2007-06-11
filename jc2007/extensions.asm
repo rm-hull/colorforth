@@ -100,8 +100,8 @@ zero: ;# na- erase words of RAM
  pop edi
  ret
 
-herestore: ;# a- directly manipulate the 'here' pointer
- mov h + loadaddr, eax
+allot: ;# n- reserve n bytes at the HERE pointer
+ add h + loadaddr, eax
  drop
  ret
 

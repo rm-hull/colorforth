@@ -1672,7 +1672,7 @@ forth0:
     ;# look in extensions.asm for most of the following new words
     packword buffer, off, rgb, hp, vp, iw, ih, hc, vc, zero
     packword cells, nan, 1-, 1+, 1, -1, w@, w!, +w!, +load
-    packword here!, vram
+    packword allot, vram
 forth1:
     .rept 512 - ((.-forth1)/4) .long 0; .endr
 macro2:
@@ -1689,7 +1689,7 @@ forth2:
     ;# look in extensions.asm for most of the following new words
     long buffer, off, rgb, hp_, vp_, iw_, ih_, hc_, vc_, zero
     long cells, nan_, oneless, oneplus, one, minus1,wat,wstore,pwstore,plusload
-    long herestore, vram
+    long allot, vram
 0:
     ;# .rept 512 - ((.-0b)/4) .long 0; .endr ;# room for new definitions
 
