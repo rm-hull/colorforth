@@ -155,10 +155,12 @@ FORTH "[TEXT]", "colorforth",  "[TEXTCAPITALIZED]", "jul31",  "[TEXTCAPITALIZED]
 FORTH "dump",  "[COMPILESHORT]", "32",  "load",  ";"
 FORTH "icons",  "[COMPILESHORT]", "34",  "load",  ";"
 .ifdef FREEDOS_ISO
-FORTH mandelbrot, [COMPILESHORT], 38, load, ";"
+FORTH core, [COMPILESHORT], 38, load, ";"
+FORTH mandelbrot, [COMPILESHORT], 40, load, ";"
 .else
 FORTH "print",  "[COMPILESHORT]", "38",  "load",  ";"
-FORTH mandelbrot, [COMPILESHORT], 64, load, ";"
+FORTH core, [COMPILESHORT], 64, load, ";"
+FORTH mandelbrot, [COMPILESHORT], 66, load, ";"
 .endif
 FORTH "file",  "[COMPILESHORT]", "44",  "load",  ";"
 FORTH "north",  "[COMPILESHORT]", "46",  "load",  ";"

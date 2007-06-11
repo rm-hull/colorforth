@@ -1,13 +1,24 @@
+BLOCK # should be 64
+FORTH [TEXTCAPITALIZED], ans, [TEXT], core
+FORTH abs, [TEXT], n-n, 0, or, -if, negate, then, ";"
+FORTH align, [COMPILEMACRO], align, ";"
+FORTH core, ";"  # redefine to no-op
 BLOCK
-FORTH [TEXTCAPITALIZED], mandelbrot, [TEXT], display, [EXECUTE], empty, [VARIABLE], xl, [BINARY], 0, [VARIABLE], xr, [BINARY], 0, [VARIABLE], yt, [BINARY], 0, [VARIABLE], yb, [BINARY], 0, [VARIABLE], xspan, [BINARY], 0, [VARIABLE], yspan, [BINARY], 0, [VARIABLE], dark, [BINARY], 0, [VARIABLE], pixel, [BINARY], 0, [VARIABLE], count, [BINARY], 0, [VARIABLE], level, [BINARY], 0,
+FORTH [TEXT], some, [TEXTCAPITALIZED], ans, core, words,
+FORTH [TEXT], not, previously, defined
+FORTH abs, return, absolute, value
+FORTH align, allow, compiling, of, macro, that, aligns,
+ FORTH [TEXTCAPITALIZED], here, pointer
+FORTH core, not, a, core, word, but, a, redefinition, of, the, word, that,
+FORTH [TEXT], loaded, this, "screen;", now, a, no-op
+BLOCK
+FORTH [TEXTCAPITALIZED], mandelbrot, [TEXT], display, [EXECUTE], empty, [VARIABLE], xl, [BINARY], 0, [VARIABLE], xr, [BINARY], 0, [VARIABLE], yt, [BINARY], 0, [VARIABLE], yb, [BINARY], 0, [VARIABLE], xspan, [BINARY], 0, [VARIABLE], yspan, [BINARY], 0, [VARIABLE], dark, [BINARY], 0, [VARIABLE], pixel, [BINARY], 0, [VARIABLE], count, [BINARY], 0, [VARIABLE], level, [BINARY], 0, [EXECUTE], core
 FORTH zlen, [EXECUTE], hp, [EXECUTE], vp, [EXECUTE], *, [EXECUTE], 1+,
  FORTH [EXECUTE], dup, [EXECUTE], +, ";"
-FORTH align, [COMPILEMACRO], align, ";"
  FORTH [VARIABLE], z, [BINARY], 0, [EXECUTE], align, [EXECUTE], here,
  FORTH [EXECUTE], zlen, [EXECUTE], cells,
  FORTH [EXECUTE], allot, [EXECUTE], 1, [EXECUTE], cells, [EXECUTE], /,
  FORTH [EXECUTE], z, [EXECUTE], !
-FORTH abs, 0, or, -if, negate, then, ";"
 FORTH fixed, [COMPILELONGHEX], 10000000, [COMPILESHORT], 10000, */, ";"
 FORTH clear, [COMPILESHORTHEX], ffff, color, screen, zlen,
  FORTH [EXECUTE], z, @, zero, 0,
