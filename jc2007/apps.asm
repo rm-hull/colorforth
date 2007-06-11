@@ -1,5 +1,5 @@
 BLOCK # should be 64
-FORTH [TEXTCAPITALIZED], ans, [TEXT], core
+FORTH [TEXTALLCAPS], ans, [TEXT], core
 FORTH abs, [TEXT], n-n, 0, or, -if, negate, then, ";"
 FORTH align, [COMPILEMACRO], align, ";"
 FORTH core, ";"  # redefine to no-op
@@ -12,7 +12,12 @@ FORTH align, allow, compiling, of, macro, that, aligns,
 FORTH core, not, a, core, word, but, a, redefinition, of, the, word, that,
 FORTH [TEXT], loaded, this, "screen;", now, a, no-op
 BLOCK
-FORTH [TEXTCAPITALIZED], mandelbrot, [TEXT], display, [EXECUTE], empty, [VARIABLE], xl, [BINARY], 0, [VARIABLE], xr, [BINARY], 0, [VARIABLE], yt, [BINARY], 0, [VARIABLE], yb, [BINARY], 0, [VARIABLE], xspan, [BINARY], 0, [VARIABLE], yspan, [BINARY], 0, [VARIABLE], dark, [BINARY], 0, [VARIABLE], pixel, [BINARY], 0, [VARIABLE], count, [BINARY], 0, [VARIABLE], level, [BINARY], 0, [EXECUTE], core
+FORTH [TEXTCAPITALIZED], mandelbrot, [EXECUTE], empty, [EXECUTE], core
+ FORTH [VARIABLE], xl, [BINARY], 0, [VARIABLE], xr, [BINARY], 0
+ FORTH [VARIABLE], yt, [BINARY], 0, [VARIABLE], yb, [BINARY], 0
+ FORTH [VARIABLE], xspan, [BINARY], 0, [VARIABLE], yspan, [BINARY], 0
+ FORTH [VARIABLE], dark, [BINARY], 0, [VARIABLE], pixel, [BINARY], 0,
+ FORTH [VARIABLE], count, [BINARY], 0, [VARIABLE], level, [BINARY], 0
 FORTH zlen, [EXECUTE], hp, [EXECUTE], vp, [EXECUTE], *, [EXECUTE], 1+,
  FORTH [EXECUTE], dup, [EXECUTE], +, ";"
  FORTH [VARIABLE], z, [BINARY], 0, [EXECUTE], align, [EXECUTE], here,
@@ -29,13 +34,10 @@ FORTH reinit,
  FORTH [EXECUTE], yt, @, [EXECUTE], yb, @, negate, +,
  FORTH [EXECUTE], yspan, !,
  FORTH [COMPILEWORD], ";"
-FORTH init, [TEXT], -2.1,
+FORTH init, 
  FORTH [EXECUTESHORT], -21000, [EXECUTE], fixed, nop, [EXECUTE], xl, "!",
- FORTH [TEXT], 1.1,
  FORTH [EXECUTESHORT], 11000, [EXECUTE], fixed, nop, [EXECUTE], xr, "!",
- FORTH [TEXT], 1.2,
  FORTH [EXECUTESHORT], 12000, [EXECUTE], fixed, nop, [EXECUTE], yt, "!",
- FORTH [TEXT], -1.2,
  FORTH [EXECUTESHORT], -12000, [EXECUTE], fixed, nop, [EXECUTE], yb, "!",
  FORTH [COMPILESHORT], -2, [EXECUTE], dark, !
  FORTH [COMPILESHORT], 5000, [EXECUTE], count, !
@@ -44,17 +46,17 @@ FORTH init, [TEXT], -2.1,
 FORTH darker, [TEXT], n-, 2*, vframe, +, dup, w@,
  FORTH [COMPILEWORD], 0, +, drop, if,
  FORTH [EXECUTE], dark, @, swap, +w!, ";", then, drop, ";"
-FORTH z@, [TEXT], i-nn, 2*, [EXECUTE], z, @, +, dup, @, swap, 1+, @, ";"
-FORTH ge4, [TEXT], n-f, ;# 'if' tests true (nz) if abs(n) > 4
+FORTH z@, 2*, [EXECUTE], z, @, +, dup, @, swap, 1+, @, ";"
+FORTH ge4, ;# 'if' tests true (nz) if abs(n) > 4
  FORTH [COMPILEWORD], abs, [EXECUTESHORT], -40000, [EXECUTE], fixed,
- FORTH [COMPILEWORD], +, drop, -if, 0, drop, ";", then, ";"
+ FORTH [COMPILEWORD], +, drop, -if, 0, drop, then, ";"
 FORTH fx*, [COMPILELONGHEX], 10000000, */, ";"
-FORTH four, [TEXT], n-, dup, z@, ge4, if, drop, drop, ";",
+FORTH four, dup, z@, ge4, if, drop, drop, ";",
  FORTH [COMPILEWORD], then, ge4, if, drop, ";",
  FORTH [COMPILEWORD], then, dup, z@, dup, fx*, ge4, if, drop, drop, ";"
  FORTH [COMPILEWORD], then, dup, fx*, ge4, if, drop, ";"
  FORTH [COMPILEWORD], then, z@, dup, fx*, swap, dup, fx*, +, ge4, ";"
-FORTH z!, [TEXT], nni-, 2*, [EXECUTE], z, @, +, dup, push, 1+, !, pop, !, ";"
+FORTH z!, 2*, [EXECUTE], z, @, +, dup, push, 1+, !, pop, !, ";"
 FORTH [EXECUTESHORT], 2, [EXECUTE], +load,
  FORTH [EXECUTESHORT], 4, [EXECUTE], +load
  FORTH [EXECUTE], ok, [EXECUTE], h
