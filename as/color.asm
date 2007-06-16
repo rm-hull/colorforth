@@ -206,7 +206,7 @@ show: pop  screen ;# pop return address into screen; 'ret' if from show0
 0:  call graphic ;# just 'ret' in gen.asm
     call [screen] ;# ret if called from show0
     call switch ;# load framebuffer into video, then switch task
-    inc  eax ;# why bother?
+    inc  eax ;# why bother? can't see this being used anywhere
     jmp  0b ;# loop eternally
 
 c_: mov  esi, godd+4
@@ -247,6 +247,7 @@ find: ;# locate code of high- or low-level Forth word
     pop  edi ;# no longer need this, can tell from ECX where match was found
     ret
 
+;# ex1 is the default action of 'aword'; find and execute the word
 ex1: dec dword ptr words ;# from keyboard
     jz   0f
     drop
