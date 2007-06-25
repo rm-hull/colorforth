@@ -110,6 +110,13 @@
 ;#     7c00 bios boot sector
 ;#        0 forth
 
+;# register usage:
+;#  EAX: TOS, top-of-stack for GODD stack; [ESI] is actually the SECOND element
+;#  ESI: data stack pointer (GODD stack)
+;#  EDI: pointer to source word, used by compiler and editor
+;#       see LOAD and INTER; EDI is incremented after each word is fetched,
+;#       which is why you see [-4+EDI*4] a lot, to get the word being compiled
+
 warm: dup_
 start1:
 .ifdef AGP
@@ -125,7 +132,7 @@ start1:
 .ifndef cm2001
 ;# in theory this is a good idea, preventing stack underflow...
 ;# in practice, other things are messed up so this causes extra item on stack
-;#  dup_ ;# so the 'drop' in 'load' doesn't move cause stack underflow
+;#  dup_ ;# so the 'drop' in 'load' doesn't cause stack underflow
 .endif
     call load
     jmp  accept ;# wait for keyhit
@@ -209,7 +216,7 @@ show: pop  screen ;# pop return address into screen; 'ret' if from show0
     inc  eax ;# why bother? can't see this being used anywhere
     jmp  0b ;# loop eternally
 
-c_: mov  esi, godd+4
+c_: mov  esi, godd+4 ;# causes data stack underflow?!
     ret
 
 mark: ;# save current state so we can recover later with 'empty'
@@ -217,18 +224,18 @@ mark: ;# save current state so we can recover later with 'empty'
     mov  mk, ecx
     mov  ecx, forths ;# number of forth words in mk+1
     mov  mk+4, ecx
-    mov  ecx, h ;# 'here' pointer in mk+2
+    mov  ecx, h ;# HERE pointer in mk+2
     mov  mk+2*4, ecx
     ret
 
 empty: ;# restore state saved at last 'mark'
     mov  ecx, mk+2*4
-    mov  h, ecx ;# 'here' pointer restored
+    mov  h, ecx ;# HERE pointer restored
     mov  ecx, mk+4
     mov  forths, ecx ;# number of forth words restored
     mov  ecx, mk
     mov  macros, ecx ;# number of macros restored
-    mov  dword ptr class, 0 ;# (jc) not sure what this is for yet
+    mov  dword ptr class, 0 ;# used by C18 compiler, cleared here
     ret
 
 mfind: ;# find pointer to macro code
@@ -267,9 +274,10 @@ ex2:
     drop ;# restore EAX from data stack
     jmp  [forth2+ecx*4] ;# execute the Forth word found
 
-abort: mov  curs, edi
-    shr  edi, 10-2
-    mov  blk, edi
+abort: mov  curs, edi ;# get pointer to last source word encountered
+    shr  edi, 10-2 ;# get block number from word pointer
+    mov  blk, edi ;# update BLK
+    ;# this way, E will begin editing at point of failure
 abort1: mov  esp, gods ;# reset return stack pointer
     mov  dword ptr  spaces+3*4, offset forthd ;# reset adefine
     mov  dword ptr  spaces+4*4, offset qcompile
@@ -292,39 +300,50 @@ forthd:
     mov  ecx, forths ;# current count of Forth words
     inc dword ptr forths ;# make it one more
     lea  ecx, [forth0+ecx*4] ;# point to the slot for the next definition
-0:  mov  edx, [-4+edi*4] ;# load the packed word from ???
+0:  mov  edx, [-4+edi*4] ;# load the packed word from source block
     and  edx, 0xfffffff0 ;# mask out the tag bits
     mov  [ecx], edx ;# store the "naked" word in the dictionary
-    mov  edx, h ;# 'here' pointer, place available for new compiled code
+    mov  edx, h ;# HERE pointer, place available for new compiled code
     mov  [forth2-forth0+ecx], edx
     lea  edx, [forth2-forth0+ecx]
     shr  edx, 2
     mov  last, edx
     mov  list, esp
     mov dword ptr  lit, offset adup
-    test dword ptr class, -1
-    jz   0f
-    jmp  [class]
+    ;# for CLASS stuff, search web for moore01a.pdf
+    test dword ptr class, -1 ;# is CLASS set for C18 compilation?
+    jz   0f ;# return if not
+    jmp  [class] ;# otherwise do C18 compilation
 0:  ret
 
-cdrop: mov  edx, h
-    mov  list, edx
-    mov  byte ptr [edx], 0x0ad ;# lodsd
-    inc  dword ptr h
+cdrop: ;# compile a DROP instruction
+    mov  edx, h ;# get HERE pointer to newly compiled code
+    mov  list, edx ;# store at LIST for tail optimization
+    mov  byte ptr [edx], 0x0ad ;# compile LODSD
+    inc  dword ptr h ;# update HERE pointer
     ret
 
-qdup: mov  edx, h
-    dec  edx
-    cmp  list, edx
-    jnz  cdup
-    cmp  byte ptr [edx], 0x0ad
-    jnz  cdup
-    mov  h, edx
+qdup: ;# compile a DUP if necessary (uses tail optimizer)
+    mov  edx, h ;# get HERE pointer
+    dec  edx ;# point back to last byte compiled
+    cmp  list, edx ;# is it subject to tail optimization?
+    jnz  cdup ;# if not, go ahead and compile the DUP
+    cmp  byte ptr [edx], 0x0ad ;# is it a DROP instruction?
+    jnz  cdup ;# if not, compile the DUP
+    ;# so it's a DROP instruction, and we were about to compile a DUP.
+    ;# DROP followed by DUP is a no-op, so point HERE to before the DROP
+    ;# was compiled, and we've eliminated a one-byte DROP, a 5-byte DUP,
+    ;# and the wasted runtime they would have consumed
+    mov  h, edx ;# move HERE back one byte
     ret
-cdup: mov  edx, h
-    mov  dword ptr [edx], 0x89fc768d
+cdup: ;# compile a DUP instruction
+    mov  edx, h ;# get HERE pointer
+    ;# disassembly of DUP:
+    ;# 8d 76 fc    lea    esi,[esi-4]
+    ;# 89 06       mov    DWORD PTR [esi],eax
+    mov  dword ptr [edx], 0x89fc768d ;# compile the DUP
     mov  byte ptr [4+edx], 06
-    add dword ptr  h, 5
+    add dword ptr  h, 5 ;# adjust HERE accordingly
     ret
 
 adup: dup_
@@ -336,12 +355,12 @@ var1: dup_
 variable: call forthd
     mov dword ptr  [forth2-forth0+ecx], offset var1
     inc dword ptr  forths ;# dummy entry for source address
-    mov  [4+ecx], edi
+    mov  [4+ecx], edi ;# EDI is source address containing variable's value
     call macrod
     mov dword ptr  [forth2-forth0+ecx], offset 0f
     inc dword ptr  macros
     mov  [4+ecx], edi
-    inc  edi
+    inc  edi ;# update source word pointer to following word
     ret
 0:  call [lit]
     mov  eax, [4+macro0+ecx*4]
@@ -379,15 +398,15 @@ qcompile: call [lit]
     jmp  [macro2+ecx*4] ;# jmp to macro code
 0:  call find ;# try to find the word in the Forth dictionary
     mov  eax, [forth2+ecx*4] ;# load code pointer in case there was a match
-0:  jnz  abort ;# abort if no match in Forth dictionary
+0:  jnz  abort ;# abort if no match in dictionary
 call_:
-    mov  edx, h ;# get 'here' pointer to where new compiled code goes
+    mov  edx, h ;# get HERE pointer to where new compiled code goes
     mov  list, edx
     mov  byte ptr [edx], 0x0e8 ;# x86 "call" instruction
     add  edx, 5
     sub  eax, edx ;# it has to be a 32-bit offset rather than absolute address
     mov  [-4+edx], eax ;# store it after the "call" instruction
-    mov  h, edx ;# point 'here' to end of just-compiled code
+    mov  h, edx ;# point HERE to end of just-compiled code
     drop ;# restore EAX from data stack
     ret
 
@@ -411,30 +430,30 @@ num: mov dword ptr lit, offset alit
     ret
 
 comma: mov  ecx, 4
-0:  mov  edx, h
-    mov  [edx], eax
-    mov  eax, [esi] ;# drop
-    lea  edx, [edx+ecx]
-    lea  esi, [esi+4]
-    mov  h, edx
+0:  mov  edx, h ;# get HERE pointer to where code is compiled
+    mov  [edx], eax ;# move what's at TOS into that location
+    mov  eax, [esi] ;# first part of DROP
+    lea  edx, [edx+ecx] ;# adjust HERE for number of bytes compiled
+    lea  esi, [esi+4] ;# finish DROP, adjusting data stack pointer
+    mov  h, edx ;# update HERE
     ret
 
-comma1: mov  ecx, 1
+comma1: mov  ecx, 1 ;# 1-byte compilation
     jmp  0b
 
-comma2: mov  ecx, 2
+comma2: mov  ecx, 2 ;# 2-byte compilation
     jmp  0b
 
-comma3: mov  ecx, 3
+comma3: mov  ecx, 3 ;# 3-byte compilation
     jmp  0b
 
-semi: mov  edx, h
-    sub  edx, 5
+semi: mov  edx, h ;# get HERE pointer
+    sub  edx, 5 ;# peek back 5 bytes
     cmp  list, edx
     jnz  0f
-    cmp  byte ptr [edx], 0x0e8
+    cmp  byte ptr [edx], 0x0e8 ;# e8=call, e9=jmp
     jnz  0f
-    inc  byte ptr [edx] ;# jmp
+    inc  byte ptr [edx] ;# change it to jmp
     ret
 0:  mov  byte ptr [5+edx], 0x0c3 ;# ret
     inc  dword ptr h
@@ -462,6 +481,9 @@ qlit: mov  edx, h
     mov  eax, list+4
     mov  list, eax
     mov  eax, [1+edx]
+    ;# disassembly of DUP:
+    ;# 8d 76 fc    lea    esi,[esi-4]
+    ;# 89 06       mov    DWORD PTR [esi],eax
     cmp  dword ptr [edx-5], 0x89fc768d ;# dup
     jz   q1
     mov  h, edx
@@ -476,11 +498,13 @@ less: cmp  [esi], eax
     xor  ecx, ecx ;# flag z
 0:  ret
 
-qignore: test dword ptr [-4+edi*4], 0xfffffff0 ;# valid packed word?
+qignore: ;# is this a continuation of the previous word? ignore if so
+    test dword ptr [-4+edi*4], 0xfffffff0 ;# valid packed word?
     jnz  nul  ;# return if so
-    pop  edi
-    pop  edi
-nul: ret
+    ;# otherwise call it a NUL and terminate the LOAD
+    pop  edi ;# pop the RET address from the call to qignore
+    pop  edi ;# now pop the saved EDI which was PUSHed by LOAD
+nul: ret ;# return to caller (where LOAD was called if NUL)
 
 jump: pop  edx
     add  edx, eax
@@ -490,7 +514,7 @@ jump: pop  edx
     jmp  edx
 
 load: shl  eax, 10-2 ;# multiply by 256 longwords, same as 1024 bytes
-    push edi ;# save EDI register, we need it for the inner interpreter loop
+    push edi ;# save EDI register in case it's being used by interpreter
     mov  edi, eax
     drop ;# block number from data stack
 inter: mov  edx, [edi*4] ;# get next longword from block
@@ -500,32 +524,34 @@ inter: mov  edx, [edi*4] ;# get next longword from block
     jmp  inter ;# loop till "nul" reached, which ends the loop
 
 .align 4
-spaces: .long qignore, execute, num
+;# these are the compiler actions for the various type tags
+spaces: .long qignore, execute, num ;# 0 = extension, 1=execute, 2=executelong
+;# 3=define, either in macro dictionary or forth dictionary
 adefine: ;# where definitions go, either in macrod (dictionary) or forthd
 .ifdef CM2001
     .long forthd ;# as found in CM2001 color.com binary
 .else
     .long macrod ;# default, the macro dictionary
 .endif
-    .long qcompile, cnum, cshort, compile
-    .long short_, nul, nul, nul
-    .long variable, nul, nul, nul
+    .long qcompile, cnum, cshort, compile ;# 4=green, 5=long, 6=short, 7=cyan
+    .long short_, nul, nul, nul ;# 8=executeshort
+    .long variable, nul, nul, nul ;# 12=variable
 
 lit: .long adup
 .ifdef CM2001
 mk: .long 0x2e, 0x5e, 0x101028
 h: .long 0x101137
 last: .long 0x59f
-class: .long 0
+class: .long 0 
 list: .long 0x101132, 0x10111e
 macros: .long 0x2e
 forths: .long 0x67
 .else
 mk: .long 0, 0, 0
-h: .long 0x40000*4 ;# start compiling at 0x100000
+h: .long 0x40000*4 ;# HERE pointer: start compiling at 0x100000
 last: .long 0
-class: .long 0
-list: .long 0, 0
+class: .long 0 ;# used by C18 compiler
+list: .long 0, 0 ;# used by tail optimizer
 macros: .long 0
 forths: .long 0
 .endif
