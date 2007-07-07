@@ -11,14 +11,14 @@
 
 .macro debugout
 /* CM referred to this as "Terry Loveall's e1 strobe" in some online docs, but
-/* I can't find anything regarding port 0xe1 anywhere else, and the data
-/* sent doesn't make any sense anyway. The boot failure problems mentioned in
-/* that online document would more likely be due to the hardcoded millisecond
-/* calculations for busy-wait routines than any "strobe" effect.
-/* milliseconds should be calulated, with a single loop, using the
-/* pc clock chip, like bogoMIPS. or, better yet, the clock should be used for
-/* timing rather than busy-wait loops.
-/* */
+ * I can't find anything regarding port 0xe1 anywhere else, and the data
+ * sent doesn't make any sense anyway. The boot failure problems mentioned in
+ * that online document would more likely be due to the hardcoded millisecond
+ * calculations for busy-wait routines than any "strobe" effect.
+ * milliseconds should be calulated, with a single loop, using the
+ * pc clock chip, like bogoMIPS. or, better yet, the clock should be used for
+ * timing rather than busy-wait loops.
+ */
 .ifdef E1_STROBE
     out 0xe1, al
 .endif
@@ -194,9 +194,9 @@ unpause: pop  eax ;# return address is that of 'main' slot above
     ret
 
 act: ;# set currently active task
-    mov  edx, maind-4 ;# data stack of 'main' task
+    mov  edx, maind-4 ;# bottom element of 'main' task data stack
     mov  [edx], eax ;# 0 if called from 'show'
-    mov  eax, mains-4 ;# return stack of 'main' task
+    mov  eax, mains-4 ;# bottom element of 'main' task return stack
     pop  [eax] ;# return of 'god' task now on 'main' stack
     sub  eax, 4 ;# down one slot on 'main' stack
     mov  [eax], edx ;# store 'main' data stack pointer
@@ -207,8 +207,8 @@ act: ;# set currently active task
 show0: call show
     ret
 show: pop  screen ;# pop return address into screen; 'ret' if from show0
-    dup_
-    xor  eax, eax
+    dup_ ;# save whatever is in EAX on data stack
+    xor  eax, eax ;# make top stack element 0
     call act ;# make following infinite loop the 'active task'
 0:  call graphic ;# just 'ret' in gen.asm
     call [screen] ;# ret if called from show0
@@ -689,19 +689,20 @@ debug: mov dword ptr  xy,  offset (3*0x10000+(vc-2)*ih+3)
 ;# MASM's 3-byte NOP for alignment is 2e8bc0, cs: mov eax,eax
 ;# whereas gas's is 8d7600, lea esi,[esi].
 .ifdef CM2001
-     cs mov eax, eax
+     cs mov eax, eax ;# (just the way MASM pads the alignment)
 xy: .long 0x033d02e5
 lm: .long 3
 rm: .long hc*iw
 xycr: .long 3*0x10000+3
-fov: .long 10*(2*vp+vp/2)
+fov: .long 10*(2*vp+vp/2) 
 .else
 .align 4 
 xy: .long 3*0x10000+3 ;# 3 pixels padding on each side of icons
-lm: .long 3
-rm: .long hc*iw ;# 1012
+lm: .long 3 ;# left margin
+rm: .long hc*iw ;# 1012 is right margin on a 1024-pixel screen
 xycr: .long 0
-fov: .long 10*(2*vp+vp/2)
+fov: .long 10*(2*vp+vp/2) ;# field of view?
+;# nothing that I can see even uses FOV, maybe get rid of it? (jc)
 .endif
 
 nc_: dup_
@@ -1319,12 +1320,12 @@ ww: dup_
 type0: ;# display continuation of previous word
     sub  dword ptr xy, iw*0x10000 ;# call bspcr
     test dword ptr [-4+edi*4], 0xfffffff0 ;# valid packed word?
-    jnz  type1
-    dec  edi
-    mov  lcad, edi
+    jnz  type1 ;# display it if so...
+    dec  edi ;# otherwise we've gone past the end of the source, go back one
+    mov  lcad, edi ;# "last" cursor address is the last source word of screen
     call space
     call qring
-    pop  edx ;# .end of block
+    pop  edx ;# end of block
     drop
     jmp  keyboard
 
@@ -1363,7 +1364,7 @@ type2: call unpack
     drop
     ret
 
-;# green (compiled) short (27 bits) word
+;# display a green (compiled) short (27 bits) word
 gsw: mov  edx, [-4+edi*4]
     sar  edx, 5 ;# shift into position
     jmp  gnw1
@@ -1404,8 +1405,8 @@ refresh: call show
     call blank
     call text1
     dup_            ;# counter
-    mov  eax, lcad
-    mov  cad, eax ;# for curs beyond .end
+    mov  eax, lcad ;# pointer to end of screen source
+    mov  cad, eax ;# for cursor beyond end
     xor  eax, eax
     mov  edi, blk
     shl  edi, 10-2
@@ -1415,13 +1416,13 @@ ref1: test dword ptr [edi*4], 0x0f
     call qring
 0:  mov  edx, [edi*4]
     inc  edi
-    mov dword ptr  bas, offset dot10
+    mov dword ptr bas, offset dot10
     test dl, 020
     jz   0f
-    mov dword ptr  bas, offset dot
-0:  and  edx, 017
-    call display[edx*4]
-    jmp  ref1
+    mov dword ptr bas, offset dot
+0:  and  edx, 017 ;# get typetag bits as index into display vector
+    call display[edx*4] ;# call the appropriate display routine
+    jmp  ref1 ;# loop
 
 .align 4
 display: .long type0, ww, nw, rw
@@ -1440,9 +1441,9 @@ lcad: .long 0x122c
 trash: .long buffer*4+12
 .else
 curs: .long 0
-cad: .long 0
-pcad: .long 0
-lcad: .long 0
+cad: .long 0 ;# cursor (ring) address
+pcad: .long 0 ;# "previous" cursor address
+lcad: .long 0 ;# "last" cursor address
 trash: .long buffer*4
 .endif
 
@@ -1587,8 +1588,8 @@ destack: mov  edx, trash ;# grab what was left by last "cut" operation
     add  edx, 1*4
     mov  trash, edx
 
-insert0: mov  ecx, lcad  ;# room available?
-    add  ecx, words
+insert0: mov  ecx, lcad  ;# room available? get pointer to last source word
+    add  ecx, words ;# add to that the number of 32-bit words to be inserted
     xor  ecx, lcad
     and  ecx, -0x100
     jz   insert1
@@ -1616,7 +1617,7 @@ insert1: push esi
     mov  ecx, words
 0:  dec  edi
     mov  [edi*4], eax
-    drop ;# requires cld
+    drop ;# requires cld (see above)
     next 0b
     ret
 
@@ -1692,20 +1693,49 @@ enstack: dup_
 ens: drop
     ret
 
-pad: pop  edx
-    mov  vector, edx
-    add  edx, 28*5
+;# 'pad' is called by a high-level program to define the keypad, followed by
+;# 28 high-level compiled words that define the key vectors (actions), again
+;# followed by the Huffman codes for the characters representing the keys
+pad:
+    pop  edx  ;# keypad data must immediately follow call...
+    ;# there are 28 keys total, 12 on each side plus undefined keys (code 0),
+    ;# "n", "space" and alt
+    ;# we're popping the "return" address which is really the address of
+    ;# the vector table
+    mov  vector, edx ;# pointer to words for each possible keyhit
+    add  edx, 28*5 ;# 5 bytes to each "call" instruction
+    ;# just past that is character data, one byte for the Huffman code of each
+    ;# character that the physical keyboard represents ("r"=1, "t"=2, etc.)
+    ;# but remember that "board" contains 4 less than that address, which means
+    ;# that the first 4 must be those for keycode 0 and the "shift" keys
     mov  board, edx
-    sub  edx, 4*4
-    mov  shift, edx
-0:  call key
-    mov  edx, vector
-    add  edx, eax
-    lea  edx, [5+eax*4+edx]
-    add  edx, [-4+edx]
-    drop
-    call edx
-    jmp  0b
+    ;# now, the following makes no sense... subtracting 4*4 from an array of
+    ;# 5-byte entries should point in the middle of an instruction (which
+    ;# indeed it does). but the "shift" table is ordinarily an array of 4
+    ;# longwords followed by the 4 character codes, so there's a method to
+    ;# CM's madness
+    ;# the 'keyboard' routine uses this address only for the 4 character codes
+    ;# at the end of the table
+    sub  edx, 4*4  ;# simulate the 4 longwords, can't really use them
+    mov  shift, edx ;# this is only to point to the character codes
+0:  call key  ;# wait for a keyhit and return the code
+    mov  edx, vector ;# load vector table into EDX
+    ;# the following 3 instructions point to the appropriate vector for the key
+    ;# it amounts to adding eax*5 to the start of the vector table
+    add  edx, eax ;# add keyvalue once
+    lea  edx, [5+eax*4+edx] ;# add keyvalue 4 more times for total of 5...
+    ;# plus an extra 5 bytes, which we explain next...
+    ;# remember that a "call" instruction is e8xxxxxxxx, where the xxxxxxxx is
+    ;# the offset to the address from the _end_ of the current instruction.
+    ;# since by adding that extra 5 bytes we _are_ pointing to the end, adding
+    ;# the 4-byte offset just preceding our address should point us to the
+    ;# routine to be called. why not just push the address of the "jmp 0b"
+    ;# below, then "jmp" to the address of the call instead?
+    ;# guess it wouldn't be any clearer.
+    add  edx, [-4+edx] ;# point to the address of the routine to be called
+    drop  ;# restore EAX from the data stack
+    call edx ;# call the routine corresponding to keyhit
+    jmp  0b  ;# loop until "accept" code reached, which exits program
 
 .ifdef OBSOLETE_CM2001
  .org (0x1200-1)*4
