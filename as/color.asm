@@ -264,8 +264,9 @@ ex1: dec dword ptr words ;# from keyboard
     drop
     jmp  [forth2+ecx*4] ;# jump to low-level code of Forth word or macro
 
-execute: mov dword ptr lit, offset alit
-    dup_ ;# save EAX on data stack
+execute: ;# execute source word
+    mov dword ptr lit, offset alit
+    dup_ ;# save EAX (top of stack) on data stack
     mov  eax, [-4+edi*4]
 ex2:
     and  eax, 0xfffffff0 ;# mask tag bits which indicate word type
@@ -274,7 +275,8 @@ ex2:
     drop ;# restore EAX from data stack
     jmp  [forth2+ecx*4] ;# execute the Forth word found
 
-abort: mov  curs, edi ;# get pointer to last source word encountered
+abort: ;# abort load operation
+    mov  curs, edi ;# store pointer to last source word encountered
     shr  edi, 10-2 ;# get block number from word pointer
     mov  blk, edi ;# update BLK
     ;# this way, E will begin editing at point of failure
@@ -700,7 +702,7 @@ fov: .long 10*(2*vp+vp/2)
 xy: .long 3*0x10000+3 ;# 3 pixels padding on each side of icons
 lm: .long 3 ;# left margin
 rm: .long hc*iw ;# 1012 is right margin on a 1024-pixel screen
-xycr: .long 0
+xycr: .long 0 ;# this is apparently unused? (jc)
 fov: .long 10*(2*vp+vp/2) ;# field of view?
 ;# nothing that I can see even uses FOV, maybe get rid of it? (jc)
 .endif
@@ -784,7 +786,8 @@ zero: test eax, eax
     inc  eax
 0:  ret
 
-blank: dup_
+blank: ;# clear the screen (black)
+    dup_
     xor  eax, eax
     mov  xy, eax
     call color
@@ -794,43 +797,48 @@ blank: dup_
     mov  eax, vp
     jmp  box
 
-top: mov  ecx, lm
-    shl  ecx, 16
-    add  ecx, 3
-    mov  xy, ecx
-    mov  xycr, ecx
+top: ;# move to top of screen
+    mov  ecx, lm ;# get left margin in pixels
+    shl  ecx, 16 ;# shift to X of XY doubleword
+    add  ecx, 3 ;# add 3 pixels for top (Y) margin
+    mov  xy, ecx ;# update XY
+    mov  xycr, ecx ;# update XYCR (unused? [jc])
     ret
 
-;# insert a carriage return if at end of line
-qcr: mov  cx, word ptr xy+2
-    cmp  cx, word ptr rm
-    js   0f
-;# insert a carriage return (drop to next line)
-cr: mov  ecx, lm
-    shl  ecx, 16
-    mov  cx, word ptr xy
-    add  ecx, ih
-    mov  xy, ecx
+qcr: ;# insert a carriage return if at end of line
+    mov  cx, word ptr xy+2 ;# get X, the horizontal character pointer
+    cmp  cx, word ptr rm ;# at or past right margin?
+    js   0f ;# no, return
+cr: ;# insert a carriage return (drop to next line)
+    mov  ecx, lm ;# set X to left margin
+    shl  ecx, 16 ;# move to high 16 bits of XY doubleword...
+    mov  cx, word ptr xy ;# now get Y word...
+    add  ecx, ih ;# and add height of icon (character) to it
+    mov  xy, ecx ;# update XY pointer
 0:  ret
 
-lms: mov  lm, eax
+lms: ;# set left margin to new pixel amount (high-level FORTH word LM)
+    mov  lm, eax ;# top of stack becomes new left margin
     drop
     ret
 
-rms: mov  rm, eax
+rms: ;# set right margin to new pixel amount (high-level FORTH word RM)
+    mov  rm, eax ;# top of stack becomes new right margin
     drop
     ret
 
-at: mov  word ptr xy, ax
-    drop
-    mov  word ptr xy+2, ax
-    drop
+at: ;# set current screen position
+    mov  word ptr xy, ax ;# top of stack should be Y position
+    drop ;# next on stack should be X position
+    mov  word ptr xy+2, ax ;# X goes in high 16 bits of XY
+    drop ;# clean X off the stack before returning
     ret
 
-pat: add  word ptr xy, ax
-    drop
-    add  word ptr xy+2, ax
-    drop
+pat: ;# plus-AT -- add to current screen position
+    add word ptr xy, ax ;# first add Y update
+    drop ;# then get X update into EAX
+    add  word ptr xy+2, ax ;# update X
+    drop ;# clean X update off the stack before returning
     ret
 
 octant: dup_
@@ -1286,13 +1294,13 @@ qring: dup_
 0:  drop
     ret
 
-ring:
-    mov  cad, edi
-    sub dword ptr xy, iw*0x10000 ;# bksp
+ring: ;# show "pacman" cursor at current source word (pointed to by EDI)
+    mov  cad, edi ;# save as current cursor address
+    sub dword ptr xy, iw*0x10000 ;# backspace one icon width
     dup_
     mov  eax, 0x0e04000 ;# ochre-colored cursor
     call color
-    mov  eax, 060
+    mov  eax, 060 ;# cursor character (shift-space, so to speak, in this code)
     mov  cx, word ptr xy+2
     cmp  cx, word ptr rm
     js   0f
@@ -1301,18 +1309,26 @@ ring:
     ret
 0:  jmp  emit
 
-rw: mov  cx, word ptr xy+2
-    cmp  cx, word ptr lm
-    jz   0f
-    call cr
-0:  call red
+rw: ;# display red word (definition)
+    mov  cx, word ptr xy+2 ;# get current X position
+    cmp  cx, word ptr lm ;# at left margin?
+    jz   0f ;# skip if so
+    call cr ;# insert newline before definition
+0:  call red ;# set text color to red
+    jmp  type_ ;# type the word
+
+gw: ;# display green word
+    call green
     jmp  type_
 
-gw: call green
+mw: ;# display deferred macro word
+    call cyan
     jmp  type_
-mw: call cyan
-    jmp  type_
-ww: dup_
+
+ww: ;# display "white", executable word (actually yellow)
+    ;# my (jc's) guess is that "white" was originally the color, and
+    ;# it got changed to yellow when CM decided to use white for comments
+    dup_
     mov  eax, yellow
     call color
     jmp  type_
@@ -1364,8 +1380,8 @@ type2: call unpack
     drop
     ret
 
-;# display a green (compiled) short (27 bits) word
-gsw: mov  edx, [-4+edi*4]
+gsw: ;# display a green (compiled) short (27 bits) word
+    mov  edx, [-4+edi*4]
     sar  edx, 5 ;# shift into position
     jmp  gnw1
 
@@ -1514,16 +1530,20 @@ actv: mov byte ptr action, 12 ;# variable
     inc  dword ptr words ;# add one to count of words
     jmp  insert ;# insert new word into dictionary
 
-mcur: dec dword ptr curs ;# minus cursor: move left
+mcur: ;# minus cursor
+    dec dword ptr curs ;# move left
     jns  0f  ;# just return if it didn't go negative, otherwise undo it...
-pcur: inc dword ptr curs ;# plus cursor: move right
+pcur: ;# plus cursor
+    inc dword ptr curs ;# move right
 0:  ret
 
-mmcur: sub dword ptr curs, 8 ;# move up one row
+mmcur: ;# move up one "row"...
+    sub dword ptr curs, 8 ;# ... actually, only 8 words
     jns  0f  ;# return if it didn't go negative
     mov dword ptr curs, 0  ;# otherwise set to 0
 0:  ret
-ppcur: add dword ptr curs, 8 ;# move down one row
+ppcur: ;# move down one "row"...
+    add dword ptr curs, 8 ;# ... actually, only 8 words
     ret  ;# guess it's ok to increment beyond end of screen (?)
 
 pblk: add dword ptr  blk, 2 ;# plus one block (+2 since odd are shadows)
@@ -1658,8 +1678,8 @@ format2: dup_
     mov  dword ptr words, 2
     jmp  insert
 
-;# delete, or cut, current word in editor (to the left of pacman cursor)
-del: call enstack
+del: ;# delete, or cut, current word in editor (to the left of pacman cursor)
+    call enstack ;# copy word(s) to be deleted into "trash" buffer
     mov  edi, pcad
     mov  ecx, lcad
     sub  ecx, edi
@@ -1671,32 +1691,33 @@ del: call enstack
     pop  esi
     jmp  mcur
 
-enstack: dup_
-    mov  eax, cad
-    sub  eax, pcad
-    jz   ens
-    mov  ecx, eax
-    xchg eax, edx
-    push esi
-    mov  esi, cad
-    lea  esi, [esi*4-4]
-    mov  edi, trash
-0:  std
-    lodsd
-    cld
-    stosd
-    next 0b
-    xchg eax, edx
-    stosd
-    mov  trash, edi
-    pop  esi
-ens: drop
+enstack: ;# copy source into "trash" buffer
+    dup_ ;# just to save TOS, we don't actually return anything
+    mov  eax, cad ;# get current cursor address
+    sub  eax, pcad ;# has it changed since previous cursor address?
+    jz   ens ;# skip if not; nothing to do
+    mov  ecx, eax ;# otherwise, get word count of items to buffer
+    xchg eax, edx ;# save the count in EDX
+    push esi ;# save data stack pointer, we need it for "string" operations
+    mov  esi, cad ;# source address is current cursor address...
+    lea  esi, [esi*4-4] ;# convert to a byte address, point to start of word
+    mov  edi, trash ;# destination address is "trash" buffer
+0:  std  ;# make string addresses work "backwards" in RAM
+    lodsd ;# grab a 32-bit word
+    cld  ;# now store "forwards" in "trash" buffer
+    stosd ;# store a 32-bit word
+    next 0b ;# loop for word count
+    xchg eax, edx ;# get the count back...
+    stosd ;# store it, too, at the end of the trash buffer
+    mov  trash, edi ;# update the pointer
+    pop  esi ;# restore data stack pointer
+ens: drop ;# restore TOS
     ret
 
 ;# 'pad' is called by a high-level program to define the keypad, followed by
 ;# 28 high-level compiled words that define the key vectors (actions), again
 ;# followed by the Huffman codes for the characters representing the keys
-pad:
+pad: ;# define keypad actions and representations
     pop  edx  ;# keypad data must immediately follow call...
     ;# there are 28 keys total, 12 on each side plus undefined keys (code 0),
     ;# "n", "space" and alt
