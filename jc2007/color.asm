@@ -624,7 +624,6 @@ debug: ;# show current machine state
 xy: .long 3*0x10000+3 ;# 3 pixels padding on each side of icons
 lm: .long 3  ;# left margin
 rm: .long hc*iw  ;# right margin, 0x1012 (iw already includes padding)
-xycr: .long 0
 fov: .long 10*(2*vp+vp/2)
 
 nc_: dup_
@@ -717,8 +716,7 @@ top: ;# move character display address to top of screen
     mov  ecx, lm + loadaddr ;# get left margin
     shl  ecx, 16 ;# shift into 'x' word of xy
     add  ecx, 3  ;# add vertical padding to y
-    mov  xy + loadaddr, ecx ;# set xy and xycr to this setting
-    mov  xycr + loadaddr, ecx
+    mov  xy + loadaddr, ecx ;# set xy to this setting
     ret
 
 qcr: ;# insert a carriage return if at end of line
