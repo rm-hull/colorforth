@@ -302,19 +302,6 @@ write:
     int  0x13  ;# let BIOS handle the nitty-gritty floppy I/O
     ret
 
-graphicsmode:
-    mov  ax, 0x4f01 ;# get video mode info
-    mov  cx, vesa ;# a 16-bit color linear video mode (5:6:5 rgb)
-    mov  di, iobuffer ;# use floppy buffer, not during floppy I/O!
-    int  0x10
-    mov  ax, 0x4f02 ;# set video mode
-    mov  bx, cx ;# vesa mode
-    int  0x10
-    mov  ebx, iobuffer + 0x28 ;# linear frame buffer address
-    mov  eax, [ebx]
-    mov  [displ + loadaddr], eax
-    ret
-
 .code32 ;# these routines called from high-level Forth (protected mode)
 readf:
     mov  cylinder + loadaddr, al
@@ -363,16 +350,6 @@ off:  ;# return loadaddr expressed in words
 ;# this is the offset in RAM to where block 0 is loaded
     dup_
     mov  eax, loadaddr >> 2
-    ret
-
-setgraphics:
-    call unreal_mode
-.code16
-    addr32 mov byte ptr [es: 0xb8000 | (upper_right - 8)], 'T'
-    call graphicsmode
-    addr32 mov byte ptr [es: 0xb8000 | (upper_right - 8)], 'G'
-    data32 call protected_mode
-.code32
     ret
 
 ;# these must be defined elsewhere before use
