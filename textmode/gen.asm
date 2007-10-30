@@ -15,8 +15,8 @@
 frame: .long 0x2000000-hp*vp*2 ;# 32 m
 displ: .long 0x0f0000000 ;# fujitsu (physical address of video memory)
 fore:  .long 0x0f7de ;# less-brightness white (silver) in 565 color mode
-xc:    .long 0
-yc:    .long 0
+xc:    .long 0 ;# current horizontal character position
+yc:    .long 0 ;# current vertical character position
 
 rgb: ;# change 8:8:8 bit format to 5:6:5
     ror  eax, 8 ;# rotate blue bits into upper word
