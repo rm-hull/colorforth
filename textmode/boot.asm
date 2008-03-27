@@ -121,8 +121,8 @@ cold:
     shownumber
     pop  cx
     loop 0b
-    showprogress
     data32 call protected_mode
+    showprogress
 .code32
     jmp  9b
 

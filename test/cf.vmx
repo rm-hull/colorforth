@@ -20,3 +20,8 @@ uuid.location = "56 4d 2f 0a 2a 72 06 58-a9 91 c3 82 3b 81 49 e6"
 uuid.bios = "56 4d 2f 0a 2a 72 06 58-a9 91 c3 82 3b 81 49 e6"
 
 tools.remindInstall = "TRUE"
+
+floppy0.clientDevice = "FALSE"
+extendedConfigFile = "cf.vmxf"
+virtualHW.productCompatibility = "hosted"
+tools.upgrade.policy = "manual"

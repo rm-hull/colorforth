@@ -1,48 +1,4 @@
 sources := $(wildcard *.asm)
-ftpfiles := $(foreach file, $(sources), \
- $(shell echo $(notdir $(file)) | tr 'a-z' 'A-Z'))
-# sed recipes (commands) for converting MASM code to GNU 'as' assembler
-label_if_any := \(\s*\w\+:\)\?
-equ := -e 's/^\s*\(\w\+\)\s\+equ\s\+\(.\+\)/.equ \1, \2/gi'
-includes := -e 's/\b\(include\)\(\s\+\)\(\S\+\)\(.*\)/.\1\2"\3"\4/i'
-directives := -e 's/\b\(macro\|endm\|org\|end\|align\)\b/.\1/gi'
-lowercase := -e 's/^\(.*\)$$/\L\1/'
-orgminus := -e 's/\(\s*\.org\s*\.\s*-\s*2\)/;\#\1/'
-org0x1fe := -e 's/\(\s*\.org\s*0x1fe\)/;\#\1/'
-offset := -e '/^$(label_if_any)\s*\.\w\+/ s/\boffset\b\s//gi'
-# need to use \x27 to represent tick "'" in regexp
-ascii := -e 's/\.byte\s\+\x27\([^\x27]\+\)\x27/.ascii "\1"/'
-dup := -e 's/\(\.\w\+\)\s\+\(\w\+\)\s\+dup\s*(\(\w\+\))/.rept \2 \1 \3; .endr/'
-unused := -e 's/^\(\s*\(.model\|.486p\|only\|assume\)\b.*\)/;\#\1/i'
-labels := -e 's/^\(\s*\w\+\)\(\s\+\.\w\+\s\+.*\)/\1:\2/'
-macro := -e 's/^\(\s*\)\(\w\+\)\(\s\+\)\(macro\)\b/\1\4\3\2/gi'
-reg8s := al\|bl\|cl\|dl\|ah\|bh\|ch\|dh
-reg16s := ax\|bx\|cx\|dx\|si\|di\|bp\|sp\|cs\|ds\|es\|ss\|ip
-reg32s := eax\|ebx\|ecx\|edx\|esi\|edi\|ebp\|esp\|eip
-registers := -e 's/\b\($(reg8s)\|$(reg16s)\|$(reg32s)\)/%\1/gi'
-shift := -e '/\bdd\b/ s/\bshl\b/<</g'
-comment := -e 's/;/;\#/'
-here := -e 's/\$$/./'
-byte := -e 's/\bdb\b/.byte/i'
-word := -e 's/\bdw\b/.word/i'
-dword := -e 's/\bdd\b/.long/i'
-local := -e 's/^\(\s*\)@@:/\10:/'
-reference := -e 's/\B@\([FfBb]\)\b/0\1/'
-octal := -e 's/\b\([0-7]\+\)o/0\1/g'
-hex := -e 's/\b\([0-9a-fA-f]\{2,\}\)h\b/0x\1/g'
-intel := -e '1 s/^/.intel_syntax /'
-use32 := -e '/\bcr0\b/I i.code32'  # will mess up the error line no.
-use16 := -e '/^start0:/ i.code16gcc' # will mess up the error line no.
-code16 := -e '/\.code16/,/\.code32/ s/\be\(\w\{2\}\)\b/\1/gi'
-offset_test := -n -e '/$(label_if_any).*offset/p'  # must be used alone
-regex_test := sed $(foreach regex, $(REGEX), $($(regex)))
-# order of the recipes can be important!
-recipes := intel lowercase
-recipes += shift comment local reference
-recipes += octal hex macro includes directives unused
-recipes += byte word dword here equ labels dup ascii
-recipes += offset orgminus use16 use32
-sed := sed $(foreach regex, $(recipes), $($(regex)))
 GAS := as -R -Z -L
 DEFINES := $(shell cat *.asm | grep '\.ifn\?def' | \
  awk '{print $$2}' | sort | uniq)
@@ -82,11 +38,6 @@ kbd:	color.asm
 small:	color.asm
 	touch $<
 	$(MAKE) SMALLSCREEN=1 newcode
-cm2001: color.asm
-	touch $<
-	$(MAKE) CM2001=1 color.com
-jf2005: color.asm
-	$(MAKE) DMA=1 AGP=1 E1_STROBE=1 QUESTIONABLE=1 color.com
 /tmp/color.dsm: ../color.com
 	objdump --target binary \
 	 --architecture i386 \

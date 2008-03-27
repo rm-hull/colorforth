@@ -18,6 +18,16 @@
     lodsd
 .endm
 
+.macro enum tmpvar constants:vararg
+ .ifndef \tmpvar
+  .equ \tmpvar, 0
+ .endif
+ .irp constant, \constants
+  .equ \constant, \tmpvar
+  .equ \tmpvar, \tmpvar + 1
+ .endr
+.endm
+
 ;# compile Forth words with Huffman coding
 .macro packword words:vararg
  .irp word, \words
@@ -124,9 +134,6 @@
 .equ loadaddr, gods ;# from here upwards is where we relocate the code
 .equ bootaddr, 0x7c00
 .equ icons, loadaddr + (12 * blocksize) ;# block 12 start of character maps
-.equ green, 10
-.equ red, 12
-.equ white, 15
 
 .include "boot.asm" ;# bootsector and related routines
 .code32 ;# protected-mode code from here on out
@@ -648,8 +655,11 @@ last_: dup_
     mov  eax, (loadaddr + (offset last-offset start)) / 4
     ret
 
-.include "gen.asm" ;# cce.asm pio.asm ati128.asm ati64.asm gen.asm
+.include "gen.asm"
 
+enum colors black, blue, green, cyan, red, magenta, brown, silver
+enum colors gray, lightblue, lightgreen, lightcyan 
+enum colors lightred, lightmagenta, yellow, whiter
 .equ yellow, 0xffff00 ;# RG0 is yellow
 cyan: dup_
     mov  eax, 0x00ffff ;# 0GB is cyan
